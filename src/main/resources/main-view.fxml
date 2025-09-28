@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="io.github.guillermo_david.controller.MainController">
+    <top>
+        <ToolBar>
+            <Label text="📚 Knowledge Base"/>
+        </ToolBar>
+    </top>
+    <center>
+        <TextArea fx:id="textArea" promptText="Escribe aquí tu primera nota..."/>
+    </center>
+</BorderPane>

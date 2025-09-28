@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.web.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="io.github.guillermo_david.controller.ListadoPildorasController"
+            fx:id="root">
+
+    <top>
+	    <VBox spacing="5">
+	        <padding>
+	            <Insets top="10" right="10" bottom="10" left="10"/>
+	        </padding>
+	        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="app-header">
+		        <ImageView fx:id="imgLogo" fitHeight="64" preserveRatio="true" pickOnBounds="true"/>
+				<Separator orientation="VERTICAL"/>
+	        
+	            <Label text="Buscar:"/>
+	            <TextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
+	
+	            <Label text="Tags:"/>
+	            <TextField fx:id="txtFiltroTags" promptText="Buscar por tags..."/>
+	
+	            <ToggleButton fx:id="btnAndOr" text="OR"/>
+	            <!--<ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav" text="★"/>-->
+	            <ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav"/>
+	            	
+	            <Pane HBox.hgrow="ALWAYS"/>   <!-- 👈 separador -->
+    			<Button fx:id="btnNueva">
+				    <HBox.margin>
+				        <Insets right="25"/>
+				    </HBox.margin>
+				</Button>
+	        </HBox>
+	    </VBox>
+	</top>
+
+
+    <center>
+	    <TableView fx:id="table" prefHeight="600" prefWidth="800">
+	        <columns>
+	        	<!--<TableColumn fx:id="colFav" text="★" prefWidth="60"/>-->
+	        	<TableColumn fx:id="colFav" text="" prefWidth="40"/>
+	            <TableColumn fx:id="colTitulo" text="Título" prefWidth="200"/>
+	            <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="400"/>
+	            <TableColumn fx:id="colTags" text="Tags" prefWidth="200"/>
+	            <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="105"/>
+	        </columns>
+	    </TableView>
+	</center>
+
+	<bottom>
+	    <VBox spacing="6">
+	        <!-- Paginación -->
+	        <HBox fx:id="paginationBox" alignment="CENTER" spacing="10">
+	            <padding>
+	                <Insets top="10" right="10" bottom="0" left="10"/>
+	            </padding>
+	            <Button fx:id="btnAnterior" text="◀ Anterior"/>
+	            <Label fx:id="lblPagina" text="Página 1 de 1"/>
+	            <Button fx:id="btnSiguiente" text="Siguiente ▶"/>
+	        </HBox>
+	
+	        <!-- Barra de estado -->
+	        <HBox fx:id="statusBar" alignment="CENTER" spacing="8" styleClass="status-bar">
+	            <padding>
+	                <Insets top="10" right="12" bottom="12" left="12"/>
+	            </padding>
+	            <Label fx:id="lblStatus" id="lblStatus" text="" maxWidth="Infinity"/>
+	        </HBox>
+	    </VBox>
+	</bottom>
+
+
+
+</BorderPane>

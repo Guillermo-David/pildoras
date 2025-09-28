@@ -1,0 +1,113 @@
+/* Contenedor y label */
+.status-bar {
+    -fx-background-color: linear-gradient(to bottom, #f6f7f9, #eceff3);
+    -fx-border-color: #d6dae0;
+    -fx-border-width: 1 0 0 0;
+}
+
+#lblStatus {
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.08) , 2, 0.0, 0, 1);
+}
+
+/* Colores por tipo: contenedor .status-bar + tipo → afecta al label hijo directo */
+.status-bar.status-info    > #lblStatus { -fx-text-fill: #0b57d0 !important; }
+.status-bar.status-success > #lblStatus { -fx-text-fill: #137333 !important; }
+.status-bar.status-warn    > #lblStatus { -fx-text-fill: #b06a00 !important; }
+.status-bar.status-error   > #lblStatus { -fx-text-fill: #b3261e !important; }
+
+/* Botón de la estrella: look limpio */
+.button.star {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+}
+
+/* Icono por defecto (no favorita) */
+.star-icon {
+    -fx-icon-size: 16px;          /* ajusta tamaño a tu gusto */
+    -fx-icon-color: -fx-text-inner-color; /* hereda color base del tema */
+}
+
+/* Icono cuando ES favorita */
+.star-icon.star-fav {
+    -fx-icon-color: #f6b800;      /* dorado */
+}
+
+/* (Opcional) hover sutil */
+.button.star:hover .star-icon {
+    -fx-icon-color: derive(#f6b800, -15%);
+}
+
+.table-cell > .label {
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* Toggle de favoritas (barra superior) */
+/* Toggle de favoritas (barra superior) */
+.toggle-button.toggle-fav {
+    -fx-padding: 4 8;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-background-color: transparent;         /* base limpia */
+    -fx-border-color: -fx-box-border;          /* borde sutil del tema */
+    -fx-border-width: 1;
+}
+
+.toggle-button.toggle-fav:hover {
+    -fx-background-color: -fx-control-inner-background; /* leve relleno al hover */
+}
+
+/* Estado seleccionado: halo dorado */
+.toggle-button.toggle-fav:selected {
+    -fx-background-color: rgba(246,184,0,0.15);
+    -fx-border-color: #f6b800;
+}
+
+/* Ikonli dentro del toggle */
+.toggle-button.toggle-fav .ikonli-font-icon,
+.toggle-button.toggle-fav .star-icon {
+    -fx-icon-size: 18px;
+    -fx-icon-color: -fx-text-base-color;
+}
+
+/* Color dorado del icono cuando está “on” */
+.toggle-button.toggle-fav:selected .ikonli-font-icon,
+.toggle-button.toggle-fav .star-icon.star-fav {
+    -fx-icon-color: #f6b800;
+}
+
+/* Botón de icono genérico para celdas de acciones */
+.icon-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 4 6;
+    -fx-cursor: hand;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.icon-btn:hover {
+    -fx-background-color: rgba(0,0,0,0.05);
+}
+
+/* Ikonli dentro del botón */
+.icon-btn .ikonli-font-icon {
+    -fx-icon-size: 16px;                 /* tamaño base */
+    -fx-icon-color: -fx-text-base-color; /* hereda tema */
+}
+
+/* Efecto hover sutil */
+.icon-btn:hover .ikonli-font-icon {
+    -fx-icon-color: -fx-accent;          /* color de acento del tema */
+}
+
+/* Estado “peligro” para borrar (rojo al hover) */
+.table-row-cell .icon-btn:focused .ikonli-font-icon { -fx-icon-color: -fx-accent; }
+.table-row-cell .icon-btn.delete:hover .ikonli-font-icon { -fx-icon-color: #b3261e; }
+
+.app-header { -fx-background-color: linear-gradient(to bottom, #ffffff, #f7f7f7); }
+.app-header .separator:vertical { -fx-opacity: .35; }
