@@ -1,0 +1,103 @@
+# --- SISTEMA OPERATIVO ---
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- EDITORES / IDEs ---
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+.nb-gradle/
+
+# VS Code
+.vscode/
+
+# --- JAVA / MAVEN ---
+# Compilados
+*.class
+*.war
+*.ear
+
+# Salidas de Maven
+target/
+# (por si creas otras carpetas de salida)
+build/
+
+# Dependencias locales bajadas (si alguna vez se usan)
+.local-repo/
+
+# Informes/temporal de tests y cobertura (ya caen en target/, pero por si acaso)
+surefire-reports/
+failsafe-reports/
+jacoco.exec
+.jacoco/
+
+# --- APLICACIÓN / EMPAQUETADO ---
+# JARs/artefactos locales
+*.jar
+*.jar.original
+*.shaded.jar
+
+# jpackage / jlink artefactos
+runtime/
+image/
+app/
+jre/
+*.jimage
+
+# Imágenes de app creadas por jpackage
+target/image/
+target/runtime/
+target/dist/
+target/jpkg/
+target/jpackage/
+
+# Instaladores (distribuciones)
+*.exe
+*.msi
+*.msix
+*.rpm
+*.deb
+*.dmg
+*.pkg
+
+# Lanzadores/propiedades generadas por jpackage
+*.cfg
+*.properties
+
+# Logs/temporales
+*.log
+hs_err_pid*.log
+replay_pid*.log
+*.tmp
+
+# --- OTROS (opcional, quita si quieres versionarlos) ---
+# Archivos de base de datos/backup locales
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.bak
