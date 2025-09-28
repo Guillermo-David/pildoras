@@ -3,6 +3,7 @@ package io.github.guillermo_david;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.guillermo_david.theme.ThemeManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -39,7 +40,11 @@ public class MainApp extends Application{
 	    var light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();
 	    var dark  = MainApp.class.getResource("/css/theme-dark.css").toExternalForm();
 
-	    scene.getStylesheets().setAll(base, light);
+	    ThemeManager.initStyles(base, light, dark);
+	    var current = ThemeManager.load();
+	    ThemeManager.apply(scene, current);
+	    
+//	    scene.getStylesheets().setAll(base, light);
 
 	    // 👇 Establece iconos PNG (con alpha) ANTES del show()
 	    var icons = loadIcons();

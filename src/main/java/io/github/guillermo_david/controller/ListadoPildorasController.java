@@ -15,6 +15,8 @@ import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.javafx.StatusBus;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
+import io.github.guillermo_david.theme.ThemeManager;
+import io.github.guillermo_david.theme.ThemeManager.Theme;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -70,9 +72,6 @@ public class ListadoPildorasController {
 	
 	private double dragOffsetX, dragOffsetY;
 	
-	private Image logoLight;
-	private Image logoDark;
-	
 	String base = null;
     String light = null;
     String dark  = null;
@@ -86,7 +85,7 @@ public class ListadoPildorasController {
 	@FXML private Label lblPagina, lblStatus;
 	@FXML private TableView<Pildora> table;
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
-	@FXML private TableColumn<Pildora, Void> colFav, colAcciones;
+	@FXML private TableColumn<Pildora, Void> colFav, colAcciones, colPinned;
 	@FXML private TextField txtFiltroTexto, txtFiltroTags;
 	@FXML private ToggleButton btnAndOr, btnSoloFav, btnTema;
 	@FXML private ImageView imgLogo;
@@ -98,24 +97,32 @@ public class ListadoPildorasController {
 	    light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();
 	    dark  = MainApp.class.getResource("/css/theme-dark.css").toExternalForm();
 	    
-	    logoLight = new Image(getClass().getResource("/icons/gdg_B.png").toExternalForm(), 0, 64, true, true);
-	    logoDark  = new Image(getClass().getResource("/icons/gdg_W.png").toExternalForm(),  0, 64, true, true);
+	    setStatusBar();
+	    setTableProperties();
+	    setColFav();
+	    setColPinned();
+	    setColTitulo();
+	    setColDescripcion();
+	    setColTags();
+	    setColAcciones();
+	    setBotones();
+	    cargarTabla(null, null);
 
-		setStatusBar();
-		setTableProperties();
-		setColFav();
-		setColTitulo();
-		setColDescripcion();
-		setColTags();
-		setColAcciones();
-		setBotones();
-		cargarTabla(null, null);
-		setLogo();
-		setTxtFiltros();
-		setSceneProperties();
-		initThemeToggle();
-		hookLogoToTheme();
-		initCustomTitleBar();
+	    // Logo inicial según tema guardado
+	    setLogoFor(io.github.guillermo_david.theme.ThemeManager.load());
+
+	    // Filtros / escena / atajos
+	    setTxtFiltros();
+	    setSceneProperties();
+
+	    // Tema: handler del botón + sincronizar estado visual + reaccionar a cambios
+	    initThemeToggle();           // pone el onAction del botón
+	    syncThemeToggleWithCurrent(); // ajusta icono/tooltip del botón según tema actual
+	    hookLogoToTheme();            // (opcional) si quieres que el logo reaccione a cambios externos
+
+	    // Barra de título custom
+	    initCustomTitleBar();
+
 	}
 
 	private void setTxtFiltros() {
@@ -255,6 +262,55 @@ public class ListadoPildorasController {
 			}
 		});
 	}
+	
+	private void setColPinned() {
+	    colPinned.setSortable(false);
+	    colPinned.setCellFactory(col -> new TableCell<>() {
+	        @Override
+	        protected void updateItem(Void item, boolean empty) {
+	            super.updateItem(item, empty);
+	            if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+	                setGraphic(null);
+	                return;
+	            }
+
+	            Pildora p = (Pildora) getTableRow().getItem();
+
+	            Button pinBtn = new Button();
+	            pinBtn.getStyleClass().add("pin");
+
+	            // 👇 siempre Solid
+	            FontIcon icon = new FontIcon(FontAwesomeSolid.THUMBTACK);
+	            icon.getStyleClass().add("pin-icon");
+	            if (p.isPinned()) icon.getStyleClass().add("pin-active");
+	            icon.setRotate(p.isPinned() ? -20 : 0); // opcional: efecto clavada
+
+	            pinBtn.setGraphic(icon);
+	            pinBtn.setTooltip(new Tooltip(p.isPinned() ? "Desfijar" : "Fijar"));
+
+	            pinBtn.setOnAction(e -> {
+	                boolean nuevo = !p.isPinned();
+	                pildoraDao.marcarPinned(p.getId(), nuevo);
+	                p.setPinned(nuevo);
+
+	                icon.getStyleClass().remove("pin-active");
+	                if (nuevo) icon.getStyleClass().add("pin-active");
+	                icon.setRotate(nuevo ? -20 : 0);
+	                pinBtn.setTooltip(new Tooltip(nuevo ? "Desfijar" : "Fijar"));
+
+	                StatusBus.show(nuevo ? "Píldora fijada" : "Píldora desfijada",
+	                        StatusBus.Type.INFO, Duration.seconds(2));
+
+	                // si el ORDER BY usa pinned DESC, recarga la tabla para recolocar
+	                ListadoPildorasController.this.refrescarTabla();
+	            });
+
+	            HBox box = new HBox(pinBtn);
+	            box.setStyle("-fx-alignment: CENTER;");
+	            setGraphic(box);
+	        }
+	    });
+	}
 
 	private void setBotones() {
 		// Icono del toggle de favoritas (igual que en la tabla)
@@ -319,16 +375,15 @@ public class ListadoPildorasController {
 		moon.setIconSize(18);
 		sun.setIconSize(18);
 
+		// 👇 clases para colorearlos por CSS
+		moon.getStyleClass().addAll("theme-icon", "icon-moon");
+		sun.getStyleClass().addAll("theme-icon", "icon-sun");
+
 		// StackPane con ambos iconos, mostramos uno u otro según el estado
 		var iconSwap = new javafx.scene.layout.StackPane(moon, sun);
 		sun.visibleProperty().bind(btnTema.selectedProperty());           // seleccionado = sol
 		moon.visibleProperty().bind(btnTema.selectedProperty().not());    // no seleccionado = luna
 		btnTema.setGraphic(iconSwap);
-
-		// si cambias el tema, aquí disparas tu lógica de tema:
-		btnTema.selectedProperty().addListener((o, old, sel) -> {
-		    setTheme(sel); // sel=true -> dark, o al revés según tu implementación
-		});
 	}
 
 	private void setColTitulo() {
@@ -762,76 +817,87 @@ public class ListadoPildorasController {
 	    return b;
 	}
 	
-	private void setLogo() {
-	    var url = getClass().getResource("/icons/gdg_B.png");
+	private void decorate(Alert alert) {
+	    // owner = stage principal
+	    var owner = (Stage) root.getScene().getWindow();
+	    alert.initOwner(owner);
+
+	    // setear los mismos iconos al Stage del diálogo
+	    var dialogStage = (Stage) alert.getDialogPane().getScene().getWindow();
+	    dialogStage.getIcons().setAll(owner.getIcons());
+	}
+	
+	private void hookLogoToTheme() {
+	    root.sceneProperty().addListener((obs, old, scene) -> {
+	        if (scene == null) return;
+	        scene.getStylesheets().addListener((ListChangeListener<String>) c -> {
+	            setLogoFor(ThemeManager.load());
+	        });
+	    });
+	}
+	
+	private void syncThemeToggleWithCurrent() {
+	    var scene = root.getScene();
+	    if (scene == null) {
+	        Platform.runLater(this::syncThemeToggleWithCurrent);
+	        return;
+	    }
+	    Theme t = ThemeManager.load();
+	    btnTema.setSelected(t == Theme.DARK);   // 👈 refleja estado en el toggle
+	    updateThemeUI(t);                       // icono/tooltip/logo
+	}
+	
+	private void initThemeToggle() {
+	    btnTema.setFocusTraversable(false);
+	    btnTema.setOnAction(e -> {
+	        var scene = root.getScene();
+	        var t = ThemeManager.toggle(scene); // alterna + aplica + guarda
+	        btnTema.setSelected(t == Theme.DARK);
+	        updateThemeUI(t);
+	    });
+	}
+
+
+//	private void updateThemeUI(Theme t) {
+//	    var icon = new FontIcon(
+//	        t == Theme.DARK ? FontAwesomeSolid.SUN : FontAwesomeSolid.MOON
+//	    );
+//	    icon.setIconSize(18);
+//	    icon.getStyleClass().add("theme-toggle-icon");
+//	    btnTema.setGraphic(icon);
+//	    btnTema.setText(null);
+//	    btnTema.setTooltip(new Tooltip(t == Theme.DARK ? "Tema claro" : "Tema oscuro"));
+//	    setLogoFor(t);
+//	}
+	
+	private void updateThemeUI(Theme t) {
+	    // refleja el estado en el toggle (true = DARK)
+	    btnTema.setSelected(t == Theme.DARK);
+
+	    // solo tooltip (NO toques el graphic)
+	    btnTema.setTooltip(new Tooltip(t == Theme.DARK ? "Tema claro" : "Tema oscuro"));
+
+	    // logo según tema
+	    setLogoFor(t);
+	}
+
+	// Dos recursos diferentes para el logo (negro/blanco):
+	private void setLogoFor(Theme t) {
+	    String path = (t == Theme.DARK) ? "/icons/gdg_W.png" : "/icons/gdg_B.png";
+	    var url = getClass().getResource(path);
 	    if (url != null) {
 	        imgLogo.setImage(new Image(url.toExternalForm(), 0, 64, true, true));
 	        imgLogo.setSmooth(true);
 	    }
 	}
-	
-	private void decorate(Alert alert) {
-	    // owner = stage principal
-	    var owner = (javafx.stage.Stage) root.getScene().getWindow();
-	    alert.initOwner(owner);
 
-	    // setear los mismos iconos al Stage del diálogo
-	    var dialogStage = (javafx.stage.Stage) alert.getDialogPane().getScene().getWindow();
-	    dialogStage.getIcons().setAll(owner.getIcons());
-	}
-	
-	private void hookLogoToTheme() {
-	    // Cuando haya Scene, coloca el logo que toque según el tema actual
-	    root.sceneProperty().addListener((obs, old, scene) -> {
-	        if (scene == null) return;
-	        boolean isDark = scene.getStylesheets().contains(dark);
-	        imgLogo.setImage(isDark ? logoDark : logoLight);
-	    });
-	}
-
-	// Llama a este método cuando cambies de tema (donde haces el toggle)
-	private void applyTheme(boolean darkMode) {
-	    var scene = root.getScene();
-	    if (scene == null) return;
-	    var ss = scene.getStylesheets();
-	    ss.clear();
-	    ss.add(base);
-	    ss.add(darkMode ? dark : light);
-
-	    // Actualiza logo
-	    imgLogo.setImage(darkMode ? logoDark : logoLight);
-	}
-	
-	private void initThemeToggle() {
-	    root.sceneProperty().addListener((obs, oldScene, scene) -> {
-	        if (scene == null) return;
-
-	        boolean isDark = scene.getStylesheets().contains(dark);
-	        btnTema.setSelected(isDark);
-	        updateThemeIcon(isDark);
-
-	        btnTema.selectedProperty().addListener((o, oldVal, darkMode) -> {
-	            applyTheme(darkMode);
-	            updateThemeIcon(darkMode);
-	        });
-	    });
-	}
-
-	private void updateThemeIcon(boolean darkMode) {
-	    // con Ikonli:
-	    var icon = new FontIcon(darkMode ? FontAwesomeSolid.SUN : FontAwesomeSolid.MOON);
-	    icon.getStyleClass().add("star-icon"); // hereda color del tema
-	    btnTema.setGraphic(icon);
-	    btnTema.setText(null); // solo icono
-	}
-
-	void setTheme(boolean darkMode) {
-		var scene = root.getScene();
-	    var ss = scene.getStylesheets();
-	    ss.clear();
-	    ss.add(base);
-	    ss.add(darkMode ? dark : light);
-	}
+//	void setTheme(boolean darkMode) {
+//		var scene = root.getScene();
+//	    var ss = scene.getStylesheets();
+//	    ss.clear();
+//	    ss.add(base);
+//	    ss.add(darkMode ? dark : light);
+//	}
 
 	private void initCustomTitleBar() {
 	    // Cerrar

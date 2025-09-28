@@ -29,3 +29,29 @@
   /* línea gris tenue sobre fondo claro */
   -gdg-separator: rgba(0,0,0,0.5);
 }
+
+/* Sol = mismo dorado que la estrella favorita */
+.theme-toggle .icon-sun {
+    -fx-icon-color: #f6b800; /* mismo que .star-icon.star-fav */
+}
+
+/* Luna = acento “chulo” para claro (violeta/indigo) */
+.theme-toggle .icon-moon {
+    -fx-icon-color: #6c63ff; /* puedes probar #6c63ff o #7b5cff */
+}
+
+/* Opcional: hover un pelín más intenso */
+.theme-toggle:hover .icon-sun {
+    -fx-icon-color: derive(#f6b800, -15%);
+}
+.theme-toggle:hover .icon-moon {
+    -fx--muted-icon: derive(#6c63ff, -30%);
+}
+
+/* Placeholder más suave en claro */
+.root {
+    -fx-placeholder-color: rgba(0,0,0,0.45);
+}
+.text-input, .text-area {
+    -fx-prompt-text-fill: -fx-placeholder-color;
+}

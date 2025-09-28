@@ -36,3 +36,28 @@
   /* línea clara tenue sobre fondo oscuro */
   -gdg-separator: rgba(255,255,255,0.20);
 }
+
+/* Sol (oscuro): igual dorado */
+.theme-toggle .icon-sun {
+    -fx-icon-color: #f6b800;
+}
+
+/* Luna (oscuro): cian luminoso */
+.theme-toggle .icon-moon {
+    -fx-icon-color: #4cc9f0; /* alternativa: #00d4ff */
+}
+
+.theme-toggle:hover .icon-sun {
+    -fx-icon-color: derive(#f6b800, -15%);
+}
+.theme-toggle:hover .icon-moon {
+    -fx-icon-color: derive(#4cc9f0, -10%);
+}
+
+/* Color de placeholder legible en oscuro */
+.root { 
+    -fx-placeholder-color: rgba(235,239,245,0.60);  /* gris claro translúcido */
+}
+.text-input, .text-area {
+    -fx-prompt-text-fill: -fx-placeholder-color;
+}

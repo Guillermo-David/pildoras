@@ -62,6 +62,7 @@
 	    <TableView fx:id="table" prefHeight="600" prefWidth="800">
 	        <columns>
 	        	<!--<TableColumn fx:id="colFav" text="★" prefWidth="60"/>-->
+	        	<TableColumn fx:id="colPinned" text="" prefWidth="40"/>
 	        	<TableColumn fx:id="colFav" text="" prefWidth="40"/>
 	            <TableColumn fx:id="colTitulo" text="Título" prefWidth="200"/>
 	            <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="400"/>

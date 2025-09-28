@@ -14,10 +14,11 @@ public class Pildora {
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
     private boolean favorita;
+    private boolean pinned;
 
 
     public Pildora(String titulo, String descripcion) {
-        this(null, titulo, descripcion, null, null, false);
+        this(null, titulo, descripcion, null, null, false, false);
     }
 
     @Override
@@ -29,6 +30,7 @@ public class Pildora {
                 ", fechaCreacion=" + fechaCreacion +
                 ", fechaActualizacion=" + fechaActualizacion +
                 ", favorita=" + (favorita ? "Sí" : "No") +
+                ", pinned=" + (pinned? "Sí" : "No") +
                 '}';
     }
 }

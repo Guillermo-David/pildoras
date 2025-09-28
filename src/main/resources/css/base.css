@@ -249,6 +249,17 @@
   -fx-content-display: graphic-only;
 }
 
+/* Iconos del botón de tema: tamaño y ligera escala en hover */
+.theme-toggle .theme-icon {
+    -fx-icon-size: 18px;
+}
+
+.theme-toggle:hover .theme-icon {
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+
 /* --- Title bar minimal --- */
 .titlebar {
     -fx-background-color: -fx-background;   /* tomará del tema */
@@ -274,4 +285,32 @@
 .titlebar-close:hover {
     -fx-background-color: rgba(255,0,0,0.12);
     -fx-text-fill: #b3261e; /* rojo sutil */
+}
+
+/* Botón pin */
+.button.pin {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 4 6;
+}
+
+/* Icono pin: estado normal = atenuado */
+/* base.css */
+.pin-icon {
+    -fx-icon-size: 16px;
+    -fx-icon-color: -fx-muted-icon; /* 👈 se define por tema */
+}
+
+.pin-icon.pin-active {
+    -fx-icon-color: #f6b800; /* dorado cuando está fijada */
+}
+
+/* Hover sutil cuando no está activo */
+.button.pin:hover .pin-icon:not(.pin-active) {
+    -fx-opacity: 0.7;
+}
+
+.root {
+    -fx-muted-icon: rgb(204, 204, 206);
 }

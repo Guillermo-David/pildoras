@@ -59,7 +59,7 @@ public class PildoraDao {
 		String dir = "ASC".equalsIgnoreCase(direccionOrden) ? "ASC" : "DESC";
 
 		StringBuilder sql = new StringBuilder(
-				"SELECT DISTINCT p.id, p.titulo, p.descripcion, p.fecha_creacion, p.fecha_actualizacion, p.favorita " + // 👈
+				"SELECT DISTINCT p.id, p.titulo, p.descripcion, p.fecha_creacion, p.fecha_actualizacion, p.favorita, p.pinned " + // 👈
 																														// favorita
 						"FROM pildoras p ");
 
@@ -99,12 +99,21 @@ public class PildoraDao {
 			sql.append("AND p.favorita = 1 ");
 		}
 
-// ORDER: favoritas primero (si NO está el filtro exclusivo), luego la columna elegida
-		if (!soloFavoritas && !"p.favorita".equals(colOrden)) {
-			sql.append("ORDER BY p.favorita DESC, ").append(colOrden).append(" ").append(dir).append(" ");
+		sql.append(" ORDER BY p.pinned DESC ");
+
+		if (!"p.pinned".equals(colOrden)) {
+		    sql.append(", ").append(colOrden).append(' ').append(dir).append(' ');
 		} else {
-			sql.append("ORDER BY ").append(colOrden).append(" ").append(dir).append(" ");
+		    // Si el usuario “ordena por pinned”, mantenemos pinned primero
+		    // y metemos un criterio estable secundario (por ejemplo, fecha desc)
+		    sql.append(", p.titulo DESC ");
 		}
+// ORDER: favoritas primero (si NO está el filtro exclusivo), luego la columna elegida
+//		if (!soloFavoritas && !"p.favorita".equals(colOrden)) {
+//			sql.append("ORDER BY p.favorita DESC, ").append(colOrden).append(" ").append(dir).append(" ");
+//		} else {
+//			sql.append("ORDER BY ").append(colOrden).append(" ").append(dir).append(" ");
+//		}
 
 		sql.append("LIMIT ? OFFSET ?");
 
@@ -127,7 +136,10 @@ public class PildoraDao {
 
 			try (ResultSet rs = stmt.executeQuery()) {
 				while (rs.next()) {
-					lista.add(new Pildora(rs.getInt("id"), rs.getString("titulo"), rs.getString("descripcion"),
+					lista.add(new Pildora(
+							rs.getInt("id"), 
+							rs.getString("titulo"), 
+							rs.getString("descripcion"),
 							rs.getTimestamp("fecha_creacion") != null
 //									? LocalDateTime.parse(rs.getString("fecha_creacion").replace(" ", "T"))
 									? rs.getTimestamp("fecha_creacion").toLocalDateTime()
@@ -136,7 +148,9 @@ public class PildoraDao {
 									? rs.getTimestamp("fecha_actualizacion").toLocalDateTime()
 //									? LocalDateTime.parse(rs.getString("fecha_actualizacion").replace(" ", "T"))
 									: null,
-							rs.getInt("favorita") == 1));
+							rs.getInt("favorita") == 1,
+							rs.getInt("pinned") == 1
+							));
 				}
 			}
 		} catch (SQLException e) {
@@ -212,14 +226,19 @@ public class PildoraDao {
 			pstmt.setInt(1, id);
 			try (ResultSet rs = pstmt.executeQuery()) {
 				if (rs.next()) {
-					return new Pildora(rs.getInt("id"), rs.getString("titulo"), rs.getString("descripcion"),
+					return new Pildora(
+							rs.getInt("id"), 
+							rs.getString("titulo"), 
+							rs.getString("descripcion"),
 							rs.getString("fecha_creacion") != null
 									? LocalDateTime.parse(rs.getString("fecha_creacion"), FORMATTER)
 									: null,
 							rs.getString("fecha_actualizacion") != null
 									? LocalDateTime.parse(rs.getString("fecha_actualizacion"), FORMATTER)
 									: null,
-							rs.getInt("favorita") == 1 ? true : false);
+							rs.getInt("favorita") == 1 ? true : false,
+							rs.getInt("pinned") == 1 ? true : false
+									);
 				}
 			}
 
@@ -260,6 +279,17 @@ public class PildoraDao {
 	    String sql = "UPDATE pildoras SET favorita = ? WHERE id = ?";
 	    try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 	        ps.setInt(1, favorita ? 1 : 0);
+	        ps.setLong(2, id);
+	        ps.executeUpdate();
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	}
+
+	public void marcarPinned(long id, boolean pinned) {
+	    String sql = "UPDATE pildoras SET pinned = ? WHERE id = ?";
+	    try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+	        ps.setInt(1, pinned ? 1 : 0);
 	        ps.setLong(2, id);
 	        ps.executeUpdate();
 	    } catch (SQLException e) {
