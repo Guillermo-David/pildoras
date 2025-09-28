@@ -1,5 +1,10 @@
 package io.github.guillermo_david.db;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -7,21 +12,24 @@ import java.sql.Statement;
 
 public class DatabaseHelper {
 
-    private static final String DB_URL = "jdbc:sqlite:knowledgebase.db";
-
     private static DatabaseHelper instance;
     private Connection connection;
 
     private DatabaseHelper() {
         try {
-            connection = DriverManager.getConnection(DB_URL);
+            Path dbPath = getDatabasePath();
+            migrateOldLocationIfNeeded(dbPath);
+            Files.createDirectories(dbPath.getParent());
+
+            String url = "jdbc:sqlite:" + dbPath.toString();
+            connection = DriverManager.getConnection(url);
+
             initializeDatabase();
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             throw new RuntimeException("Error inicializando la base de datos", e);
         }
     }
 
-    // Singleton: acceso único a la instancia
     public static synchronized DatabaseHelper getInstance() {
         if (instance == null) {
             instance = new DatabaseHelper();
@@ -33,7 +41,28 @@ public class DatabaseHelper {
         return connection;
     }
 
-    // Crear tablas si no existen
+    private Path getDatabasePath() {
+        // Usamos %APPDATA%\Pildoras\knowledgebase.db
+        String appdata = System.getenv("APPDATA");
+        if (appdata == null || appdata.isBlank()) {
+            appdata = System.getProperty("user.home");
+        }
+        return Paths.get(appdata, "Pildoras", "knowledgebase.db");
+    }
+
+    private void migrateOldLocationIfNeeded(Path nueva) throws IOException {
+        if (Files.exists(nueva)) return; // ya migrada
+
+        String local = System.getenv("LOCALAPPDATA");
+        if (local == null || local.isBlank()) return;
+
+        Path antigua = Paths.get(local, "Pildoras", "knowledgebase.db");
+        if (Files.exists(antigua)) {
+            Files.createDirectories(nueva.getParent());
+            Files.move(antigua, nueva, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
     private void initializeDatabase() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("""
@@ -42,7 +71,9 @@ public class DatabaseHelper {
                     titulo TEXT NOT NULL,
                     descripcion TEXT NOT NULL,
                     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    fecha_actualizacion TIMESTAMP
+                    fecha_actualizacion TIMESTAMP,
+                    favorita INTEGER NOT NULL DEFAULT 0,
+                    pinned INTEGER NOT NULL DEFAULT 0
                 )
             """);
 
