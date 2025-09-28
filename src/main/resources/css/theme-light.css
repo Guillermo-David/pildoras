@@ -1,0 +1,31 @@
+/* Paleta */
+.root {
+    -c-bg:            #ffffff;
+    -c-bg-subtle:     #f7f7f7;
+    -c-text:          #1f2328;
+    -c-text-muted:    #6e7781;
+    -c-border:        #d0d7de;
+    -c-accent:        #0b57d0;
+    -c-row-hover:     #f0f3f6;
+    -c-row-selected:  #e8f0fe;
+    -c-input-bg:      #ffffff;
+    -c-input-border:  #c9d1d9;
+    -c-shadow:        rgba(0,0,0,0.10);
+}
+
+/* Mapeo looked-up de JavaFX (coherencia visual) */
+.root {
+    -fx-base:                         -c-bg;
+    -fx-background:                   -c-bg;
+    -fx-accent:                       -c-accent;
+    -fx-text-base-color:              -c-text;
+    -fx-text-inner-color:             -c-text;
+    -fx-control-inner-background:     -c-bg;      /* fondo filas table */
+    -fx-cell-hover-color:             -c-row-hover;
+    -fx-box-border:                   -c-border;
+	-gdg-icon-color: #1f2328;
+}
+.root {
+  /* línea gris tenue sobre fondo claro */
+  -gdg-separator: rgba(0,0,0,0.5);
+}

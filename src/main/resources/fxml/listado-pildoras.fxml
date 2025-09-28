@@ -11,31 +11,49 @@
             fx:id="root">
 
     <top>
-	    <VBox spacing="5">
-	        <padding>
-	            <Insets top="10" right="10" bottom="10" left="10"/>
-	        </padding>
-	        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="app-header">
-		        <ImageView fx:id="imgLogo" fitHeight="64" preserveRatio="true" pickOnBounds="true"/>
-				<Separator orientation="VERTICAL"/>
-	        
-	            <Label text="Buscar:"/>
-	            <TextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
-	
-	            <Label text="Tags:"/>
-	            <TextField fx:id="txtFiltroTags" promptText="Buscar por tags..."/>
-	
-	            <ToggleButton fx:id="btnAndOr" text="OR"/>
-	            <!--<ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav" text="★"/>-->
-	            <ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav"/>
-	            	
-	            <Pane HBox.hgrow="ALWAYS"/>   <!-- 👈 separador -->
-    			<Button fx:id="btnNueva">
-				    <HBox.margin>
-				        <Insets right="25"/>
-				    </HBox.margin>
-				</Button>
+	    <VBox spacing="0">
+	        <!-- Title bar personalizada -->
+	        <HBox fx:id="titleBar" alignment="CENTER_LEFT" styleClass="titlebar">
+	            <!-- Grabbable area -->
+	            <Label text="Píldoras" styleClass="titlebar-title"/>
+	            <Pane HBox.hgrow="ALWAYS"/>
+	            <Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
 	        </HBox>
+	    
+		    <VBox spacing="5">
+		        <padding>
+		            <Insets top="10" right="10" bottom="10" left="10"/>
+		        </padding>
+		        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="app-header">
+			        <ImageView fx:id="imgLogo" fitHeight="64" preserveRatio="true" pickOnBounds="true"/>
+					
+					<Separator orientation="VERTICAL" styleClass="v-sep"/>
+		        
+		            <Label text="Buscar:"/>
+		            <TextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
+	
+					<Separator orientation="VERTICAL" styleClass="v-sep"/>
+	
+		            <Label text="Tags:"/>
+		            <TextField fx:id="txtFiltroTags" promptText="Buscar por tags..."/>
+		
+					<Separator orientation="VERTICAL" styleClass="v-sep"/>
+	
+		            <ToggleButton fx:id="btnAndOr" text="OR"/>
+		            <ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav"/>
+	
+					<Separator orientation="VERTICAL" styleClass="v-sep"/>
+	
+		            <Pane HBox.hgrow="ALWAYS"/>
+	    			<Button fx:id="btnNueva">
+					</Button>
+	
+					<Separator orientation="VERTICAL" styleClass="v-sep"/>
+		            
+		            <ToggleButton fx:id="btnTema" styleClass="theme-toggle"/>
+	
+		        </HBox>
+		    </VBox>
 	    </VBox>
 	</top>
 

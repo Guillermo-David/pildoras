@@ -9,6 +9,7 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeRegular;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import io.github.guillermo_david.MainApp;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.javafx.StatusBus;
@@ -66,23 +67,39 @@ public class ListadoPildorasController {
 
 	private String columnaOrden = "titulo"; // por defecto
 	private String direccionOrden = "ASC";
+	
+	private double dragOffsetX, dragOffsetY;
+	
+	private Image logoLight;
+	private Image logoDark;
+	
+	String base = null;
+    String light = null;
+    String dark  = null;
 
 	private Node topBackup;
 	private Node centerBackup;
 
 	@FXML private BorderPane root;
-	@FXML private Button btnNueva, btnAnterior, btnSiguiente;
-	@FXML private HBox paginationBox, statusBar;
+	@FXML private Button btnNueva, btnAnterior, btnSiguiente, btnClose;
+	@FXML private HBox paginationBox, statusBar, titleBar;
 	@FXML private Label lblPagina, lblStatus;
 	@FXML private TableView<Pildora> table;
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
 	@FXML private TableColumn<Pildora, Void> colFav, colAcciones;
 	@FXML private TextField txtFiltroTexto, txtFiltroTags;
-	@FXML private ToggleButton btnAndOr, btnSoloFav;
+	@FXML private ToggleButton btnAndOr, btnSoloFav, btnTema;
 	@FXML private ImageView imgLogo;
 
 	@FXML
 	public void initialize() {
+
+		base = MainApp.class.getResource("/css/base.css").toExternalForm();
+	    light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();
+	    dark  = MainApp.class.getResource("/css/theme-dark.css").toExternalForm();
+	    
+	    logoLight = new Image(getClass().getResource("/icons/gdg_B.png").toExternalForm(), 0, 64, true, true);
+	    logoDark  = new Image(getClass().getResource("/icons/gdg_W.png").toExternalForm(),  0, 64, true, true);
 
 		setStatusBar();
 		setTableProperties();
@@ -96,7 +113,9 @@ public class ListadoPildorasController {
 		setLogo();
 		setTxtFiltros();
 		setSceneProperties();
-
+		initThemeToggle();
+		hookLogoToTheme();
+		initCustomTitleBar();
 	}
 
 	private void setTxtFiltros() {
@@ -268,13 +287,11 @@ public class ListadoPildorasController {
 		btnNueva.setText("");
 		btnNueva.setTooltip(new Tooltip("Nueva (Ctrl+N)"));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
-		btnNueva.getStyleClass().add("button-right");
-		
+//		btnNueva.getStyleClass().add("button-right");
+		btnNueva.getStyleClass().add("icon-btn");
+
 		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.PLUS);
 		btnNueva.setGraphic(nuevaIcon);
-//		nuevaIcon.getStyleClass().add("star-icon"); // clase propia para CSS
-		
-		
 		
 		
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
@@ -291,6 +308,26 @@ public class ListadoPildorasController {
 				paginaActual++;
 				refrescarTabla();
 			}
+		});
+		
+		// Botón de tema con dos iconos superpuestos y tamaño fijo
+		btnTema.getStyleClass().add("theme-toggle");
+		btnTema.setText(null);
+
+		var moon = new FontIcon(FontAwesomeRegular.MOON);
+		var sun  = new FontIcon(FontAwesomeRegular.SUN);
+		moon.setIconSize(18);
+		sun.setIconSize(18);
+
+		// StackPane con ambos iconos, mostramos uno u otro según el estado
+		var iconSwap = new javafx.scene.layout.StackPane(moon, sun);
+		sun.visibleProperty().bind(btnTema.selectedProperty());           // seleccionado = sol
+		moon.visibleProperty().bind(btnTema.selectedProperty().not());    // no seleccionado = luna
+		btnTema.setGraphic(iconSwap);
+
+		// si cambias el tema, aquí disparas tu lógica de tema:
+		btnTema.selectedProperty().addListener((o, old, sel) -> {
+		    setTheme(sel); // sel=true -> dark, o al revés según tu implementación
 		});
 	}
 
@@ -742,5 +779,84 @@ public class ListadoPildorasController {
 	    var dialogStage = (javafx.stage.Stage) alert.getDialogPane().getScene().getWindow();
 	    dialogStage.getIcons().setAll(owner.getIcons());
 	}
+	
+	private void hookLogoToTheme() {
+	    // Cuando haya Scene, coloca el logo que toque según el tema actual
+	    root.sceneProperty().addListener((obs, old, scene) -> {
+	        if (scene == null) return;
+	        boolean isDark = scene.getStylesheets().contains(dark);
+	        imgLogo.setImage(isDark ? logoDark : logoLight);
+	    });
+	}
 
+	// Llama a este método cuando cambies de tema (donde haces el toggle)
+	private void applyTheme(boolean darkMode) {
+	    var scene = root.getScene();
+	    if (scene == null) return;
+	    var ss = scene.getStylesheets();
+	    ss.clear();
+	    ss.add(base);
+	    ss.add(darkMode ? dark : light);
+
+	    // Actualiza logo
+	    imgLogo.setImage(darkMode ? logoDark : logoLight);
+	}
+	
+	private void initThemeToggle() {
+	    root.sceneProperty().addListener((obs, oldScene, scene) -> {
+	        if (scene == null) return;
+
+	        boolean isDark = scene.getStylesheets().contains(dark);
+	        btnTema.setSelected(isDark);
+	        updateThemeIcon(isDark);
+
+	        btnTema.selectedProperty().addListener((o, oldVal, darkMode) -> {
+	            applyTheme(darkMode);
+	            updateThemeIcon(darkMode);
+	        });
+	    });
+	}
+
+	private void updateThemeIcon(boolean darkMode) {
+	    // con Ikonli:
+	    var icon = new FontIcon(darkMode ? FontAwesomeSolid.SUN : FontAwesomeSolid.MOON);
+	    icon.getStyleClass().add("star-icon"); // hereda color del tema
+	    btnTema.setGraphic(icon);
+	    btnTema.setText(null); // solo icono
+	}
+
+	void setTheme(boolean darkMode) {
+		var scene = root.getScene();
+	    var ss = scene.getStylesheets();
+	    ss.clear();
+	    ss.add(base);
+	    ss.add(darkMode ? dark : light);
+	}
+
+	private void initCustomTitleBar() {
+	    // Cerrar
+	    btnClose.setOnAction(e -> {
+	        Stage st = (Stage) root.getScene().getWindow();
+	        st.close();
+	    });
+
+	    // Arrastrar
+	    titleBar.setOnMousePressed(e -> {
+	        Stage st = (Stage) root.getScene().getWindow();
+	        dragOffsetX = e.getScreenX() - st.getX();
+	        dragOffsetY = e.getScreenY() - st.getY();
+	        e.consume();
+	    });
+
+	    titleBar.setOnMouseDragged(e -> {
+	        Stage st = (Stage) root.getScene().getWindow();
+	        st.setX(e.getScreenX() - dragOffsetX);
+	        st.setY(e.getScreenY() - dragOffsetY);
+	        e.consume();
+	    });
+
+	    // Evita que el botón “capture” el arrastre
+	    btnClose.setOnMousePressed(e -> e.consume());
+	    btnClose.setOnMouseDragged(e -> e.consume());
+	}
 }

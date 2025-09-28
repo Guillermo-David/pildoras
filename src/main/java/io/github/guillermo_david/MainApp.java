@@ -35,15 +35,18 @@ public class MainApp extends Application{
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
 	    Scene scene = new Scene(fxmlLoader.load(), 1024, 794);
 
-	    var css = MainApp.class.getResource("/css/app.css");
-	    if (css != null) scene.getStylesheets().add(css.toExternalForm());
+	    var base = MainApp.class.getResource("/css/base.css").toExternalForm();
+	    var light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();
+	    var dark  = MainApp.class.getResource("/css/theme-dark.css").toExternalForm();
+
+	    scene.getStylesheets().setAll(base, light);
 
 	    // 👇 Establece iconos PNG (con alpha) ANTES del show()
 	    var icons = loadIcons();
 	    if (!icons.isEmpty()) stage.getIcons().setAll(icons);
 
 	    stage.setTitle("Píldoras");
-	    stage.initStyle(javafx.stage.StageStyle.DECORATED); // asegúrate de no usar UNIFIED/TRANSPARENT
+	    stage.initStyle(javafx.stage.StageStyle.UNDECORATED); // asegúrate de no usar UNIFIED/TRANSPARENT
 	    stage.setResizable(false);
 	    stage.setScene(scene);
 	    stage.show();

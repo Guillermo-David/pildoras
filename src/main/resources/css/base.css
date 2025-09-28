@@ -1,0 +1,277 @@
+/* ========= Variables de uso en base (definidas en cada theme) =========
+   -c-bg, -c-bg-subtle, -c-text, -c-text-muted, -c-border, -c-accent
+   -c-row-hover, -c-row-selected, -c-input-bg, -c-input-border, -c-shadow
+   ==================================================================== */
+
+/* ---------- Status bar ---------- */
+.status-bar {
+	-fx-background-color: linear-gradient(to bottom, -c-bg, -c-bg-subtle);
+	-fx-border-color: -c-border;
+	-fx-border-width: 1 0 0 0;
+}
+
+#lblStatus {
+	-fx-text-alignment: center;
+	-fx-alignment: center;
+	-fx-font-size: 14px;
+	-fx-font-weight: 600;
+	-fx-effect: dropshadow(gaussian, -c-shadow, 2, 0.0, 0, 1);
+}
+
+.status-bar.status-info>#lblStatus {
+	-fx-text-fill: #0b57d0 !important;
+}
+
+.status-bar.status-success>#lblStatus {
+	-fx-text-fill: #137333 !important;
+}
+
+.status-bar.status-warn>#lblStatus {
+	-fx-text-fill: #b06a00 !important;
+}
+
+.status-bar.status-error>#lblStatus {
+	-fx-text-fill: #b3261e !important;
+}
+
+/* ---------- App header ---------- */
+.app-header {
+	-fx-background-color: linear-gradient(to bottom, -c-bg, -c-bg-subtle);
+}
+
+.app-header .separator:vertical {
+	-fx-opacity: .35;
+}
+
+/* ---------- Estrella favoritas ---------- */
+.button.star {
+	-fx-background-color: transparent;
+	-fx-border-color: transparent;
+	-fx-cursor: hand;
+}
+
+.star-icon {
+	/* Ikonli */
+	-fx-icon-size: 16px;
+	-fx-icon-color: -fx-text-base-color;
+}
+
+.star-icon.star-fav {
+	-fx-icon-color: #f6b800;
+}
+
+.button.star:hover .star-icon {
+	-fx-icon-color: derive(#f6b800, -15%);
+}
+
+/* ---------- Botón/icono genérico (acciones) ---------- */
+.icon-btn {
+	-fx-background-color: transparent;
+	-fx-border-color: transparent;
+	-fx-padding: 4 6;
+	-fx-cursor: hand;
+	-fx-background-radius: 6;
+	-fx-border-radius: 6;
+}
+
+.icon-btn:hover {
+	-fx-background-color: rgba(0, 0, 0, 0.05);
+}
+
+.icon-btn .ikonli-font-icon {
+	-fx-icon-size: 16px;
+	-fx-icon-color: -fx-text-base-color;
+}
+
+.icon-btn:hover .ikonli-font-icon {
+	-fx-icon-color: -fx-accent;
+}
+
+.table-row-cell .icon-btn:focused .ikonli-font-icon {
+	-fx-icon-color: -fx-accent;
+}
+
+.table-row-cell .icon-btn.delete:hover .ikonli-font-icon {
+	-fx-icon-color: #b3261e;
+}
+
+/* ---------- Toggle “solo favoritas” ---------- */
+.toggle-button.toggle-fav {
+	-fx-padding: 4 8;
+	-fx-background-radius: 999;
+	-fx-border-radius: 999;
+	-fx-background-color: transparent;
+	-fx-border-color: -fx-box-border;
+	-fx-border-width: 1;
+}
+
+.toggle-button.toggle-fav:hover {
+	-fx-background-color: -fx-control-inner-background;
+}
+
+.toggle-button.toggle-fav:selected {
+	-fx-background-color: rgba(246, 184, 0, 0.15);
+	-fx-border-color: #f6b800;
+}
+
+.toggle-button.toggle-fav .ikonli-font-icon,
+.toggle-button.toggle-fav .star-icon {
+	-fx-icon-size: 18px;
+}
+
+.toggle-button.toggle-fav:selected .ikonli-font-icon,
+.toggle-button.toggle-fav .star-icon.star-fav {
+	-fx-icon-color: #f6b800;
+}
+
+/* ---------- TableView (común) ---------- */
+.table-view {
+	-fx-text-background-color: -c-text;
+	-fx-table-cell-border-color: derive(-c-border, -15%);
+}
+
+.table-view .column-header-background {
+	-fx-background-color: -c-bg-subtle;
+	-fx-border-color: -c-border;
+	-fx-border-width: 0 0 1 0;
+}
+
+.table-view .column-header .label {
+	-fx-text-fill: -c-text-muted;
+	-fx-font-weight: 600;
+}
+
+.table-view .filler {
+	-fx-background-color: -c-bg-subtle;
+	-fx-border-color: -c-border;
+	-fx-border-width: 0 0 1 0;
+}
+
+.table-row-cell {
+	-fx-background-insets: 0;
+}
+
+.table-cell {
+	-fx-text-fill: -c-text;
+}
+
+.table-row-cell:filled:hover {
+	-fx-background-color: -c-row-hover;
+}
+
+.table-row-cell:filled:selected,
+.table-row-cell:filled:selected:hover {
+	-fx-background-color: -c-row-selected;
+}
+
+.table-view .placeholder .label {
+	-fx-text-fill: -c-text-muted;
+}
+
+/* Si te gustan filas alternas (opcional) */
+.table-row-cell:odd {
+	-fx-background-color: derive(-fx-control-inner-background, -3%);
+}
+
+/* ---------- Inputs (TextField/TextArea) ---------- */
+.text-input {
+	-fx-background-color: -c-input-bg;
+	-fx-text-fill: -c-text;
+	-fx-background-insets: 0;
+	-fx-background-radius: 8;
+	-fx-border-color: -c-input-border;
+	-fx-border-radius: 8;
+	-fx-border-width: 1;
+	-fx-highlight-fill: derive(-c-accent, 20%);
+	-fx-highlight-text-fill: white;
+	-fx-caret-color: -c-text;
+}
+
+.text-input:focused {
+	-fx-border-color: -c-accent;
+	-fx-effect: dropshadow(gaussian, -c-shadow, 6, 0, 0, 1);
+}
+
+.text-input:empty .prompt-text,
+.text-input:focused:empty .prompt-text {
+	-fx-fill: -c-text-muted;
+}
+
+/* ---------- Separadores y tooltips ---------- */
+.separator *.line {
+	-fx-background-color: -c-border;
+}
+
+.tooltip {
+	-fx-background-color: -c-bg-subtle;
+	-fx-text-fill: -c-text;
+	-fx-border-color: -c-border;
+}
+
+.table-cell>.label {
+	-fx-alignment: CENTER_LEFT;
+}
+
+.ikonli-font-icon {
+	-fx-icon-color: -gdg-icon-color;
+}
+
+/* Tamaño por defecto (ajústalo si quieres) */
+.ikonli-font-icon {
+	-fx-icon-size: 16px;
+}
+.app-header {
+  -fx-padding: 10 16 10 10; /* top right bottom left */
+  /* si ya usas VBox padding exterior, esto es el padding interno del HBox */
+}
+.v-sep {
+  -fx-padding: 0;               /* quita holguras del skin */
+}
+.v-sep:vertical .line {
+  -fx-min-width: 1;
+  -fx-pref-width: 1;
+  -fx-max-width: 1;
+  -fx-background-color: -gdg-separator; /* definido por tema */
+  -fx-opacity: 1;               /* el color ya viene con alpha */
+}
+
+/* Botón circular, tamaño fijo, icono centrado */
+.theme-toggle {
+  -fx-min-width: 36;
+  -fx-pref-width: 36;
+  -fx-max-width: 36;
+  -fx-min-height: 36;
+  -fx-pref-height: 36;
+  -fx-max-height: 36;
+  -fx-padding: 0;               /* que no crezca por padding */
+  -fx-background-radius: 999;
+  -fx-border-radius: 999;
+  -fx-content-display: graphic-only;
+}
+
+/* --- Title bar minimal --- */
+.titlebar {
+    -fx-background-color: -fx-background;   /* tomará del tema */
+    -fx-padding: 6 10;
+    -fx-spacing: 8;
+    -fx-border-color: -fx-box-border;
+    -fx-border-width: 0 0 1 0;
+}
+
+.titlebar-title {
+    -fx-text-fill: -fx-text-base-color;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.titlebar-close {
+    -fx-background-radius: 6;
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-cursor: hand;
+    -fx-padding: 4 8;
+}
+.titlebar-close:hover {
+    -fx-background-color: rgba(255,0,0,0.12);
+    -fx-text-fill: #b3261e; /* rojo sutil */
+}

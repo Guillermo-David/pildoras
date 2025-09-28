@@ -1,0 +1,38 @@
+/* Paleta */
+.root {
+    -c-bg:            #0f1115;
+    -c-bg-subtle:     #151a21;
+    -c-text:          #e6edf3;
+    -c-text-muted:    #9ea7b3;
+    -c-border:        #2d333b;
+    -c-accent:        #8ab4f8;
+    -c-row-hover:     #1a1f27;
+    -c-row-selected:  #0b2942;
+    -c-input-bg:      #141922;     /* NO negro puro; legible */
+    -c-input-border:  #2b3038;
+    -c-shadow:        rgba(0,0,0,0.55);
+}
+
+/* Mapeo looked-up de JavaFX */
+.root {
+    -fx-base:                         -c-bg;
+    -fx-background:                   -c-bg;
+    -fx-accent:                       -c-accent;
+    -fx-text-base-color:              -c-text;
+    -fx-text-inner-color:             -c-text;
+    -fx-control-inner-background:     -c-bg;       /* fondo filas */
+    -fx-cell-hover-color:             -c-row-hover;
+    -fx-box-border:                   -c-border;
+	-gdg-icon-color: #e7e9ed;
+}
+
+/* Ajuste hover de icon-btn en dark (el de base usa rgba negro) */
+.root .icon-btn:hover { -fx-background-color: rgba(255,255,255,0.06); }
+
+/* Filas alternas (oscuro) opcional */
+.table-row-cell:odd { -fx-background-color: derive(-fx-control-inner-background, 3%); }
+
+.root {
+  /* línea clara tenue sobre fondo oscuro */
+  -gdg-separator: rgba(255,255,255,0.20);
+}
