@@ -81,7 +81,7 @@ public class ListadoPildorasController {
 
 	@FXML private BorderPane root;
 	@FXML private Button btnNueva, btnAnterior, btnSiguiente, btnClose;
-	@FXML private HBox paginationBox, statusBar, titleBar;
+	@FXML private HBox paginationBox, statusBar, titleBar, appHeader;
 	@FXML private Label lblPagina, lblStatus;
 	@FXML private TableView<Pildora> table;
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
@@ -122,6 +122,10 @@ public class ListadoPildorasController {
 
 	    // Barra de título custom
 	    initCustomTitleBar();
+	    
+	    if (centerBackup == null) {
+	        centerBackup = root.getCenter();  // guarda el “centro del listado” inicial
+	    }
 
 	}
 
@@ -784,26 +788,39 @@ public class ListadoPildorasController {
 	}
 
 	private void ocultarFiltrosYPaginacion() {
-		if (!uiOculta) {
-			topBackup = root.getTop();
-			centerBackup = root.getCenter();
-			root.setTop(null);
-			// 👇 oculta solo la paginación, NO la barra de estado
-			paginationBox.setManaged(false);
-			paginationBox.setVisible(false);
-			uiOculta = true;
-		}
+	    if (!uiOculta) {
+	        // Guarda el centro actual del listado (tabla/contenedor)
+	        centerBackup = root.getCenter();
+
+	        if (appHeader != null) {
+	            appHeader.setManaged(false);
+	            appHeader.setVisible(false);
+	        }
+	        paginationBox.setManaged(false);
+	        paginationBox.setVisible(false);
+	        uiOculta = true;
+	    }
 	}
 
 	private void restaurarFiltrosYPaginacion() {
-		if (uiOculta) {
-			root.setTop(topBackup);
-//            root.setBottom(bottomBackup);
-			root.setCenter(centerBackup);
-			paginationBox.setManaged(true);
-			paginationBox.setVisible(true);
-			uiOculta = false;
-		}
+	    if (uiOculta) {
+	        if (appHeader != null) {
+	            appHeader.setManaged(true);
+	            appHeader.setVisible(true);
+	        }
+	        paginationBox.setManaged(true);
+	        paginationBox.setVisible(true);
+
+	        if (centerBackup != null) {
+	            root.setCenter(centerBackup);  // vuelve el listado
+	        }
+
+	        uiOculta = false;
+
+	        // opcional, calidad de vida:
+	        table.requestFocus();
+	        refrescarTabla(); // si quieres refrescar al volver
+	    }
 	}
 
 	private Button iconButton(FontIcon icon, String tooltip, Runnable action) {

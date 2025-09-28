@@ -1,57 +1,68 @@
 /* Paleta */
 .root {
-    -c-bg:            #ffffff;
-    -c-bg-subtle:     #f7f7f7;
-    -c-text:          #1f2328;
-    -c-text-muted:    #6e7781;
-    -c-border:        #d0d7de;
-    -c-accent:        #0b57d0;
-    -c-row-hover:     #f0f3f6;
-    -c-row-selected:  #e8f0fe;
-    -c-input-bg:      #ffffff;
-    -c-input-border:  #c9d1d9;
-    -c-shadow:        rgba(0,0,0,0.10);
+	-c-bg: #ffffff;
+	-c-bg-subtle: #f7f7f7;
+	-c-text: #1f2328;
+	-c-text-muted: #6e7781;
+	-c-border: #d0d7de;
+	-c-accent: #0b57d0;
+	-c-row-hover: #f0f3f6;
+	-c-row-selected: #e8f0fe;
+	-c-input-bg: #ffffff;
+	-c-input-border: #c9d1d9;
+	-c-shadow: rgba(0, 0, 0, 0.10);
 }
 
 /* Mapeo looked-up de JavaFX (coherencia visual) */
 .root {
-    -fx-base:                         -c-bg;
-    -fx-background:                   -c-bg;
-    -fx-accent:                       -c-accent;
-    -fx-text-base-color:              -c-text;
-    -fx-text-inner-color:             -c-text;
-    -fx-control-inner-background:     -c-bg;      /* fondo filas table */
-    -fx-cell-hover-color:             -c-row-hover;
-    -fx-box-border:                   -c-border;
+	-fx-base: -c-bg;
+	-fx-background: -c-bg;
+	-fx-accent: -c-accent;
+	-fx-text-base-color: -c-text;
+	-fx-text-inner-color: -c-text;
+	-fx-control-inner-background: -c-bg;
+	/* fondo filas table */
+	-fx-cell-hover-color: -c-row-hover;
+	-fx-box-border: -c-border;
 	-gdg-icon-color: #1f2328;
 }
+
 .root {
-  /* línea gris tenue sobre fondo claro */
-  -gdg-separator: rgba(0,0,0,0.5);
+	/* línea gris tenue sobre fondo claro */
+	-gdg-separator: rgba(0, 0, 0, 0.5);
 }
 
 /* Sol = mismo dorado que la estrella favorita */
 .theme-toggle .icon-sun {
-    -fx-icon-color: #f6b800; /* mismo que .star-icon.star-fav */
+	-fx-icon-color: #f6b800;
+	/* mismo que .star-icon.star-fav */
 }
 
 /* Luna = acento “chulo” para claro (violeta/indigo) */
 .theme-toggle .icon-moon {
-    -fx-icon-color: #6c63ff; /* puedes probar #6c63ff o #7b5cff */
+	-fx-icon-color: #6c63ff;
+	/* puedes probar #6c63ff o #7b5cff */
 }
 
 /* Opcional: hover un pelín más intenso */
 .theme-toggle:hover .icon-sun {
-    -fx-icon-color: derive(#f6b800, -15%);
+	-fx-icon-color: derive(#f6b800, -15%);
 }
+
 .theme-toggle:hover .icon-moon {
-    -fx--muted-icon: derive(#6c63ff, -30%);
+	-fx--muted-icon: derive(#6c63ff, -30%);
 }
 
 /* Placeholder más suave en claro */
 .root {
-    -fx-placeholder-color: rgba(0,0,0,0.45);
+	-fx-placeholder-color: rgba(0, 0, 0, 0.45);
 }
-.text-input, .text-area {
-    -fx-prompt-text-fill: -fx-placeholder-color;
+
+.text-input,
+.text-area {
+	-fx-prompt-text-fill: -fx-placeholder-color;
 }
+
+.detail-title { -fx-font-size: 18px; -fx-font-weight: bold; }
+.detail-meta  { -fx-text-fill: #5f6b7a; }
+.detail-tags  { -fx-text-fill: #374151; -fx-font-style: italic; }

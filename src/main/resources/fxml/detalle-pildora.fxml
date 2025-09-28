@@ -13,9 +13,10 @@
         <Insets top="15" right="15" bottom="15" left="15"/>
     </padding>
 
-    <Label fx:id="lblTitulo" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-    <Label fx:id="lblFecha" style="-fx-text-fill: gray;"/>
-    <Label fx:id="lblTags" style="-fx-font-style: italic;"/>
+    <Label fx:id="lblTitulo" styleClass="detail-title"/>
+	<Label fx:id="lblFecha"  styleClass="detail-meta"/>
+	<Label fx:id="lblTags"   styleClass="detail-tags"/>
+
 
     <Separator/>
 

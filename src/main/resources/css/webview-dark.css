@@ -1,0 +1,68 @@
+/* Fondo y texto base */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0f1216;   /* igual o cercano a tu theme-dark */
+  color: #e7ecf3;
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+/* Párrafos y títulos */
+h1,h2,h3,h4,h5,h6 { color: #eef3fa; margin: 0 0 .6em; line-height: 1.25; }
+p { margin: 0 0 .8em; }
+
+/* Enlaces */
+a { color: #8ab4ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Citas */
+blockquote {
+  margin: .8em 0;
+  padding: .6em .9em;
+  border-left: 4px solid #2a3240;
+  background: #121721;
+  color: #ccd6e5;
+  border-radius: 6px;
+}
+
+/* Código inline */
+code {
+  background: #1b2330;
+  color: #e8edf5;
+  padding: .15em .35em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.95em;
+}
+
+/* Bloques de código */
+pre {
+  margin: .9em 0;
+  padding: .9em 1em;
+  background: #111722;     /* más oscuro que inline */
+  color: #e6ebf2;
+  border-radius: 8px;
+  overflow: auto;
+}
+pre code {
+  background: transparent; /* evita doble fondo */
+  padding: 0;
+  font-size: 0.95em;
+}
+
+/* Listas */
+ul,ol { margin: 0 0 .8em 1.35em; }
+
+/* Tablas básicas */
+table { border-collapse: collapse; margin: .9em 0; width: 100%; }
+th, td { border: 1px solid #243044; padding: .5em .6em; }
+th { background: #0f1826; color: #eaf1fa; }
+
+/* Separadores */
+hr { border: none; border-top: 1px solid #263040; margin: 1.2em 0; }
+
+/* Imágenes (opcional) */
+img { max-width: 100%; }
+
+/* Selección de texto */
+::selection { background: #2c4b8a; color: white; }

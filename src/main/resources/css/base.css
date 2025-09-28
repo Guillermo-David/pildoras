@@ -220,97 +220,110 @@
 .ikonli-font-icon {
 	-fx-icon-size: 16px;
 }
+
 .app-header {
-  -fx-padding: 10 16 10 10; /* top right bottom left */
-  /* si ya usas VBox padding exterior, esto es el padding interno del HBox */
+	-fx-padding: 10 16 10 10;
+	/* top right bottom left */
+	/* si ya usas VBox padding exterior, esto es el padding interno del HBox */
 }
+
 .v-sep {
-  -fx-padding: 0;               /* quita holguras del skin */
+	-fx-padding: 0;
+	/* quita holguras del skin */
 }
+
 .v-sep:vertical .line {
-  -fx-min-width: 1;
-  -fx-pref-width: 1;
-  -fx-max-width: 1;
-  -fx-background-color: -gdg-separator; /* definido por tema */
-  -fx-opacity: 1;               /* el color ya viene con alpha */
+	-fx-min-width: 1;
+	-fx-pref-width: 1;
+	-fx-max-width: 1;
+	-fx-background-color: -gdg-separator;
+	/* definido por tema */
+	-fx-opacity: 1;
+	/* el color ya viene con alpha */
 }
 
 /* Botón circular, tamaño fijo, icono centrado */
 .theme-toggle {
-  -fx-min-width: 36;
-  -fx-pref-width: 36;
-  -fx-max-width: 36;
-  -fx-min-height: 36;
-  -fx-pref-height: 36;
-  -fx-max-height: 36;
-  -fx-padding: 0;               /* que no crezca por padding */
-  -fx-background-radius: 999;
-  -fx-border-radius: 999;
-  -fx-content-display: graphic-only;
+	-fx-min-width: 36;
+	-fx-pref-width: 36;
+	-fx-max-width: 36;
+	-fx-min-height: 36;
+	-fx-pref-height: 36;
+	-fx-max-height: 36;
+	-fx-padding: 0;
+	/* que no crezca por padding */
+	-fx-background-radius: 999;
+	-fx-border-radius: 999;
+	-fx-content-display: graphic-only;
 }
 
 /* Iconos del botón de tema: tamaño y ligera escala en hover */
 .theme-toggle .theme-icon {
-    -fx-icon-size: 18px;
+	-fx-icon-size: 18px;
 }
 
 .theme-toggle:hover .theme-icon {
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
+	-fx-scale-x: 1.05;
+	-fx-scale-y: 1.05;
 }
 
 
 /* --- Title bar minimal --- */
 .titlebar {
-    -fx-background-color: -fx-background;   /* tomará del tema */
-    -fx-padding: 6 10;
-    -fx-spacing: 8;
-    -fx-border-color: -fx-box-border;
-    -fx-border-width: 0 0 1 0;
+	-fx-background-color: -fx-background;
+	/* tomará del tema */
+	-fx-padding: 6 10;
+	-fx-spacing: 8;
+	-fx-border-color: -fx-box-border;
+	-fx-border-width: 0 0 1 0;
 }
 
 .titlebar-title {
-    -fx-text-fill: -fx-text-base-color;
-    -fx-font-size: 13px;
-    -fx-font-weight: 600;
+	-fx-text-fill: -fx-text-base-color;
+	-fx-font-size: 13px;
+	-fx-font-weight: 600;
 }
 
 .titlebar-close {
-    -fx-background-radius: 6;
-    -fx-background-color: transparent;
-    -fx-text-fill: -fx-text-base-color;
-    -fx-cursor: hand;
-    -fx-padding: 4 8;
+	-fx-background-radius: 6;
+	-fx-background-color: transparent;
+	-fx-text-fill: -fx-text-base-color;
+	-fx-cursor: hand;
+	-fx-padding: 4 8;
 }
+
 .titlebar-close:hover {
-    -fx-background-color: rgba(255,0,0,0.12);
-    -fx-text-fill: #b3261e; /* rojo sutil */
+	-fx-background-color: rgba(255, 0, 0, 0.12);
+	-fx-text-fill: #b3261e;
+	/* rojo sutil */
 }
 
 /* Botón pin */
 .button.pin {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-cursor: hand;
-    -fx-padding: 4 6;
+	-fx-background-color: transparent;
+	-fx-border-color: transparent;
+	-fx-cursor: hand;
+	-fx-padding: 4 6;
 }
 
 /* Icono pin: estado normal = atenuado */
 /* base.css */
 .pin-icon {
-    -fx-icon-size: 16px;
-    -fx-icon-color: -fx-muted-icon; /* 👈 se define por tema */
+	-fx-icon-size: 16px;
+	-fx-icon-color: -fx-muted-icon;
+	/* 👈 se define por tema */
 }
 
 .pin-icon.pin-active {
-    -fx-icon-color: #f6b800; /* dorado cuando está fijada */
+	-fx-icon-color: #f6b800;
+	/* dorado cuando está fijada */
 }
 
 /* Hover sutil cuando no está activo */
 .button.pin:hover .pin-icon:not(.pin-active) {
-    -fx-opacity: 0.7;
+	-fx-opacity: 0.7;
 }
 
 .root {
-    -fx-muted-icon: rgb(204, 204, 206);
+	-fx-muted-icon: rgb(204, 204, 206);
 }

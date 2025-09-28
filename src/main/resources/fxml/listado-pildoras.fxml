@@ -11,52 +11,49 @@
             fx:id="root">
 
     <top>
-	    <VBox spacing="0">
-	        <!-- Title bar personalizada -->
-	        <HBox fx:id="titleBar" alignment="CENTER_LEFT" styleClass="titlebar">
-	            <!-- Grabbable area -->
-	            <Label text="Píldoras" styleClass="titlebar-title"/>
-	            <Pane HBox.hgrow="ALWAYS"/>
-	            <Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
-	        </HBox>
-	    
-		    <VBox spacing="5">
-		        <padding>
-		            <Insets top="10" right="10" bottom="10" left="10"/>
-		        </padding>
-		        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="app-header">
-			        <ImageView fx:id="imgLogo" fitHeight="64" preserveRatio="true" pickOnBounds="true"/>
-					
-					<Separator orientation="VERTICAL" styleClass="v-sep"/>
-		        
-		            <Label text="Buscar:"/>
-		            <TextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
-	
-					<Separator orientation="VERTICAL" styleClass="v-sep"/>
-	
-		            <Label text="Tags:"/>
-		            <TextField fx:id="txtFiltroTags" promptText="Buscar por tags..."/>
+		<VBox spacing="0">
+		  <!-- Title bar fija -->
+		  <HBox fx:id="titleBar" alignment="CENTER_LEFT" styleClass="titlebar">
+		    <Label text="Píldoras" styleClass="titlebar-title"/>
+		    <Pane HBox.hgrow="ALWAYS"/>
+		    <Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
+		  </HBox>
 		
-					<Separator orientation="VERTICAL" styleClass="v-sep"/>
-	
-		            <ToggleButton fx:id="btnAndOr" text="OR"/>
-		            <ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav"/>
-	
-					<Separator orientation="VERTICAL" styleClass="v-sep"/>
-	
-		            <Pane HBox.hgrow="ALWAYS"/>
-	    			<Button fx:id="btnNueva">
-					</Button>
-	
-					<Separator orientation="VERTICAL" styleClass="v-sep"/>
-		            
-		            <ToggleButton fx:id="btnTema" styleClass="theme-toggle"/>
-	
-		        </HBox>
-		    </VBox>
-	    </VBox>
+		  <!-- Cabecera con filtros (ocultable) -->
+		  <HBox fx:id="appHeader" spacing="10" alignment="CENTER_LEFT" styleClass="app-header">
+		    <padding>
+		      <Insets top="10" right="10" bottom="10" left="10"/>
+		    </padding>
+		
+		    <ImageView fx:id="imgLogo" fitHeight="64" preserveRatio="true" pickOnBounds="true"/>
+		
+		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
+		
+		    <Label text="Buscar:"/>
+		    <TextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
+		
+		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
+		
+		    <Label text="Tags:"/>
+		    <TextField fx:id="txtFiltroTags" promptText="Buscar por tags..."/>
+		
+		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
+		
+		    <ToggleButton fx:id="btnAndOr" text="OR"/>
+		    <ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav"/>
+		
+		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
+		
+		    <Pane HBox.hgrow="ALWAYS"/>
+		
+		    <Button fx:id="btnNueva"/>
+		
+		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
+		
+		    <ToggleButton fx:id="btnTema" styleClass="theme-toggle"/>
+		  </HBox>
+		</VBox>
 	</top>
-
 
     <center>
 	    <TableView fx:id="table" prefHeight="600" prefWidth="800">
