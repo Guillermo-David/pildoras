@@ -165,15 +165,16 @@ public class DetallePildoraController {
     /** Envuélvelo con HTML + <style> CSS incrustado y fondo transparente */
     private String wrapHtmlWithCss(String bodyHtml, String css) {
         return """
-               <!doctype html>
-               <html>
-                 <head>
-                   <meta charset="UTF-8">
-                   <style>%s</style>
-                 </head>
-                 <body>%s</body>
-               </html>
-               """.formatted(css, bodyHtml);
+          <!doctype html>
+          <html>
+            <head>
+              <meta charset="UTF-8">
+              <meta name="color-scheme" content="dark light">
+              <style>%s</style>
+            </head>
+            <body>%s</body>
+          </html>
+        """.formatted(css, bodyHtml);
     }
 
     private String loadResourceAsString(String path) {

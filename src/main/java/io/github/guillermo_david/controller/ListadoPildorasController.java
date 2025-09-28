@@ -67,7 +67,7 @@ public class ListadoPildorasController {
 	private boolean shortcutsInstalados = false;
 	private boolean ignoreNextDelete = false;
 
-	private String columnaOrden = "titulo"; // por defecto
+	private String columnaOrden = "titulo";
 	private String direccionOrden = "ASC";
 	
 	private double dragOffsetX, dragOffsetY;
@@ -76,7 +76,6 @@ public class ListadoPildorasController {
     String light = null;
     String dark  = null;
 
-	private Node topBackup;
 	private Node centerBackup;
 
 	@FXML private BorderPane root;
