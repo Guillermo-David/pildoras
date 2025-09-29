@@ -14,7 +14,7 @@ public class TagDao {
 
     public Tag findOrCreate(String nombre) {
         // ¿Ya existe?
-        String select = "SELECT id, nombre FROM tags WHERE nombre = ?";
+        String select = "SELECT id, nombre FROM tags WHERE LOWER(nombre) = LOWER(?)";
         try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(select)) {
             pstmt.setString(1, nombre);
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -27,7 +27,7 @@ public class TagDao {
         }
 
         // Si no existe → insertar
-        String insert = "INSERT INTO tags (nombre) VALUES (?)";
+        String insert = "INSERT INTO tags (nombre) VALUES LOWER(?)";
         try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection()
                 .prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, nombre);

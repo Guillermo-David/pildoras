@@ -97,6 +97,8 @@ replay_pid*.log
 # --- OTROS (opcional, quita si quieres versionarlos) ---
 # Archivos de base de datos/backup locales
 *.db
+*.db-wal
+*.db-shm
 *.db-journal
 *.sqlite
 *.sqlite3
