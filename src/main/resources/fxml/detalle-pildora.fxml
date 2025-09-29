@@ -9,23 +9,35 @@
       fx:controller="io.github.guillermo_david.controller.DetallePildoraController"
       fx:id="root"
       spacing="10">
-    <padding>
-        <Insets top="15" right="15" bottom="15" left="15"/>
-    </padding>
+  <padding>
+    <Insets top="15" right="15" bottom="15" left="15"/>
+  </padding>
 
-    <Label fx:id="lblTitulo" styleClass="detail-title"/>
-	<Label fx:id="lblFecha"  styleClass="detail-meta"/>
-	<FlowPane fx:id="tagsBox" hgap="6" vgap="6"/>
+  <!-- CABECERA: izquierda (título/fecha/tags) + derecha (exportar) -->
+  <HBox spacing="10" alignment="CENTER_LEFT">
+    <VBox spacing="2">
+      <Label fx:id="lblTitulo" styleClass="detail-title"/>
+      <Label fx:id="lblFecha"  styleClass="detail-meta"/>
+      <FlowPane fx:id="tagsBox" hgap="6" vgap="6"/>
+    </VBox>
 
-    <Separator/>
+    <Region HBox.hgrow="ALWAYS"/> <!-- empuja a la derecha -->
 
-    <WebView fx:id="webContenido" VBox.vgrow="ALWAYS"/>
+    <HBox spacing="8" alignment="CENTER_RIGHT">
+      <Button fx:id="btnExportMd"   text="Exportar .md"   />
+      <Button fx:id="btnExportHtml" text="Exportar .html" />
+    </HBox>
+  </HBox>
 
-    <HBox spacing="10" alignment="CENTER_RIGHT">
-	    <Button fx:id="btnBorrar" text="🗑 Borrar" style="-fx-text-fill: red;"/>
-	    <Button fx:id="btnEditar" text="✏ Editar"/>
-	    <Button fx:id="btnVolver" text="⬅ Volver al listado"/>
-	</HBox>
+  <Separator/>
 
+  <WebView fx:id="webContenido" VBox.vgrow="ALWAYS"/>
 
+  <!-- Barra inferior, tal cual la tenías -->
+  <HBox spacing="10" alignment="CENTER_RIGHT">
+    <Button fx:id="btnBorrar" text="🗑 Borrar" style="-fx-text-fill: red;"/>
+    <Button fx:id="btnEditar" text="✏ Editar"/>
+    <Button fx:id="btnVolver" text="⬅ Volver al listado"/>
+  </HBox>
 </VBox>
+

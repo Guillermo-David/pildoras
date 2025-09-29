@@ -346,3 +346,11 @@
 }
 
 .tag-chip .chip-close:hover { -fx-opacity: .75; }
+
+
+/* Iconos de exportación, heredan color del tema */
+.export-icon {
+  -fx-icon-size: 18px;            /* por si acaso */
+  -fx-fill: -fx-text-base-color;  /* Ikonli respeta esto */
+}
+

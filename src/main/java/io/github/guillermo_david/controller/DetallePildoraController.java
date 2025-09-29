@@ -5,8 +5,14 @@ import java.util.function.Consumer;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeBrands;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import io.github.guillermo_david.dao.TagDao;
+import io.github.guillermo_david.export.PildoraExporter;
+import io.github.guillermo_david.javafx.ColorUtil;
+import io.github.guillermo_david.javafx.StatusBus;
 import io.github.guillermo_david.javafx.ThemeManager;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
@@ -34,7 +40,7 @@ public class DetallePildoraController {
     @FXML private Label lblTitulo, lblFecha;
     @FXML private FlowPane tagsBox;
     @FXML private WebView webContenido;
-    @FXML private Button btnVolver, btnEditar, btnBorrar;
+    @FXML private Button btnVolver, btnEditar, btnBorrar, btnExportMd, btnExportHtml;
 
     private Runnable onClose;
     private Consumer<Pildora> onEdit;
@@ -79,6 +85,8 @@ public class DetallePildoraController {
     	btnVolver.setOnAction(e -> { if (onClose != null) onClose.run(); });
     	btnEditar.setOnAction(e -> { if (onEdit != null && currentPildora != null) onEdit.accept(currentPildora); });
     	btnBorrar.setOnAction(e -> doDelete());
+    	btnExportMd.setOnAction(e -> doExportMd());
+        btnExportHtml.setOnAction(e -> doExportHtml());
     	
     	// Tooltips
     	btnVolver.setTooltip(new Tooltip("Volver (Esc)"));
@@ -119,6 +127,29 @@ public class DetallePildoraController {
                 (ListChangeListener<String>) c -> repaintTagChipsForTheme()
             );
         });
+    	
+    	{
+    	    var mdIcon = new FontIcon(FontAwesomeBrands.MARKDOWN);
+    	    mdIcon.setIconSize(18);
+    	    mdIcon.getStyleClass().add("export-icon");
+
+    	    var box = new HBox(6, mdIcon);
+    	    btnExportMd.setText(null);
+    	    btnExportMd.setGraphic(box);
+    	    btnExportMd.setTooltip(new Tooltip("Exportar a Markdown (.md)"));
+    	}
+
+    	// Botón HTML: icono + ".html"
+    	{
+    	    var htmlIcon = new FontIcon(FontAwesomeSolid.FILE_CODE);
+    	    htmlIcon.setIconSize(18);
+    	    htmlIcon.getStyleClass().add("export-icon");
+
+    	    var box = new HBox(6, htmlIcon);
+    	    btnExportHtml.setText(null);
+    	    btnExportHtml.setGraphic(box);
+    	    btnExportHtml.setTooltip(new Tooltip("Exportar a HTML (.html)"));
+    	}
     }
     
     private HBox buildTagChipReadOnly(String name) {
@@ -127,9 +158,9 @@ public class DetallePildoraController {
         var box = new HBox(6, lb);
         box.getStyleClass().add("tag-chip"); // reutiliza tu CSS del editor
         // color en función del tema actual
-        String bg = io.github.guillermo_david.javafx.ColorUtil
+        String bg = ColorUtil
                       .colorForTag(name, ThemeManager.load() == ThemeManager.Theme.DARK);
-        String fg = io.github.guillermo_david.javafx.ColorUtil.bestTextOn(bg);
+        String fg = ColorUtil.bestTextOn(bg);
         box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
         return box;
     }
@@ -140,8 +171,8 @@ public class DetallePildoraController {
         for (var n : tagsBox.getChildren()) {
             if (n instanceof HBox box && !box.getChildren().isEmpty() && box.getChildren().get(0) instanceof Label lb) {
                 String name = lb.getText();
-                String bg = io.github.guillermo_david.javafx.ColorUtil.colorForTag(name, dark);
-                String fg = io.github.guillermo_david.javafx.ColorUtil.bestTextOn(bg);
+                String bg = ColorUtil.colorForTag(name, dark);
+                String fg = ColorUtil.bestTextOn(bg);
                 box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
             }
         }
@@ -158,7 +189,67 @@ public class DetallePildoraController {
     public void setOnDelete(Consumer<Pildora> onDelete) {
         this.onDelete = onDelete;
     }
+    
+    private void doExportMd() {
+        if (currentPildora == null) return;
+        var chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Exportar a Markdown");
+        chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"));
+        chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".md");
+        var file = chooser.showSaveDialog(root.getScene().getWindow());
+        if (file == null) return;
+        try {
+            PildoraExporter.exportMarkdown(currentPildora, new TagDao(), file.toPath());
+            StatusBus.show("Exportada a " + file.getName(), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR, javafx.util.Duration.seconds(4));
+        }
+    }
 
+    private void doExportHtml() {
+        if (currentPildora == null) return;
+        var chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Exportar a HTML");
+        chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("HTML (*.html)", "*.html"));
+        chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".html");
+        var file = chooser.showSaveDialog(root.getScene().getWindow());
+        if (file == null) return;
+        try {
+            // Si quieres colores de chips idénticos a la app, puedes pasar un CSS generado aquí (opcional)
+        	var extraCss = buildChipsCssForHtml(currentPildora.getId()); // 👈 mismo color que en la app
+        	PildoraExporter.exportHtml(currentPildora, new TagDao(), file.toPath(), extraCss);
+            StatusBus.show("Exportada a " + file.getName(), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR, javafx.util.Duration.seconds(4));
+        }
+    }
+    
+    private String buildChipsCssForHtml(int pildoraId) {
+        var tagDao = new TagDao();
+        var tags = tagDao.findByPildoraId(pildoraId);
+        boolean dark = false; // el HTML por defecto es claro; pon true si quieres tema oscuro
+
+        StringBuilder css = new StringBuilder();
+        for (var t : tags) {
+            String name = t.getNombre();
+            String bg = ColorUtil.colorForTag(name, dark);
+            String fg = ColorUtil.bestTextOn(bg);
+            // usa selector por data-tag exacto
+            css.append(".chip[data-tag=\"").append(name).append("\"]{")
+               .append("background:").append(bg).append(";")
+               .append("color:").append(fg).append(";")
+               .append("}");
+        }
+        return css.toString();
+    }
+
+    private static String safeFilename(String s) {
+        String base = (s == null || s.isBlank()) ? "pildora" : s.trim();
+        base = base.replaceAll("[\\\\/:*?\"<>|]+", "_");
+        return base.length() > 60 ? base.substring(0, 60) : base;
+    }
     
     private void doDelete() {
         if (deletingNow || onDelete == null || currentPildora == null) return;
