@@ -119,6 +119,11 @@
       linear-gradient(derive(-fx-accent,-5%), derive(-fx-accent,-15%));
 }
 
+/* Botón Eliminar */
+.root .icon-btn.danger:hover {
+  -fx-background-color: rgba(229, 57, 53, 0.18);
+}
+
 /* Botón Cancelar (opcional, más discreto) */
 .dialog-pane .button-bar .button:cancel {
   -fx-background-color: #2a2f3a;

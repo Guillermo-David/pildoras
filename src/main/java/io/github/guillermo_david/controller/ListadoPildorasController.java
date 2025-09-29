@@ -457,7 +457,7 @@ public class ListadoPildorasController {
 	        );
 
 	        private final Button btnBorrar = iconButton(
-	        		new FontIcon(FontAwesomeRegular.TRASH_ALT), "Eliminar (Supr)",
+	        		new FontIcon(FontAwesomeSolid.TRASH), "Eliminar (Supr)",
 	            () -> {
 	                Pildora p = (Pildora) getTableRow().getItem();
 	                if (p == null) return;
@@ -485,7 +485,8 @@ public class ListadoPildorasController {
 	        protected void updateItem(Void item, boolean empty) {
 	            super.updateItem(item, empty);
 	            setGraphic(empty || getTableRow() == null || getTableRow().getItem() == null ? null : box);
-	            btnBorrar.getStyleClass().add("delete");
+//	            btnBorrar.getStyleClass().add("delete");
+	            btnBorrar.getStyleClass().addAll("icon-btn", "danger");
 	        }
 	    });
 	}

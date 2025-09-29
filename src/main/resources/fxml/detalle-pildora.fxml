@@ -14,19 +14,19 @@
   </padding>
 
   <!-- CABECERA: izquierda (título/fecha/tags) + derecha (exportar) -->
-  <HBox spacing="10" alignment="CENTER_LEFT">
-    <VBox spacing="2">
-      <Label fx:id="lblTitulo" styleClass="detail-title"/>
-      <Label fx:id="lblFecha"  styleClass="detail-meta"/>
-      <FlowPane fx:id="tagsBox" hgap="6" vgap="6"/>
+  <HBox spacing="10" alignment="TOP_LEFT">
+    <VBox spacing="4">
+        <Label fx:id="lblTitulo" styleClass="detail-title"/>
+        <Label fx:id="lblFecha"  styleClass="detail-meta"/>
+        <FlowPane fx:id="tagsBox" hgap="6" vgap="6"/>
     </VBox>
 
-    <Region HBox.hgrow="ALWAYS"/> <!-- empuja a la derecha -->
+    <!-- expansor para empujar a la derecha -->
+    <Pane HBox.hgrow="ALWAYS"/>
 
-    <HBox spacing="8" alignment="CENTER_RIGHT">
-      <Button fx:id="btnExportMd"   text="Exportar .md"   />
-      <Button fx:id="btnExportHtml" text="Exportar .html" />
-    </HBox>
+    <MenuButton fx:id="btnExportMenu"
+                styleClass="icon-btn"
+                popupSide="BOTTOM"/>
   </HBox>
 
   <Separator/>
