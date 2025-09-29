@@ -1,16 +1,15 @@
 package io.github.guillermo_david.controller;
 
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 
 import io.github.guillermo_david.dao.TagDao;
+import io.github.guillermo_david.javafx.ThemeManager;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
-import io.github.guillermo_david.theme.ThemeManager;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
@@ -23,6 +22,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
 import javafx.util.Duration;
@@ -30,7 +31,8 @@ import javafx.util.Duration;
 public class DetallePildoraController {
 
 	@FXML private VBox root; 
-    @FXML private Label lblTitulo, lblFecha, lblTags;
+    @FXML private Label lblTitulo, lblFecha;
+    @FXML private FlowPane tagsBox;
     @FXML private WebView webContenido;
     @FXML private Button btnVolver, btnEditar, btnBorrar;
 
@@ -110,6 +112,39 @@ public class DetallePildoraController {
     		// Acelerador Ctrl+E en la SCENE (se retira en dispose())
     		scene.getAccelerators().put(kcEditar, () -> btnEditar.fire());
     	});
+    	
+    	root.sceneProperty().addListener((obs, oldScene, scene) -> {
+            if (scene == null) return;
+            scene.getStylesheets().addListener(
+                (ListChangeListener<String>) c -> repaintTagChipsForTheme()
+            );
+        });
+    }
+    
+    private HBox buildTagChipReadOnly(String name) {
+        name = name == null ? "" : name.trim().toLowerCase();
+        var lb = new Label(name);
+        var box = new HBox(6, lb);
+        box.getStyleClass().add("tag-chip"); // reutiliza tu CSS del editor
+        // color en función del tema actual
+        String bg = io.github.guillermo_david.javafx.ColorUtil
+                      .colorForTag(name, ThemeManager.load() == ThemeManager.Theme.DARK);
+        String fg = io.github.guillermo_david.javafx.ColorUtil.bestTextOn(bg);
+        box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
+        return box;
+    }
+
+    /** Recalcula los estilos de TODOS los chips según el tema vigente */
+    private void repaintTagChipsForTheme() {
+        boolean dark = ThemeManager.load() == ThemeManager.Theme.DARK;
+        for (var n : tagsBox.getChildren()) {
+            if (n instanceof HBox box && !box.getChildren().isEmpty() && box.getChildren().get(0) instanceof Label lb) {
+                String name = lb.getText();
+                String bg = io.github.guillermo_david.javafx.ColorUtil.colorForTag(name, dark);
+                String fg = io.github.guillermo_david.javafx.ColorUtil.bestTextOn(bg);
+                box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
+            }
+        }
     }
 
     public void setOnClose(Runnable onClose) {
@@ -141,16 +176,17 @@ public class DetallePildoraController {
     public void mostrarPildora(Pildora p) {
         this.currentPildora = p;
         
-        
         lblTitulo.setText(p.getTitulo());
         lblFecha.setText("Creada: " + (p.getFechaCreacion() != null
                 ? p.getFechaCreacion().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
                 : "sin fecha"));
 
         var tags = new TagDao().findByPildoraId(p.getId());
-        lblTags.setText("Tags: " + tags.stream().map(Tag::getNombre).collect(Collectors.joining(", ")));
-
-        // Render Markdown -> HTML
+        tagsBox.getChildren().clear();
+        for (Tag t : tags) {
+            tagsBox.getChildren().add(buildTagChipReadOnly(t.getNombre()));
+        }
+        repaintTagChipsForTheme();
 
         Node doc = parser.parse(p.getDescripcion());
         lastHtml = renderer.render(doc);                  // guarda el html

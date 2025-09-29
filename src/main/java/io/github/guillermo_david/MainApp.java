@@ -3,7 +3,7 @@ package io.github.guillermo_david;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.guillermo_david.theme.ThemeManager;
+import io.github.guillermo_david.javafx.ThemeManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -33,6 +33,18 @@ public class MainApp extends Application{
 	
 	@Override
 	public void start(Stage stage) throws Exception {
+		
+//		var args = java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments();
+//		System.out.println("[JVM ARGS]");
+//		for (var a : args) System.out.println("  " + a);
+//
+//		var base3 = javafx.beans.Observable.class.getModule(); // javafx.base
+//		var us   = MainApp.class.getModule();                 // tu módulo (unnamed)
+//		System.out.println("[CHECK] exported? " + base3.isExported("com.sun.javafx.event", us)
+//		                   + "  opened? " + base3.isOpen("com.sun.javafx.event", us));
+
+		//===========================================================================================
+
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
 	    Scene scene = new Scene(fxmlLoader.load(), 1024, 794);
 

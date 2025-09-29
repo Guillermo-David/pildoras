@@ -98,7 +98,7 @@ $appImageArgs = @(
   '--icon', $IconPath,
   '--module-path', "$Jmods;$($env:PATH_JAVAFX_JMODS)",
   '--add-modules', $Modules,
-  '--java-options','-Dprism.order=sw',
+  '--java-options','-Dprism.order=sw --add-exports=javafx.base/com.sun.javafx.event=ALL-UNNAMED --add-opens=javafx.base/com.sun.javafx.event=ALL-UNNAMED',
   '--dest', $ImageDir,
   '--verbose'
 )

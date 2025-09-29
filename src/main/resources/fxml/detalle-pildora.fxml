@@ -15,8 +15,7 @@
 
     <Label fx:id="lblTitulo" styleClass="detail-title"/>
 	<Label fx:id="lblFecha"  styleClass="detail-meta"/>
-	<Label fx:id="lblTags"   styleClass="detail-tags"/>
-
+	<FlowPane fx:id="tagsBox" hgap="6" vgap="6"/>
 
     <Separator/>
 

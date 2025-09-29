@@ -327,3 +327,22 @@
 .root {
 	-fx-muted-icon: rgb(204, 204, 206);
 }
+
+.tag-chip {
+    -fx-background-color: -fx-tag-bg;
+    -fx-background-radius: 12;
+    -fx-padding: 2 8 2 8;
+    -fx-alignment: CENTER_LEFT;
+}
+.tag-chip > .label {
+    -fx-text-fill: -fx-tag-fg;
+    -fx-font-size: 11px;
+}
+.tag-chip .chip-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-tag-fg;
+    -fx-padding: 0 0 0 4;
+    -fx-cursor: hand;
+}
+
+.tag-chip .chip-close:hover { -fx-opacity: .75; }

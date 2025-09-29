@@ -1,4 +1,4 @@
-package io.github.guillermo_david.theme;
+package io.github.guillermo_david.javafx;
 
 import java.util.prefs.Preferences;
 

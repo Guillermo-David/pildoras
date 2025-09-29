@@ -12,38 +12,47 @@ import io.github.guillermo_david.model.Tag;
 
 public class TagDao {
 
-    public Tag findOrCreate(String nombre) {
-        // ¿Ya existe?
-        String select = "SELECT id, nombre FROM tags WHERE LOWER(nombre) = LOWER(?)";
-        try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(select)) {
-            pstmt.setString(1, nombre);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return new Tag(rs.getInt("id"), rs.getString("nombre"));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+	public Tag findOrCreate(String input) {
+	    String nombre = normalize(input);
+	    if (nombre.isEmpty()) return null;
 
-        // Si no existe → insertar
-        String insert = "INSERT INTO tags (nombre) VALUES LOWER(?)";
-        try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection()
-                .prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, nombre);
-            pstmt.executeUpdate();
+	    var conn = DatabaseHelper.getInstance().getConnection();
 
-            try (ResultSet rs = pstmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return new Tag(rs.getInt(1), nombre);
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+	    String select = "SELECT id, nombre FROM tags WHERE lower(nombre) = ?";
+	    try (PreparedStatement ps = conn.prepareStatement(select)) {
+	        ps.setString(1, nombre);
+	        try (ResultSet rs = ps.executeQuery()) {
+	            if (rs.next()) return new Tag(rs.getInt("id"), rs.getString("nombre"));
+	        }
+	    } catch (SQLException e) {
+	        throw new RuntimeException("Error buscando tag", e);
+	    }
 
-        return null; // algo falló
-    }
+	    String insert = "INSERT INTO tags (nombre) VALUES (?)";
+	    try (PreparedStatement ps = conn.prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)) {
+	        ps.setString(1, nombre);
+	        ps.executeUpdate();
+	        try (ResultSet rs = ps.getGeneratedKeys()) {
+	            if (rs.next()) return new Tag(rs.getInt(1), nombre); // devuelve normalizado
+	        }
+	    } catch (SQLException e) {
+	        // posible carrera: re-lee
+	        try (PreparedStatement ps2 = conn.prepareStatement(select)) {
+	            ps2.setString(1, nombre);
+	            try (ResultSet rs2 = ps2.executeQuery()) {
+	                if (rs2.next()) return new Tag(rs2.getInt("id"), rs2.getString("nombre"));
+	            }
+	        } catch (SQLException ignore) {}
+	        throw new RuntimeException("Error insertando tag", e);
+	    }
+
+	    return null;
+	}
+
+	private static String normalize(String s) {
+	    return s == null ? "" : s.trim().toLowerCase(java.util.Locale.ROOT);
+	}
+
 
     public List<Tag> findByPildoraId(int pildoraId) {
         List<Tag> lista = new ArrayList<>();
@@ -84,4 +93,24 @@ public class TagDao {
         }
         return lista;
     }
+    
+    public List<String> listAllLike(String prefix, int limit) {
+        String sql = """
+            SELECT t.nombre
+            FROM tags t
+            WHERE lower(t.nombre) LIKE lower(?) || '%'
+            ORDER BY t.nombre
+            LIMIT ?
+            """;
+        ArrayList<String> out = new ArrayList<>();
+        try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+            ps.setString(1, prefix == null ? "" : prefix.trim());
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) out.add(rs.getString(1));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return out;
+    }
+
 }

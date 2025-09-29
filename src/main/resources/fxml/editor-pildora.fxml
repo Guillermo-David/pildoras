@@ -14,6 +14,7 @@
     <Label text="Título:"/>
     <TextField fx:id="txtTitulo"/>
 
+
     <Label text="Contenido (Markdown):"/>
     <ToolBar>
 	    <Button text="B" onAction="#insertBold"/>
@@ -27,8 +28,11 @@
           wrapText="true"
           VBox.vgrow="ALWAYS"/>
 
-    <Label text="Tags (separados por coma):"/>
-    <TextField fx:id="txtTags"/>
+    <Label text="Tags"/>
+	<HBox spacing="8">
+	    <TextField fx:id="txtTagInput" promptText="Añade un tag y pulsa Enter…" HBox.hgrow="ALWAYS"/>
+	    <FlowPane fx:id="tagsBox" hgap="6" vgap="6" />
+	</HBox>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button fx:id="btnGuardar" text="💾 Guardar"/>

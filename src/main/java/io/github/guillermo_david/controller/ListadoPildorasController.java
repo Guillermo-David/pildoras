@@ -12,11 +12,12 @@ import org.kordamp.ikonli.javafx.FontIcon;
 import io.github.guillermo_david.MainApp;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
+import io.github.guillermo_david.javafx.Dialogs;
 import io.github.guillermo_david.javafx.StatusBus;
+import io.github.guillermo_david.javafx.ThemeManager;
+import io.github.guillermo_david.javafx.ThemeManager.Theme;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
-import io.github.guillermo_david.theme.ThemeManager;
-import io.github.guillermo_david.theme.ThemeManager.Theme;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -108,7 +109,7 @@ public class ListadoPildorasController {
 	    cargarTabla(null, null);
 
 	    // Logo inicial según tema guardado
-	    setLogoFor(io.github.guillermo_david.theme.ThemeManager.load());
+	    setLogoFor(io.github.guillermo_david.javafx.ThemeManager.load());
 
 	    // Filtros / escena / atajos
 	    setTxtFiltros();
@@ -462,7 +463,7 @@ public class ListadoPildorasController {
 	                if (p == null) return;
 	                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
 	                        "¿Seguro que quieres eliminar la píldora \"" + p.getTitulo() + "\"?");
-	                decorate(confirm);
+	                Dialogs.decorate(confirm, root);
 	                confirm.showAndWait().ifPresent(res -> {
 	                    if (res.getButtonData().isDefaultButton()) {
 	                        pildoraDao.eliminar(p.getId());
@@ -580,6 +581,9 @@ public class ListadoPildorasController {
 
 			    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
 			        "¿Seguro que quieres eliminar la píldora \"" + sel.getTitulo() + "\"?");
+			    
+			    Dialogs.decorate(confirm, root);
+			    
 			    confirm.showAndWait().ifPresent(res -> {
 			        if (res.getButtonData().isDefaultButton()) {
 			            pildoraDao.eliminar(sel.getId());
@@ -690,6 +694,8 @@ public class ListadoPildorasController {
 	            confirm.setTitle("Confirmar borrado");
 	            confirm.setHeaderText("¿Seguro que quieres borrar esta píldora?");
 	            confirm.setContentText(pildora.getTitulo());
+	            
+	            Dialogs.decorate(confirm, root);
 
 	            confirm.showAndWait().ifPresent(res -> {
 	                if (res == ButtonType.OK) {
@@ -833,15 +839,28 @@ public class ListadoPildorasController {
 	    return b;
 	}
 	
-	private void decorate(Alert alert) {
-	    // owner = stage principal
-	    var owner = (Stage) root.getScene().getWindow();
-	    alert.initOwner(owner);
-
-	    // setear los mismos iconos al Stage del diálogo
-	    var dialogStage = (Stage) alert.getDialogPane().getScene().getWindow();
-	    dialogStage.getIcons().setAll(owner.getIcons());
-	}
+//	private void decorate(Alert alert) {
+//	    var owner = (Stage) root.getScene().getWindow();
+//	    alert.initOwner(owner);
+//	    
+//	    alert.setOnShown(e -> {
+//	        var dlgScene = alert.getDialogPane().getScene();
+//
+//	        // 1) Copia EXACTA de los stylesheets del Scene principal
+//	        var mainSS = root.getScene().getStylesheets();
+//	        var dlgSS  = dlgScene.getStylesheets();
+//	        dlgSS.setAll(mainSS); // limpia y añade todos
+//
+//	        // 2) (opcional) misma clase root para seletores tipo `.root { ... }`
+//	        alert.getDialogPane().getStyleClass().addAll(root.getStyleClass());
+//
+//	        // 3) Iconos del Stage del diálogo
+//	        var dlgStage = (Stage) dlgScene.getWindow();
+//	        dlgStage.getIcons().setAll(owner.getIcons());
+//	    });
+//	}
+	
+	
 	
 	private void hookLogoToTheme() {
 	    root.sceneProperty().addListener((obs, old, scene) -> {
