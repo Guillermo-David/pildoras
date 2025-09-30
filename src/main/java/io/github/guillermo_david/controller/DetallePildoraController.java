@@ -46,6 +46,8 @@ public class DetallePildoraController {
     @FXML private Button btnVolver, btnEditar, btnBorrar;
     @FXML private MenuButton btnExportMenu;
 
+    private java.util.function.Consumer<String> onTagClick;
+
     private Runnable onClose;
     private Consumer<Pildora> onEdit;
     private Consumer<Pildora> onDelete;
@@ -219,31 +221,47 @@ public class DetallePildoraController {
         }
     }
     
-    private HBox buildTagChipReadOnly(String name) {
+    private HBox buildTagChipButton(String name) {
         name = name == null ? "" : name.trim().toLowerCase();
-        var lb = new Label(name);
-        var box = new HBox(6, lb);
-        box.getStyleClass().add("tag-chip"); // reutiliza tu CSS del editor
-        // color en función del tema actual
-        String bg = ColorUtil
-                      .colorForTag(name, ThemeManager.load() == ThemeManager.Theme.DARK);
+
+        var btn = new Button(name);
+        btn.getStyleClass().add("tag-chip"); // reutiliza tu CSS del editor (bordes redondeados, etc.)
+        btn.setFocusTraversable(false);
+        btn.setTooltip(new Tooltip("Filtrar por tag: " + name));
+
+        // Colores según tema (igual que antes)
+        boolean dark = ThemeManager.load() == ThemeManager.Theme.DARK;
+        String bg = ColorUtil.colorForTag(name, dark);
         String fg = ColorUtil.bestTextOn(bg);
-        box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
+        btn.setStyle(String.format("-fx-tag-bg:%s; -fx-tag-fg:%s;", bg, fg));
+
+        // Acción: invocar callback si existe
+        final String nameFinal = name;
+        btn.setOnAction(e -> {
+            if (onTagClick != null) onTagClick.accept(nameFinal);
+        });
+
+        // Envolvemos en HBox para mantener la misma jerarquía esperada por repaintTagChipsForTheme()
+        var box = new HBox(btn);
+        box.getStyleClass().add("tag-chip-wrapper");
         return box;
     }
 
-    /** Recalcula los estilos de TODOS los chips según el tema vigente */
     private void repaintTagChipsForTheme() {
         boolean dark = ThemeManager.load() == ThemeManager.Theme.DARK;
         for (var n : tagsBox.getChildren()) {
-            if (n instanceof HBox box && !box.getChildren().isEmpty() && box.getChildren().get(0) instanceof Label lb) {
-                String name = lb.getText();
+            if (n instanceof HBox box && !box.getChildren().isEmpty() && box.getChildren().get(0) instanceof Button btn) {
+                String name = btn.getText();
                 String bg = ColorUtil.colorForTag(name, dark);
                 String fg = ColorUtil.bestTextOn(bg);
-                box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
+                btn.setStyle(String.format("-fx-tag-bg:%s; -fx-tag-fg:%s;", bg, fg));
             }
         }
     }
+    
+    public void setOnTagClick(Consumer<String> onTagClick) { 
+    	this.onTagClick = onTagClick; 
+	}
 
     public void setOnClose(Runnable onClose) {
         this.onClose = onClose;
@@ -307,7 +325,7 @@ public class DetallePildoraController {
         var tags = new TagDao().findByPildoraId(p.getId());
         tagsBox.getChildren().clear();
         for (Tag t : tags) {
-            tagsBox.getChildren().add(buildTagChipReadOnly(t.getNombre()));
+            tagsBox.getChildren().add(buildTagChipButton(t.getNombre()));
         }
         repaintTagChipsForTheme();
 

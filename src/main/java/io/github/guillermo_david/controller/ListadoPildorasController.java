@@ -763,6 +763,27 @@ public class ListadoPildorasController {
 	        Parent detalleRoot = loader.load();
 	        DetallePildoraController controller = loader.getController();
 
+	        controller.setOnTagClick(tagName -> {
+	            // Cierra el detalle y vuelve al listado
+	            controller.dispose();
+	            restaurarFiltrosYPaginacion();
+
+	            // Aplica el filtro por ese tag (modo OR por defecto)
+	            txtFiltroTags.setText(tagName);
+	            btnAndOr.setSelected(false);
+	            btnAndOr.setText("OR");
+
+	            // Reinicia a página 1 y carga
+	            paginaActual = 1;
+	            refrescarTabla();
+
+	            // Foco de vuelta a la tabla
+	            table.requestFocus();
+
+	            // (opcional) feedback al usuario
+	            StatusBus.show("Filtrado por tag: " + tagName, StatusBus.Type.INFO, Duration.seconds(2));
+	        });
+
 	        ocultarFiltrosYPaginacion();
 	        root.setCenter(detalleRoot);
 	        controller.mostrarPildora(p);

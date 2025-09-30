@@ -355,6 +355,9 @@
 
 .tag-chip .chip-close:hover { -fx-opacity: .75; }
 
+.button.tag-chip:hover {
+  -fx-opacity: 0.9;
+}
 
 /* Iconos de exportación, heredan color del tema */
 .export-icon {
