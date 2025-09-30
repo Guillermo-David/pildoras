@@ -10,15 +10,23 @@
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="io.github.guillermo_david.controller.ListadoPildorasController"
             fx:id="root">
-
     <top>
 		<VBox spacing="0">
 		  <!-- Title bar fija -->
 		  <HBox fx:id="titleBar" alignment="CENTER_LEFT" styleClass="titlebar">
-		    <Label text="Píldoras" styleClass="titlebar-title"/>
-		    <Pane HBox.hgrow="ALWAYS"/>
-		    <Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
-		  </HBox>
+			  <Label text="Píldoras" styleClass="titlebar-title"/>
+			  <Pane HBox.hgrow="ALWAYS"/>
+			
+			  <!-- Acciones de la barra -->
+			  <HBox spacing="8" styleClass="titlebar-actions">
+			    <!--<ToggleButton fx:id="btnTema" styleClass="theme-toggle settings-btn"/>-->
+			    <MenuButton   fx:id="btnSettings" popupSide="BOTTOM" styleClass="icon-btn settings-btn"/>
+			    <Separator orientation="VERTICAL" styleClass="v-sep"/>
+			    <!--<Separator orientation="VERTICAL" styleClass="v-sep-thin"/>-->
+			    <Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
+			  </HBox>
+			</HBox>
+
 		
 		  <!-- Cabecera con filtros (ocultable) -->
 		  <HBox fx:id="appHeader" spacing="10" alignment="CENTER_LEFT" styleClass="app-header">
@@ -40,8 +48,8 @@
 		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
-		    <ToggleButton fx:id="btnAndOr" text="OR"/>
-		    <ToggleButton fx:id="btnSoloFav" styleClass="toggle-fav"/>
+		    <ToggleButton fx:id="btnAndOr" styleClass="toggle-btn"/>
+		    <ToggleButton fx:id="btnSoloFav" styleClass="toggle-btn"/>
 		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
@@ -51,8 +59,6 @@
 		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
-		    <ToggleButton fx:id="btnTema" styleClass="theme-toggle"/>
-		    <MenuButton fx:id="btnSettings" styleClass="icon-btn" popupSide="BOTTOM"/>
 		  </HBox>
 		</VBox>
 	</top>

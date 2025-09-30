@@ -25,7 +25,6 @@ import javafx.application.Platform;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -34,6 +33,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -104,7 +104,7 @@ public class ListadoPildorasController {
 
 	@FXML private BorderPane root;
 	@FXML private Button btnNueva, btnAnterior, btnSiguiente, btnClose;
-	@FXML private ToggleButton btnAndOr, btnSoloFav, btnTema;
+	@FXML private ToggleButton btnAndOr, btnSoloFav;
 	@FXML private MenuButton btnSettings;
 	@FXML private HBox paginationBox, statusBar, titleBar, appHeader;
 	@FXML private Label lblPagina, lblStatus;
@@ -133,18 +133,12 @@ public class ListadoPildorasController {
 	    initSettingsMenu();
 	    applyTypographyNow();
 	    cargarTabla(null, null);
-
-	    // Logo inicial según tema guardado
-	    setLogoFor(io.github.guillermo_david.javafx.ThemeManager.load());
-
-	    // Filtros / escena / atajos
+	    setLogoFor(ThemeManager.load());
 	    setTxtFiltros();
 	    setSceneProperties();
-
-	    // Tema: handler del botón + sincronizar estado visual + reaccionar a cambios
-	    initThemeToggle();           // pone el onAction del botón
-	    syncThemeToggleWithCurrent(); // ajusta icono/tooltip del botón según tema actual
-	    hookLogoToTheme();            // (opcional) si quieres que el logo reaccione a cambios externos
+//	    initThemeToggle();
+//	    syncThemeToggleWithCurrent();
+//	    hookLogoToTheme();
 
 	    // Barra de título custom
 	    initCustomTitleBar();
@@ -349,6 +343,18 @@ public class ListadoPildorasController {
 			});
 			return row;
 		});
+		
+		// Columnas fijas para pin y fav
+		colPinned.setMinWidth(40);
+		colPinned.setPrefWidth(40);
+		colPinned.setMaxWidth(40);
+		colPinned.setResizable(false);
+
+		colFav.setMinWidth(40);
+		colFav.setPrefWidth(40);
+		colFav.setMaxWidth(40);
+		colFav.setResizable(false);
+
 	}
 
 	private void setColFav() {
@@ -432,7 +438,7 @@ public class ListadoPildorasController {
 	                icon.setRotate(nuevo ? -20 : 0);
 	                pinBtn.setTooltip(new Tooltip(nuevo ? "Desfijar" : "Fijar"));
 
-	                StatusBus.show(nuevo ? "Píldora fijada" : "Píldora desfijada",
+	                StatusBus.show(nuevo ? "Píldora anclada" : "Píldora desanclada",
 	                        StatusBus.Type.INFO, Duration.seconds(2));
 
 	                // si el ORDER BY usa pinned DESC, recarga la tabla para recolocar
@@ -447,47 +453,50 @@ public class ListadoPildorasController {
 	}
 
 	private void setBotones() {
-		// Icono del toggle de favoritas (igual que en la tabla)
-		FontIcon favTopIcon = new FontIcon(btnSoloFav.isSelected() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
-		favTopIcon.getStyleClass().add("star-icon"); // clase propia para CSS
-		
-		btnSoloFav.setSelected(PREFS.getBoolean(PREF_SOLO_FAV, false));
-		btnSoloFav.setText(null);                    // sin texto, solo icono
-		btnSoloFav.setGraphic(favTopIcon);
-		btnSoloFav.setTooltip(new Tooltip("Solo favoritas (Ctrl+Shift+F)"));
-		
-		// Cambia icono y color al (de)seleccionar
-		btnSoloFav.selectedProperty().addListener((obs, old, sel) -> {
-			favTopIcon.setIconCode(sel ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
-			favTopIcon.getStyleClass().remove("star-fav");
-			if (sel) favTopIcon.getStyleClass().add("star-fav");
-			PREFS.putBoolean(PREF_SOLO_FAV, sel);
-			paginaActual = 1;
-			refrescarTabla();
-		});
-		
-		btnAndOr.setSelected(PREFS.getBoolean(PREF_AND_OR, false));
-		btnAndOr.setText(btnAndOr.isSelected() ? "AND" : "OR");
-		btnAndOr.setTooltip(new Tooltip(
-		        "• OR: muestra las píldoras que tengan al menos un tag\n" +
-		        "• AND: muestra solo las que tengan todos los tags\n" +
-		        "(Ctrl+Shift+O)"));
+		// --- SOLO FAVORITAS ---
+		FontIcon favTopIcon = new FontIcon(btnSoloFav.isSelected()
+		        ? FontAwesomeSolid.STAR
+		        : FontAwesomeRegular.STAR);
+		favTopIcon.setIconSize(14);
 
-		btnAndOr.selectedProperty().addListener((obs, oldSel, sel) -> {
-		    btnAndOr.setText(sel ? "AND" : "OR");
+		btnSoloFav.getStyleClass().setAll("round-toggle", "fav-toggle"); // <- aquí
+		btnSoloFav.setGraphic(favTopIcon);
+		btnSoloFav.setText(null);
+		btnSoloFav.setTooltip(new Tooltip("Solo favoritas (Ctrl+Shift+F)"));
+
+		btnSoloFav.selectedProperty().addListener((obs, old, sel) -> {
+		    favTopIcon.setIconCode(sel ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
+		    PREFS.putBoolean(PREF_SOLO_FAV, sel);
+		    paginaActual = 1;
+		    refrescarTabla();
+		});
+
+		// --- AND / OR ---
+		FontIcon btnAndOrIcon = new FontIcon(btnAndOr.isSelected()
+		        ? FontAwesomeSolid.LINK
+		        : FontAwesomeSolid.CODE_BRANCH);
+		btnAndOrIcon.setIconSize(14);
+
+		btnAndOr.getStyleClass().setAll("round-toggle", "andor-toggle"); // <- y aquí
+		btnAndOr.setGraphic(btnAndOrIcon);
+		btnAndOr.setText(null);
+		btnAndOr.setTooltip(new Tooltip(
+		    "Alterna entre al menos un tag / todos los tags (Ctrl+Shift+O)"));
+
+		btnAndOr.selectedProperty().addListener((obs, o, sel) -> {
+		    btnAndOrIcon.setIconCode(sel ? FontAwesomeSolid.LINK : FontAwesomeSolid.CODE_BRANCH);
 		    PREFS.putBoolean(PREF_AND_OR, sel);
 		    paginaActual = 1;
 		    refrescarTabla();
 		});
 
 		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.FOLDER_PLUS);
-//		nuevaIcon.setIconSize(28);     // 16–18 suele ir bien
 		btnNueva.setGraphic(nuevaIcon);
 		btnNueva.setText("");
 		btnNueva.setTooltip(new Tooltip("Nueva (Ctrl+N)"));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
 		btnNueva.getStyleClass().add("icon-btn");
-		btnNueva.getStyleClass().add("primary");
+		btnNueva.getStyleClass().add("btn-filter-bar");
 		
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
 		btnAnterior.setOnAction(e -> {
@@ -505,24 +514,6 @@ public class ListadoPildorasController {
 			}
 		});
 		
-		// Botón de tema con dos iconos superpuestos y tamaño fijo
-		btnTema.getStyleClass().add("theme-toggle");
-		btnTema.setText(null);
-
-		var moon = new FontIcon(FontAwesomeRegular.MOON);
-		var sun  = new FontIcon(FontAwesomeRegular.SUN);
-		moon.setIconSize(18);
-		sun.setIconSize(18);
-
-		// 👇 clases para colorearlos por CSS
-		moon.getStyleClass().addAll("theme-icon", "icon-moon");
-		sun.getStyleClass().addAll("theme-icon", "icon-sun");
-
-		// StackPane con ambos iconos, mostramos uno u otro según el estado
-		var iconSwap = new javafx.scene.layout.StackPane(moon, sun);
-		sun.visibleProperty().bind(btnTema.selectedProperty());           // seleccionado = sol
-		moon.visibleProperty().bind(btnTema.selectedProperty().not());    // no seleccionado = luna
-		btnTema.setGraphic(iconSwap);
 	}
 
 	private void setColTitulo() {
@@ -747,7 +738,7 @@ public class ListadoPildorasController {
 						txtFiltroTexto.clear();
 						txtFiltroTags.clear();
 						btnAndOr.setSelected(false);
-						btnAndOr.setText("OR");
+						btnAndOr.setGraphic(new FontIcon(FontAwesomeSolid.CODE_BRANCH));
 						paginaActual = 1;
 						refrescarTabla();
 						e.consume();
@@ -820,7 +811,7 @@ public class ListadoPildorasController {
 	            // Aplica el filtro por ese tag (modo OR por defecto)
 	            txtFiltroTags.setText(tagName);
 	            btnAndOr.setSelected(false);
-	            btnAndOr.setText("OR");
+	            btnAndOr.setGraphic(new FontIcon(FontAwesomeSolid.CODE_BRANCH));
 
 	            // Reinicia a página 1 y carga
 	            paginaActual = 1;
@@ -1020,84 +1011,6 @@ public class ListadoPildorasController {
 	    return b;
 	}
 	
-//	private void decorate(Alert alert) {
-//	    var owner = (Stage) root.getScene().getWindow();
-//	    alert.initOwner(owner);
-//	    
-//	    alert.setOnShown(e -> {
-//	        var dlgScene = alert.getDialogPane().getScene();
-//
-//	        // 1) Copia EXACTA de los stylesheets del Scene principal
-//	        var mainSS = root.getScene().getStylesheets();
-//	        var dlgSS  = dlgScene.getStylesheets();
-//	        dlgSS.setAll(mainSS); // limpia y añade todos
-//
-//	        // 2) (opcional) misma clase root para seletores tipo `.root { ... }`
-//	        alert.getDialogPane().getStyleClass().addAll(root.getStyleClass());
-//
-//	        // 3) Iconos del Stage del diálogo
-//	        var dlgStage = (Stage) dlgScene.getWindow();
-//	        dlgStage.getIcons().setAll(owner.getIcons());
-//	    });
-//	}
-	
-	
-	
-	private void hookLogoToTheme() {
-	    root.sceneProperty().addListener((obs, old, scene) -> {
-	        if (scene == null) return;
-	        scene.getStylesheets().addListener((ListChangeListener<String>) c -> {
-	            setLogoFor(ThemeManager.load());
-	        });
-	    });
-	}
-	
-	private void syncThemeToggleWithCurrent() {
-	    var scene = root.getScene();
-	    if (scene == null) {
-	        Platform.runLater(this::syncThemeToggleWithCurrent);
-	        return;
-	    }
-	    Theme t = ThemeManager.load();
-	    btnTema.setSelected(t == Theme.DARK);   // 👈 refleja estado en el toggle
-	    updateThemeUI(t);                       // icono/tooltip/logo
-	}
-	
-	private void initThemeToggle() {
-	    btnTema.setFocusTraversable(false);
-	    btnTema.setOnAction(e -> {
-	        var scene = root.getScene();
-	        var t = ThemeManager.toggle(scene); // alterna + aplica + guarda
-	        btnTema.setSelected(t == Theme.DARK);
-	        updateThemeUI(t);
-	    });
-	}
-
-
-//	private void updateThemeUI(Theme t) {
-//	    var icon = new FontIcon(
-//	        t == Theme.DARK ? FontAwesomeSolid.SUN : FontAwesomeSolid.MOON
-//	    );
-//	    icon.setIconSize(18);
-//	    icon.getStyleClass().add("theme-toggle-icon");
-//	    btnTema.setGraphic(icon);
-//	    btnTema.setText(null);
-//	    btnTema.setTooltip(new Tooltip(t == Theme.DARK ? "Tema claro" : "Tema oscuro"));
-//	    setLogoFor(t);
-//	}
-	
-	private void updateThemeUI(Theme t) {
-	    // refleja el estado en el toggle (true = DARK)
-	    btnTema.setSelected(t == Theme.DARK);
-
-	    // solo tooltip (NO toques el graphic)
-	    btnTema.setTooltip(new Tooltip(t == Theme.DARK ? "Tema claro" : "Tema oscuro"));
-
-	    // logo según tema
-	    setLogoFor(t);
-	}
-
-	// Dos recursos diferentes para el logo (negro/blanco):
 	private void setLogoFor(Theme t) {
 	    String path = (t == Theme.DARK) ? "/icons/gdg_W.png" : "/icons/gdg_B.png";
 	    var url = getClass().getResource(path);
@@ -1106,14 +1019,6 @@ public class ListadoPildorasController {
 	        imgLogo.setSmooth(true);
 	    }
 	}
-
-//	void setTheme(boolean darkMode) {
-//		var scene = root.getScene();
-//	    var ss = scene.getStylesheets();
-//	    ss.clear();
-//	    ss.add(base);
-//	    ss.add(darkMode ? dark : light);
-//	}
 
 	private void initCustomTitleBar() {
 	    // Cerrar
@@ -1186,7 +1091,6 @@ public class ListadoPildorasController {
 
 	private void initSettingsMenu() {
 	    var gear = new FontIcon(FontAwesomeSolid.COG);
-	    gear.setIconSize(16);
 	    btnSettings.setText(null);
 	    btnSettings.setGraphic(gear);
 	    btnSettings.setTooltip(new Tooltip("Ajustes"));
@@ -1238,6 +1142,25 @@ public class ListadoPildorasController {
 	        });
 	        miSize.getItems().add(r);
 	    }
+	    
+	    var miTemaOscuro = new CheckMenuItem("Tema oscuro");
+	    miTemaOscuro.setSelected(ThemeManager.load() == Theme.DARK);
+	    miTemaOscuro.setOnAction(e -> {
+	        var scene = root.getScene();
+	        if (scene == null) return;
+
+	        boolean wantsDark = miTemaOscuro.isSelected();
+	        boolean isDark    = (ThemeManager.load() == Theme.DARK);
+
+	        // Si el estado deseado difiere del actual, alterna
+	        if (wantsDark != isDark) {
+	            Theme t = ThemeManager.toggle(scene);  // tu helper existente
+	            setLogoFor(t);                         // actualiza logo según tema
+	            // (opcional) feedback:
+	            StatusBus.show(t == Theme.DARK ? "Tema oscuro" : "Tema claro",
+	                           StatusBus.Type.INFO, Duration.seconds(2));
+	        }
+	    });
 
 	    // --- Atajos de teclado ---
 	    var miShortcuts = new MenuItem("Atajos de teclado…");
@@ -1246,6 +1169,8 @@ public class ListadoPildorasController {
 	    btnSettings.getItems().setAll(
 	        miFamily,
 	        miSize,
+	        new javafx.scene.control.SeparatorMenuItem(),
+	        miTemaOscuro,
 	        new SeparatorMenuItem(),
 	        miShortcuts
 	    );
