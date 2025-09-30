@@ -91,6 +91,13 @@
   -fx-icon-color: #e53935;
 }
 
+/* en tu CSS */
+.icon-btn.primary .ikonli-font-icon {
+  -fx-text-fill: white;
+  -fx-icon-size: 20px;
+}
+
+
 .icon-btn.danger:hover {
   -fx-background-color: rgba(229, 57, 53, 0.12);
 }

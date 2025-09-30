@@ -52,6 +52,7 @@
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
 		    <ToggleButton fx:id="btnTema" styleClass="theme-toggle"/>
+		    <MenuButton fx:id="btnSettings" styleClass="icon-btn" popupSide="BOTTOM"/>
 		  </HBox>
 		</VBox>
 	</top>

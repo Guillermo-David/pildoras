@@ -46,7 +46,7 @@ public class MainApp extends Application{
 		//===========================================================================================
 
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
-	    Scene scene = new Scene(fxmlLoader.load(), 1024, 794);
+	    Scene scene = new Scene(fxmlLoader.load(), 1024, 840);
 
 	    var base = MainApp.class.getResource("/css/base.css").toExternalForm();
 	    var light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();

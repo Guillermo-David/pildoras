@@ -35,7 +35,10 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
@@ -86,6 +89,11 @@ public class ListadoPildorasController {
 	private static final String PREF_SOLO_FAV = "soloFavoritas";
 	private static final String PREF_AND_OR = "filtroAndOr";
 	
+	private static final String PREF_FONT_FAMILY = "uiFontFamily";
+	private static final String PREF_FONT_SIZE   = "uiFontSize";   // "small" | "normal" | "large"
+	private static final String DEF_FONT_FAMILY = "System";
+	private static final String DEF_FONT_SIZE   = "normal";
+
 	private double dragOffsetX, dragOffsetY;
 	
 	String base = null;
@@ -96,13 +104,14 @@ public class ListadoPildorasController {
 
 	@FXML private BorderPane root;
 	@FXML private Button btnNueva, btnAnterior, btnSiguiente, btnClose;
+	@FXML private ToggleButton btnAndOr, btnSoloFav, btnTema;
+	@FXML private MenuButton btnSettings;
 	@FXML private HBox paginationBox, statusBar, titleBar, appHeader;
 	@FXML private Label lblPagina, lblStatus;
 	@FXML private TableView<Pildora> table;
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
 	@FXML private TableColumn<Pildora, Void> colFav, colAcciones, colPinned;
 	@FXML private CustomTextField txtFiltroTexto, txtFiltroTags;
-	@FXML private ToggleButton btnAndOr, btnSoloFav, btnTema;
 	@FXML private ImageView imgLogo;
 
 	@FXML
@@ -121,6 +130,8 @@ public class ListadoPildorasController {
 	    setColTags();
 	    setColAcciones();
 	    setBotones();
+	    initSettingsMenu();
+	    applyTypographyNow();
 	    cargarTabla(null, null);
 
 	    // Logo inicial según tema guardado
@@ -153,6 +164,24 @@ public class ListadoPildorasController {
 		
 		attachClearButton(txtFiltroTexto, () -> { paginaActual = 1; refrescarTabla(); });
 	    attachClearButton(txtFiltroTags,  () -> { paginaActual = 1; refrescarTabla(); });
+	    
+	 // Ancho base (un poco más grandes)
+	    txtFiltroTexto.setPrefWidth(250);
+	    txtFiltroTexto.setMinWidth(200);
+	    txtFiltroTexto.setMaxWidth(Double.MAX_VALUE);
+
+	    txtFiltroTags.setPrefWidth(200);
+	    txtFiltroTags.setMinWidth(140);
+	    txtFiltroTags.setMaxWidth(Double.MAX_VALUE);
+
+	    // Que puedan crecer si hay hueco en la barra
+	    HBox.setHgrow(txtFiltroTexto, Priority.SOMETIMES);
+	    HBox.setHgrow(txtFiltroTags, Priority.SOMETIMES);
+
+	    // (opcional) por columnas, por si prefieres afinar por caracteres
+//	     txtFiltroTexto.setPrefColumnCount(24);
+//	     txtFiltroTags.setPrefColumnCount(18);
+
 	}
 
 	private void setStatusBar() {
@@ -189,6 +218,7 @@ public class ListadoPildorasController {
 		});
 	}
 
+	@SuppressWarnings("unchecked")
 	private void setTableProperties() {
 		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 		table.setFixedCellSize(30); // alto por fila
@@ -450,13 +480,14 @@ public class ListadoPildorasController {
 		    refrescarTabla();
 		});
 
+		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.FOLDER_PLUS);
+//		nuevaIcon.setIconSize(28);     // 16–18 suele ir bien
+		btnNueva.setGraphic(nuevaIcon);
 		btnNueva.setText("");
 		btnNueva.setTooltip(new Tooltip("Nueva (Ctrl+N)"));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
 		btnNueva.getStyleClass().add("icon-btn");
-
-		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.PLUS);
-		btnNueva.setGraphic(nuevaIcon);
+		btnNueva.getStyleClass().add("primary");
 		
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
 		btnAnterior.setOnAction(e -> {
@@ -888,6 +919,7 @@ public class ListadoPildorasController {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void cargarTabla(String tituloFiltro, String tagsFiltro) {
 		boolean andMode = btnAndOr.isSelected();
 
@@ -1150,6 +1182,151 @@ public class ListadoPildorasController {
 	    };
 	    tf.textProperty().addListener((o, a, b) -> update.run());
 	    update.run();
+	}
+
+	private void initSettingsMenu() {
+	    var gear = new FontIcon(FontAwesomeSolid.COG);
+	    gear.setIconSize(16);
+	    btnSettings.setText(null);
+	    btnSettings.setGraphic(gear);
+	    btnSettings.setTooltip(new Tooltip("Ajustes"));
+	    btnSettings.getStyleClass().add("icon-btn");
+	    btnSettings.getStyleClass().add("primary");
+
+	    // --- Tipografías disponibles (elige las que prefieras) ---
+	    // Puedes añadir más familias; si no están instaladas, JavaFX hará fallback.
+	    record Family(String label, String css) {}
+	    var families = java.util.List.of(
+	        new Family("System",      "System"),
+	        new Family("Sans (Arial)","Arial"),
+	        new Family("Serif",       "Serif"),
+	        new Family("Monospace",   "Consolas")
+	    );
+
+	    var miFamily = new javafx.scene.control.Menu("Tipografía");
+	    var tgFamily = new javafx.scene.control.ToggleGroup();
+
+	    String currentFamily = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
+	    for (var f : families) {
+	        var r = new javafx.scene.control.RadioMenuItem(f.label());
+	        r.setToggleGroup(tgFamily);
+	        r.setSelected(f.css().equalsIgnoreCase(currentFamily));
+	        r.setOnAction(e -> {
+	            PREFS.put(PREF_FONT_FAMILY, f.css());
+	            applyTypographyNow();
+	        });
+	        miFamily.getItems().add(r);
+	    }
+
+	    // --- Tamaño de letra ---
+	    var miSize = new javafx.scene.control.Menu("Tamaño");
+	    var tgSize = new javafx.scene.control.ToggleGroup();
+
+	    var sizes = java.util.Map.of(
+	        "Pequeño", "small",
+	        "Normal",  "normal",
+	        "Grande",  "large"
+	    );
+	    String currentSize = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
+	    for (var entry : sizes.entrySet()) {
+	        var r = new javafx.scene.control.RadioMenuItem(entry.getKey());
+	        r.setToggleGroup(tgSize);
+	        r.setSelected(entry.getValue().equalsIgnoreCase(currentSize));
+	        r.setOnAction(e -> {
+	            PREFS.put(PREF_FONT_SIZE, entry.getValue());
+	            applyTypographyNow();
+	        });
+	        miSize.getItems().add(r);
+	    }
+
+	    // --- Atajos de teclado ---
+	    var miShortcuts = new MenuItem("Atajos de teclado…");
+	    miShortcuts.setOnAction(e -> showShortcutsDialog());
+
+	    btnSettings.getItems().setAll(
+	        miFamily,
+	        miSize,
+	        new SeparatorMenuItem(),
+	        miShortcuts
+	    );
+	}
+
+	/** Aplica familia + tamaño guardados a toda la escena */
+	private void applyTypographyNow() {
+	    Runnable apply = () -> {
+	        var scene = root.getScene();
+	        if (scene == null) { Platform.runLater(this::applyTypographyNow); return; }
+
+	        String family = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
+	        String sizeKey = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
+
+	        double px = switch (sizeKey) {
+	            case "small"  -> 13.0;
+	            case "large"  -> 17.0;
+	            default       -> 15.0; // normal
+	        };
+
+	        // Aplica estilo inline al root de la escena (se hereda a todos los nodos)
+	        scene.getRoot().setStyle("""
+	            -fx-font-family: '%s';
+	            -fx-font-size: %spx;
+	        """.formatted(family.replace("'", "\\'"), px));
+	    };
+	    apply.run();
+	}
+
+	/** Diálogo con los atajos principales */
+	private void showShortcutsDialog() {
+	    var sb = new StringBuilder();
+	    sb.append("LISTADO\n")
+	      .append("────────\n")
+	      .append("Ctrl+F            – Foco en filtro de texto\n")
+	      .append("Ctrl+T            – Foco en filtro de tags\n")
+	      .append("Ctrl+N            – Nueva píldora\n")
+	      .append("Ctrl+O            – Abrir detalle de la fila seleccionada\n")
+	      .append("Ctrl+E            – Editar la fila seleccionada\n")
+	      .append("Supr              – Eliminar la fila seleccionada\n")
+	      .append("M                 – (Tabla enfocada) Alternar favorita\n")
+	      .append("Ctrl+Shift+F      – Mostrar solo favoritas (toggle)\n")
+	      .append("Ctrl+Shift+O      – Cambiar OR/AND para filtro de tags\n")
+	      .append("PageUp / Ctrl+←   – Página anterior\n")
+	      .append("PageDown / Ctrl+→ – Página siguiente\n")
+	      .append("Esc               – Limpiar filtros (si hay foco en filtros) / Volver\n")
+	      .append("Doble clic fila   – Abrir detalle\n\n")
+	      .append("DETALLE\n")
+	      .append("───────\n")
+	      .append("Ctrl+E            – Editar\n")
+	      .append("Supr              – Eliminar\n")
+	      .append("Esc               – Volver al listado\n")
+	      .append("Click en tag      – Filtrar listado por ese tag\n\n")
+	      .append("EDITOR\n")
+	      .append("──────\n")
+	      .append("Ctrl+S            – Guardar\n")
+	      .append("Esc               – Cancelar y volver\n")
+	      .append("Ctrl+B            – Insertar **negrita**\n")
+	      .append("Ctrl+I            – Insertar *cursiva*\n")
+	      .append("Ctrl+K            – Insertar [enlace](https://)\n")
+	      .append("Ctrl+E            – Insertar `código`\n")
+	      .append("Enter / ','       – Confirmar tag en el campo de tags\n")
+	      .append("Backspace (tags)  – Con input vacío, borrar el último tag\n");
+
+	    var alert = new Alert(Alert.AlertType.INFORMATION);
+	    alert.setTitle("Atajos de teclado");
+	    alert.setHeaderText(null);
+
+	    var ta = new javafx.scene.control.TextArea(sb.toString());
+	    ta.setEditable(false);
+	    ta.setWrapText(false); // sin cortes de línea automáticos
+	    ta.setFocusTraversable(false);
+	    ta.setPrefColumnCount(48); // ancho aprox
+	    ta.setPrefRowCount(24);    // alto aprox
+	    ta.setStyle("-fx-font-family: 'Consolas','Monospaced'; -fx-font-size: 13px;");
+
+	    alert.getDialogPane().setContent(ta);
+	    alert.getDialogPane().setPrefWidth(560); // opcional, asegura buen ancho
+
+	    Dialogs.decorate(alert, root);
+	    alert.showAndWait();
 	}
 
 
