@@ -3,6 +3,7 @@ package io.github.guillermo_david.controller;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
 import org.controlsfx.control.textfield.CustomTextField;
@@ -81,7 +82,9 @@ public class ListadoPildorasController {
 	private SortState lastState = SortState.NONE;
 	private boolean suppressSort = false;
 
-	
+	private static final Preferences PREFS = Preferences.userNodeForPackage(ListadoPildorasController.class);
+	private static final String PREF_SOLO_FAV = "soloFavoritas";
+	private static final String PREF_AND_OR = "filtroAndOr";
 	
 	private double dragOffsetX, dragOffsetY;
 	
@@ -104,7 +107,7 @@ public class ListadoPildorasController {
 
 	@FXML
 	public void initialize() {
-
+		
 		base = MainApp.class.getResource("/css/base.css").toExternalForm();
 	    light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();
 	    dark  = MainApp.class.getResource("/css/theme-dark.css").toExternalForm();
@@ -144,6 +147,9 @@ public class ListadoPildorasController {
 	private void setTxtFiltros() {
 		txtFiltroTexto.setOnAction(e -> { paginaActual = 1; refrescarTabla(); });
 		txtFiltroTags.setOnAction(e -> { paginaActual = 1; refrescarTabla(); });
+		
+		txtFiltroTexto.setTooltip(new Tooltip("Ctrl+F"));
+		txtFiltroTags.setTooltip(new Tooltip("Ctrl+T"));
 		
 		attachClearButton(txtFiltroTexto, () -> { paginaActual = 1; refrescarTabla(); });
 	    attachClearButton(txtFiltroTags,  () -> { paginaActual = 1; refrescarTabla(); });
@@ -415,6 +421,7 @@ public class ListadoPildorasController {
 		FontIcon favTopIcon = new FontIcon(btnSoloFav.isSelected() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
 		favTopIcon.getStyleClass().add("star-icon"); // clase propia para CSS
 		
+		btnSoloFav.setSelected(PREFS.getBoolean(PREF_SOLO_FAV, false));
 		btnSoloFav.setText(null);                    // sin texto, solo icono
 		btnSoloFav.setGraphic(favTopIcon);
 		btnSoloFav.setTooltip(new Tooltip("Solo favoritas (Ctrl+Shift+F)"));
@@ -424,29 +431,32 @@ public class ListadoPildorasController {
 			favTopIcon.setIconCode(sel ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
 			favTopIcon.getStyleClass().remove("star-fav");
 			if (sel) favTopIcon.getStyleClass().add("star-fav");
+			PREFS.putBoolean(PREF_SOLO_FAV, sel);
 			paginaActual = 1;
 			refrescarTabla();
 		});
 		
+		btnAndOr.setSelected(PREFS.getBoolean(PREF_AND_OR, false));
+		btnAndOr.setText(btnAndOr.isSelected() ? "AND" : "OR");
 		btnAndOr.setTooltip(new Tooltip(
-				"• OR: muestra las píldoras que tengan al menos un tag"
-						+ "\n"
-						+ "• AND: muestra solo las que tengan todos los tags"));
-		btnAndOr.setOnAction(e -> {
-			btnAndOr.setText(btnAndOr.isSelected() ? "AND" : "OR");
-			paginaActual = 1;
-			refrescarTabla();
+		        "• OR: muestra las píldoras que tengan al menos un tag\n" +
+		        "• AND: muestra solo las que tengan todos los tags\n" +
+		        "(Ctrl+Shift+O)"));
+
+		btnAndOr.selectedProperty().addListener((obs, oldSel, sel) -> {
+		    btnAndOr.setText(sel ? "AND" : "OR");
+		    PREFS.putBoolean(PREF_AND_OR, sel);
+		    paginaActual = 1;
+		    refrescarTabla();
 		});
-		
+
 		btnNueva.setText("");
 		btnNueva.setTooltip(new Tooltip("Nueva (Ctrl+N)"));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
-//		btnNueva.getStyleClass().add("button-right");
 		btnNueva.getStyleClass().add("icon-btn");
 
 		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.PLUS);
 		btnNueva.setGraphic(nuevaIcon);
-		
 		
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
 		btnAnterior.setOnAction(e -> {
@@ -654,6 +664,9 @@ public class ListadoPildorasController {
 
 			accel.accept(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
 					() -> btnSoloFav.fire());
+
+			accel.accept(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
+					() -> btnAndOr.fire());
 
 			scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 				if (e.getCode() != KeyCode.DELETE) return;
