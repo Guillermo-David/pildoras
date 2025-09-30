@@ -5,6 +5,7 @@
 <?import javafx.scene.web.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.geometry.Insets?>
+<?import org.controlsfx.control.textfield.CustomTextField?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="io.github.guillermo_david.controller.ListadoPildorasController"
@@ -30,12 +31,12 @@
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
 		    <Label text="Buscar:"/>
-		    <TextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
+		    <CustomTextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
 		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
 		    <Label text="Tags:"/>
-		    <TextField fx:id="txtFiltroTags" promptText="Buscar por tags..."/>
+			<CustomTextField fx:id="txtFiltroTags"  promptText="Buscar por tags..."/>
 		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		

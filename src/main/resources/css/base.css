@@ -393,3 +393,24 @@
 
 /* Icono hereda color */
 .export-icon { -fx-icon-size: 18px; -fx-fill: -fx-text-base-color; }
+
+/* Botón de limpiar dentro del CustomTextField */
+.clear-field {
+  -fx-background-color: transparent;
+  -fx-padding: 0 6 0 6;
+  -fx-cursor: hand;
+  -fx-text-fill: -fx-text-inner-color;
+  -fx-opacity: 0.6;
+  -fx-background-insets: 0;
+  -fx-effect: null;
+}
+
+.clear-field:hover {
+  -fx-opacity: 1.0;
+}
+
+/* Que no cambie el alto del campo al aparecer la ✕ */
+.custom-text-field > .right-pane .clear-field {
+  -fx-min-height: 20;
+  -fx-max-height: 20;
+}

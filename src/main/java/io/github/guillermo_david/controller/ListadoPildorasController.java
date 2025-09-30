@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import org.controlsfx.control.textfield.CustomTextField;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeRegular;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -26,6 +27,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
@@ -37,7 +39,6 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
@@ -51,6 +52,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -96,7 +98,7 @@ public class ListadoPildorasController {
 	@FXML private TableView<Pildora> table;
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
 	@FXML private TableColumn<Pildora, Void> colFav, colAcciones, colPinned;
-	@FXML private TextField txtFiltroTexto, txtFiltroTags;
+	@FXML private CustomTextField txtFiltroTexto, txtFiltroTags;
 	@FXML private ToggleButton btnAndOr, btnSoloFav, btnTema;
 	@FXML private ImageView imgLogo;
 
@@ -142,6 +144,9 @@ public class ListadoPildorasController {
 	private void setTxtFiltros() {
 		txtFiltroTexto.setOnAction(e -> { paginaActual = 1; refrescarTabla(); });
 		txtFiltroTags.setOnAction(e -> { paginaActual = 1; refrescarTabla(); });
+		
+		attachClearButton(txtFiltroTexto, () -> { paginaActual = 1; refrescarTabla(); });
+	    attachClearButton(txtFiltroTags,  () -> { paginaActual = 1; refrescarTabla(); });
 	}
 
 	private void setStatusBar() {
@@ -1091,4 +1096,49 @@ public class ListadoPildorasController {
 	    btnClose.setOnMousePressed(e -> e.consume());
 	    btnClose.setOnMouseDragged(e -> e.consume());
 	}
+	
+	private void attachClearButton(CustomTextField tf, Runnable onCleared) {
+	    // Icono (Ikonli) en lugar de texto
+		 var icon = new FontIcon(FontAwesomeSolid.PLUS);
+	    icon.setIconSize(11);        // 10–12 suele quedar bien
+	    icon.setRotate(45); 
+
+	    var btn = new Button();
+	    btn.setGraphic(icon);
+	    btn.setText(null);                 // <- sin texto
+	    btn.setFocusTraversable(false);
+	    btn.setMnemonicParsing(false);
+	    btn.getStyleClass().add("clear-field");
+	    btn.setOnAction(e -> {
+	        if (!tf.getText().isBlank()) {
+	            tf.clear();
+	            if (onCleared != null) onCleared.run();
+	        }
+	    });
+
+	    // SLOT fijo (siempre presente)
+	    final double SLOT_W = 24;          // 22–26 funciona bien; ajusta si quieres
+	    var slot = new StackPane(btn);
+	    slot.setMinWidth(SLOT_W);
+	    slot.setPrefWidth(SLOT_W);
+	    slot.setMaxWidth(SLOT_W);
+
+	    btn.setMinSize(18, 18);
+	    btn.setPrefSize(18, 18);
+	    btn.setMaxSize(18, 18);
+	    StackPane.setMargin(btn, new Insets(0.0,0.0,2.0,0.0));
+
+	    tf.setRight(slot);                 // deja SIEMPRE el slot
+
+	    Runnable update = () -> {
+	        boolean show = tf.getText() != null && !tf.getText().isBlank();
+	        btn.setVisible(show);
+	        btn.setManaged(show);
+	    };
+	    tf.textProperty().addListener((o, a, b) -> update.run());
+	    update.run();
+	}
+
+
+
 }
