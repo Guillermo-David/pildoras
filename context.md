@@ -11,7 +11,7 @@
 - **VM args**:
 
 ``` 
---module-path "<ruta a jars JavaFX en .m2 o al SDK>"
+--module-path "C:\Program Files\Java\javafx-sdk-21.0.8\lib"
 --add-modules=javafx.base,javafx.controls,javafx.fxml,javafx.graphics,javafx.media,javafx.web
 --add-exports=javafx.base/com.sun.javafx.event=ALL-UNNAMED
 ``` 

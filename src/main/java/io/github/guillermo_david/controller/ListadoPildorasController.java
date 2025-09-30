@@ -56,6 +56,8 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 public class ListadoPildorasController {
+	
+	private enum SortState { ASC, DESC, NONE }
 
 	private final PildoraDao pildoraDao = new PildoraDao();
 	private final TagDao tagDao = new TagDao();
@@ -68,8 +70,16 @@ public class ListadoPildorasController {
 	private boolean shortcutsInstalados = false;
 	private boolean ignoreNextDelete = false;
 
-	private String columnaOrden = "titulo";
-	private String direccionOrden = "ASC";
+	private static final String DEFAULT_ORDER_COL = "fecha_creacion";
+	private static final String DEFAULT_ORDER_DIR = "DESC";
+	private String columnaOrden = DEFAULT_ORDER_COL;
+	private String direccionOrden = DEFAULT_ORDER_DIR;
+	private TableColumn<Pildora, ?> lastSortColumn = null;
+	
+	private SortState lastState = SortState.NONE;
+	private boolean suppressSort = false;
+
+	
 	
 	private double dragOffsetX, dragOffsetY;
 	
@@ -183,7 +193,6 @@ public class ListadoPildorasController {
 		        double row = table.getFixedCellSize(); // 30
 		        int rows   = TAMANIO_PAGINA;           // 20
 
-		        // 👇 Limpia el binding previo antes de re-vincular
 		        table.prefHeightProperty().unbind();
 		        table.prefHeightProperty().bind(headerHeight.add(rows * row + 2));
 
@@ -194,21 +203,101 @@ public class ListadoPildorasController {
 		        if (wnd instanceof Stage st) Platform.runLater(st::sizeToScene);
 		    });
 		});
-		table.getSortOrder().addListener((ListChangeListener<TableColumn<Pildora, ?>>) change -> {
-			if (!table.getSortOrder().isEmpty()) {
-				TableColumn<Pildora, ?> col = table.getSortOrder().get(0);
-				columnaOrden = switch (col.getText()) {
-				case "Título" -> "titulo";
-				case "Descripción" -> "descripcion";
-				case "Tags" -> "nombre"; // ojo, esto requiere join, podemos dejarlo vacío de momento
-				default -> "fecha_creacion";
-				};
-				direccionOrden = col.getSortType() == TableColumn.SortType.ASCENDING ? "ASC" : "DESC";
-				
-				paginaActual = 1; // reset al ordenar
-				refrescarTabla();
-			}
+		
+		colTitulo.setSortable(true);
+		colDescripcion.setSortable(true);
+		colTags.setSortable(false);
+		colFav.setSortable(false);
+		colPinned.setSortable(false);
+		colAcciones.setSortable(false);
+
+		table.setSortPolicy(tv -> {
+		    if (suppressSort) return true;
+
+		    TableColumn<Pildora, ?> primary =
+		            tv.getSortOrder().isEmpty() ? null : tv.getSortOrder().get(0);
+
+		    // --- 3er click: JavaFX ya limpió sortOrder (primary == null). Forzamos NONE + orden por defecto.
+		    if (primary == null && lastSortColumn != null && lastState != SortState.NONE) {
+		        suppressSort = true;
+		        try {
+		            tv.getSortOrder().clear();   // sin flecha
+		            lastSortColumn = null;
+		            lastState = SortState.NONE;
+		        } finally {
+		            suppressSort = false;
+		        }
+		        columnaOrden   = DEFAULT_ORDER_COL;  // "fecha_creacion"
+		        direccionOrden = DEFAULT_ORDER_DIR;  // "DESC"
+		        paginaActual = 1;
+		        refrescarTabla();
+		        return true; // ya gestionado
+		    }
+
+		    if (primary == null) return true; // no hay transición (p.ej. click fuera), no hacer nada
+
+		    SortState next;
+		    if (primary == lastSortColumn) {
+		        next = switch (lastState) {
+		            case ASC  -> SortState.DESC;
+		            case DESC -> SortState.NONE;
+		            case NONE -> SortState.ASC;
+		        };
+		    } else {
+		        next = SortState.ASC;
+		    }
+
+		    suppressSort = true;
+		    try {
+		        if (next == SortState.NONE) {
+		            tv.getSortOrder().clear();
+		            lastSortColumn = null;
+		            lastState = SortState.NONE;
+
+		            columnaOrden   = DEFAULT_ORDER_COL;
+		            direccionOrden = DEFAULT_ORDER_DIR;
+
+		            paginaActual = 1;
+		            refrescarTabla();
+		        } else {
+		            if (tv.getSortOrder().isEmpty() || tv.getSortOrder().get(0) != primary) {
+		                tv.getSortOrder().setAll(primary);
+		            }
+		            primary.setSortType(next == SortState.ASC
+		                    ? TableColumn.SortType.ASCENDING
+		                    : TableColumn.SortType.DESCENDING);
+
+		            if (primary == colTitulo) {
+		                columnaOrden = "titulo";
+		            } else if (primary == colDescripcion) {
+		                columnaOrden = "descripcion";
+		            } else {
+		                tv.getSortOrder().clear();
+		                lastSortColumn = null;
+		                lastState = SortState.NONE;
+		                columnaOrden   = DEFAULT_ORDER_COL;
+		                direccionOrden = DEFAULT_ORDER_DIR;
+
+		                paginaActual = 1;
+		                refrescarTabla();
+		                return true;
+		            }
+
+		            direccionOrden = (next == SortState.ASC) ? "ASC" : "DESC";
+
+		            lastSortColumn = primary;
+		            lastState = next;
+
+		            paginaActual = 1;
+		            refrescarTabla();
+		        }
+		    } finally {
+		        suppressSort = false;
+		    }
+
+		    return true;
 		});
+
 		table.setRowFactory(tv -> {
 			TableRow<Pildora> row = new TableRow<>();
 			row.setOnMouseClicked(event -> {
@@ -779,6 +868,26 @@ public class ListadoPildorasController {
 
 		table.setItems(FXCollections.observableArrayList(todas));
 		lblPagina.setText("Página " + paginaActual + " de " + totalPaginas);
+		
+		// Restaura el indicador visual del orden elegido por el usuario
+		suppressSort = true;
+		try {
+		    if (lastState == SortState.NONE || lastSortColumn == null) {
+		        table.getSortOrder().clear(); // sin flecha
+		    } else {
+		        if (table.getSortOrder().isEmpty() || table.getSortOrder().get(0) != lastSortColumn) {
+		            table.getSortOrder().setAll(lastSortColumn);
+		        }
+		        lastSortColumn.setSortType(
+		            lastState == SortState.ASC
+		                ? TableColumn.SortType.ASCENDING
+		                : TableColumn.SortType.DESCENDING
+		        );
+		    }
+		} finally {
+		    suppressSort = false;
+		}
+
 
 		btnAnterior.setDisable(paginaActual == 1);
 		btnSiguiente.setDisable(paginaActual == totalPaginas);

@@ -49,8 +49,8 @@ public class PildoraDao {
 
 // Whitelist para ORDER BY
 		String colOrden = switch (columnaOrden) {
-		case "titulo" -> "p.titulo";
-		case "descripcion" -> "p.descripcion";
+		case "titulo" -> "lower(p.titulo)";
+		case "descripcion" -> "lower(p.descripcion)";
 		case "fecha_creacion" -> "p.fecha_creacion";
 		case "fecha_actualizacion" -> "p.fecha_actualizacion";
 		case "favorita" -> "p.favorita";
@@ -106,7 +106,7 @@ public class PildoraDao {
 		} else {
 		    // Si el usuario “ordena por pinned”, mantenemos pinned primero
 		    // y metemos un criterio estable secundario (por ejemplo, fecha desc)
-		    sql.append(", p.titulo DESC ");
+		    sql.append(", p.fecha_creacion DESC ");
 		}
 // ORDER: favoritas primero (si NO está el filtro exclusivo), luego la columna elegida
 //		if (!soloFavoritas && !"p.favorita".equals(colOrden)) {
