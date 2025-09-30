@@ -97,7 +97,7 @@ public class DetallePildoraController {
     	    trash.setIconSize(16);
     	    btnBorrar.setText(null);
     	    btnBorrar.setGraphic(trash);
-    	    btnBorrar.getStyleClass().addAll("icon-btn", "danger"); // <- para color
+    	    btnBorrar.getStyleClass().addAll("icon-btn", "danger", "btn-big"); // <- para color
     	    btnBorrar.setTooltip(new Tooltip("Eliminar (Supr)"));
     	}
 
@@ -107,7 +107,7 @@ public class DetallePildoraController {
     	    edit.setIconSize(16);
     	    btnEditar.setText(null);
     	    btnEditar.setGraphic(edit);
-    	    btnEditar.getStyleClass().add("icon-btn");
+    	    btnEditar.getStyleClass().addAll("icon-btn", "btn-big");
     	    btnEditar.setTooltip(new Tooltip("Editar (Ctrl+E)"));
     	}
 
@@ -117,7 +117,7 @@ public class DetallePildoraController {
     	    back.setIconSize(16);
     	    btnVolver.setText(null);
     	    btnVolver.setGraphic(back);
-    	    btnVolver.getStyleClass().add("icon-btn");
+    	    btnVolver.getStyleClass().addAll("icon-btn", "btn-big");
     	    btnVolver.setTooltip(new Tooltip("Volver (Esc)"));
     	}
     	
@@ -167,6 +167,8 @@ public class DetallePildoraController {
         btnExportMenu.setText(null);
         btnExportMenu.setGraphic(exportIcon);
         btnExportMenu.setTooltip(new Tooltip("Exportar"));
+        btnExportMenu.getStyleClass().add("icon-btn");
+        btnExportMenu.getStyleClass().add("btn-big");
 
         // Opción Markdown
         var miMd = new MenuItem("Markdown");

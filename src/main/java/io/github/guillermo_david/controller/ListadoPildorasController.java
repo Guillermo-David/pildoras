@@ -93,6 +93,7 @@ public class ListadoPildorasController {
 	private static final String PREF_FONT_SIZE   = "uiFontSize";   // "small" | "normal" | "large"
 	private static final String DEF_FONT_FAMILY = "System";
 	private static final String DEF_FONT_SIZE   = "normal";
+	private final int DEFAULT_SMALL_ICON_SIZE = 14;
 
 	private double dragOffsetX, dragOffsetY;
 	
@@ -160,17 +161,17 @@ public class ListadoPildorasController {
 	    attachClearButton(txtFiltroTags,  () -> { paginaActual = 1; refrescarTabla(); });
 	    
 	 // Ancho base (un poco más grandes)
-	    txtFiltroTexto.setPrefWidth(250);
+	    txtFiltroTexto.setPrefWidth(275);
 	    txtFiltroTexto.setMinWidth(200);
 	    txtFiltroTexto.setMaxWidth(Double.MAX_VALUE);
 
-	    txtFiltroTags.setPrefWidth(200);
-	    txtFiltroTags.setMinWidth(140);
+	    txtFiltroTags.setPrefWidth(275);
+	    txtFiltroTags.setMinWidth(200);
 	    txtFiltroTags.setMaxWidth(Double.MAX_VALUE);
 
 	    // Que puedan crecer si hay hueco en la barra
-	    HBox.setHgrow(txtFiltroTexto, Priority.SOMETIMES);
-	    HBox.setHgrow(txtFiltroTags, Priority.SOMETIMES);
+	    HBox.setHgrow(txtFiltroTexto, Priority.ALWAYS);
+	    HBox.setHgrow(txtFiltroTags, Priority.ALWAYS);
 
 	    // (opcional) por columnas, por si prefieres afinar por caracteres
 //	     txtFiltroTexto.setPrefColumnCount(24);
@@ -345,14 +346,14 @@ public class ListadoPildorasController {
 		});
 		
 		// Columnas fijas para pin y fav
-		colPinned.setMinWidth(40);
-		colPinned.setPrefWidth(40);
-		colPinned.setMaxWidth(40);
+		colPinned.setMinWidth(45);
+		colPinned.setPrefWidth(45);
+		colPinned.setMaxWidth(45);
 		colPinned.setResizable(false);
 
-		colFav.setMinWidth(40);
-		colFav.setPrefWidth(40);
-		colFav.setMaxWidth(40);
+		colFav.setMinWidth(45);
+		colFav.setPrefWidth(45);
+		colFav.setMaxWidth(45);
 		colFav.setResizable(false);
 
 	}
@@ -375,8 +376,10 @@ public class ListadoPildorasController {
 
 				FontIcon icon = new FontIcon(p.isFavorita() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
 				icon.getStyleClass().add("star-icon"); // base para tamaño/color
-				if (p.isFavorita())
+				icon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
+				if (p.isFavorita()) {
 					icon.getStyleClass().add("star-fav"); // 👈 color dorado
+				}
 
 				star.setGraphic(icon);
 				star.setOnAction(e -> {
@@ -398,6 +401,7 @@ public class ListadoPildorasController {
 
 				HBox box = new HBox(star);
 				box.setStyle("-fx-alignment: CENTER;");
+				box.setTranslateX(-4);
 				setGraphic(box);
 			}
 		});
@@ -421,6 +425,7 @@ public class ListadoPildorasController {
 
 	            // 👇 siempre Solid
 	            FontIcon icon = new FontIcon(FontAwesomeSolid.THUMBTACK);
+				icon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
 	            icon.getStyleClass().add("pin-icon");
 	            if (p.isPinned()) icon.getStyleClass().add("pin-active");
 	            icon.setRotate(p.isPinned() ? -20 : 0); // opcional: efecto clavada
@@ -457,7 +462,7 @@ public class ListadoPildorasController {
 		FontIcon favTopIcon = new FontIcon(btnSoloFav.isSelected()
 		        ? FontAwesomeSolid.STAR
 		        : FontAwesomeRegular.STAR);
-		favTopIcon.setIconSize(14);
+		favTopIcon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
 
 		btnSoloFav.getStyleClass().setAll("round-toggle", "fav-toggle"); // <- aquí
 		btnSoloFav.setGraphic(favTopIcon);
@@ -469,13 +474,19 @@ public class ListadoPildorasController {
 		    PREFS.putBoolean(PREF_SOLO_FAV, sel);
 		    paginaActual = 1;
 		    refrescarTabla();
+		    
+		    StatusBus.show(
+		            sel ? "Mostrando solo favoritas" : "Mostrando todas las píldoras",
+		            StatusBus.Type.INFO,
+		            Duration.seconds(2)
+		        );
 		});
 
 		// --- AND / OR ---
 		FontIcon btnAndOrIcon = new FontIcon(btnAndOr.isSelected()
 		        ? FontAwesomeSolid.LINK
 		        : FontAwesomeSolid.CODE_BRANCH);
-		btnAndOrIcon.setIconSize(14);
+		btnAndOrIcon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
 
 		btnAndOr.getStyleClass().setAll("round-toggle", "andor-toggle"); // <- y aquí
 		btnAndOr.setGraphic(btnAndOrIcon);
@@ -488,6 +499,12 @@ public class ListadoPildorasController {
 		    PREFS.putBoolean(PREF_AND_OR, sel);
 		    paginaActual = 1;
 		    refrescarTabla();
+		    
+		    StatusBus.show(
+		            sel ? "Filtro de tags: contiene todas" : "Filtro de tags: contiene al menos una",
+		            StatusBus.Type.INFO,
+		            Duration.seconds(2)
+		        );
 		});
 
 		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.FOLDER_PLUS);
@@ -496,7 +513,7 @@ public class ListadoPildorasController {
 		btnNueva.setTooltip(new Tooltip("Nueva (Ctrl+N)"));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
 		btnNueva.getStyleClass().add("icon-btn");
-		btnNueva.getStyleClass().add("btn-filter-bar");
+		btnNueva.getStyleClass().add("btn-big");
 		
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
 		btnAnterior.setOnAction(e -> {
@@ -573,7 +590,7 @@ public class ListadoPildorasController {
 	}
 
 	private void setColAcciones() {
-	    colAcciones.setMaxWidth(120);
+	    colAcciones.setMaxWidth(80);
 	    colAcciones.setSortable(false);
 
 	    colAcciones.setCellFactory(col -> new TableCell<>() {
@@ -604,7 +621,13 @@ public class ListadoPildorasController {
 	        private final HBox box = new HBox(8, btnEditar, btnBorrar);
 
 	        {
-	            box.setStyle("-fx-alignment: CENTER;");
+	        	box.setStyle("-fx-alignment: CENTER;");
+	            box.setFillHeight(false); // no fuerces a crecer en alto
+	            box.setSpacing(14);
+//	            box.setTranslateY(-1.5);
+	            // Alternativa (más “top”):
+//	             setAlignment(Pos.TOP_CENTER);
+//	             setPadding(new Insets(0, 0, 6, 0)); // microajuste si quieres
 	        }
 
 	        @Override

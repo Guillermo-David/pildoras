@@ -52,7 +52,7 @@
 
 .star-icon {
 	/* Ikonli */
-	-fx-icon-size: 16px;
+	/*-fx-icon-size: 16px;*/
 	-fx-icon-color: -fx-text-base-color;
 }
 
@@ -96,6 +96,32 @@
   -fx-background-color: rgba(229, 57, 53, 0.12);
 }
 
+/* Solo en filas de la tabla: botón compacto y sin padding */
+.table-row-cell .button.icon-btn {
+  -fx-content-display: graphic-only;
+  -fx-padding: 0 6 !important;
+  -fx-background-insets: 0;
+  -fx-border-insets: 0;
+  -fx-background-color: transparent;
+  -fx-min-width: 0;
+  -fx-min-height: 0;
+  -fx-pref-width: 16;
+  -fx-pref-height: 16;
+  -fx-max-width: 16;
+  -fx-max-height: 16;
+}
+
+/* Icono pequeño */
+.table-row-cell .button.icon-btn .ikonli-font-icon {
+  -fx-icon-size: 14px;
+}
+
+/* (opcional) baja un pelín el padding vertical de las celdas para que no “corten” */
+.table-cell {
+  -fx-padding: 2 6 2 6;
+}
+
+
 .table-row-cell .icon-btn:focused .ikonli-font-icon {
 	-fx-icon-color: -fx-accent;
 }
@@ -123,10 +149,9 @@
 	-fx-border-color: #f6b800;
 }
 
-.toggle-button.toggle-btn .ikonli-font-icon,
-.toggle-button.toggle-btn .star-icon,
-.icon-btn.btn-filter-bar .ikonli-font-icon {
+.icon-btn.btn-big .ikonli-font-icon {
 	-fx-icon-size: 24px;
+	-fx-padding: 0 25 0 0 !important;
 }
 
 .toggle-button.toggle-btn:selected .ikonli-font-icon,
@@ -182,6 +207,24 @@
 .table-row-cell:odd {
 	-fx-background-color: derive(-fx-control-inner-background, -3%);
 }
+
+/* Botones compactos SOLO dentro de las filas de la tabla */
+/*
+.table-row-cell .icon-btn {
+  -fx-content-display: graphic-only;
+  -fx-padding: 0;
+  -fx-min-width: 16;
+  -fx-pref-width: 16;
+  -fx-max-width: 16;
+  -fx-min-height: 16;
+  -fx-pref-height: 16;
+  -fx-max-height: 16;
+  -fx-background-insets: 0;
+}
+
+.table-row-cell .icon-btn .ikonli-font-icon {
+  -fx-icon-size: 12px;
+}/*
 
 /* ---------- Inputs (TextField/TextArea) ---------- */
 .text-input {

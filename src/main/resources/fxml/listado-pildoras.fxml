@@ -19,10 +19,8 @@
 			
 			  <!-- Acciones de la barra -->
 			  <HBox spacing="8" styleClass="titlebar-actions">
-			    <!--<ToggleButton fx:id="btnTema" styleClass="theme-toggle settings-btn"/>-->
 			    <MenuButton   fx:id="btnSettings" popupSide="BOTTOM" styleClass="icon-btn settings-btn"/>
 			    <Separator orientation="VERTICAL" styleClass="v-sep"/>
-			    <!--<Separator orientation="VERTICAL" styleClass="v-sep-thin"/>-->
 			    <Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
 			  </HBox>
 			</HBox>
@@ -35,25 +33,20 @@
 		    </padding>
 		
 		    <ImageView fx:id="imgLogo" fitHeight="64" preserveRatio="true" pickOnBounds="true"/>
-		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
 		    <Label text="Buscar:"/>
 		    <CustomTextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
-		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
 		    <Label text="Tags:"/>
 			<CustomTextField fx:id="txtFiltroTags"  promptText="Buscar por tags..."/>
-		
-		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
-		
 		    <ToggleButton fx:id="btnAndOr" styleClass="toggle-btn"/>
 		    <ToggleButton fx:id="btnSoloFav" styleClass="toggle-btn"/>
-		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
-		    <Pane HBox.hgrow="ALWAYS"/>
+			<!--Esto empuja-->
+		    <!--<Pane HBox.hgrow="ALWAYS"/>-->
 		
 		    <Button fx:id="btnNueva"/>
 		
@@ -67,8 +60,8 @@
 	    <TableView fx:id="table" prefHeight="600" prefWidth="800">
 	        <columns>
 	        	<!--<TableColumn fx:id="colFav" text="★" prefWidth="60"/>-->
-	        	<TableColumn fx:id="colPinned" text="" prefWidth="40"/>
-	        	<TableColumn fx:id="colFav" text="" prefWidth="40"/>
+	        	<TableColumn fx:id="colPinned" text=""/>
+	        	<TableColumn fx:id="colFav" text=""/>
 	            <TableColumn fx:id="colTitulo" text="Título" prefWidth="200"/>
 	            <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="400"/>
 	            <TableColumn fx:id="colTags" text="Tags" prefWidth="200"/>
