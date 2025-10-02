@@ -3,6 +3,7 @@ package io.github.guillermo_david;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.guillermo_david.db.DatabaseHelper;
 import io.github.guillermo_david.javafx.ThemeManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -34,17 +35,10 @@ public class MainApp extends Application{
 	@Override
 	public void start(Stage stage) throws Exception {
 		
-//		var args = java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments();
-//		System.out.println("[JVM ARGS]");
-//		for (var a : args) System.out.println("  " + a);
-//
-//		var base3 = javafx.beans.Observable.class.getModule(); // javafx.base
-//		var us   = MainApp.class.getModule();                 // tu módulo (unnamed)
-//		System.out.println("[CHECK] exported? " + base3.isExported("com.sun.javafx.event", us)
-//		                   + "  opened? " + base3.isOpen("com.sun.javafx.event", us));
+		// 1) Fuerza inicialización + migraciones de la BD primero
+	    DatabaseHelper.getInstance();  // 👈 esto dispara initializeDatabase()
 
-		//===========================================================================================
-
+	    // 2) Ya puedes cargar los FXML/Controllers con la BD migrada
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
 	    Scene scene = new Scene(fxmlLoader.load(), 1024, 840);
 
@@ -56,19 +50,15 @@ public class MainApp extends Application{
 	    var current = ThemeManager.load();
 	    ThemeManager.apply(scene, current);
 	    
-//	    scene.getStylesheets().setAll(base, light);
-
-	    // 👇 Establece iconos PNG (con alpha) ANTES del show()
 	    var icons = loadIcons();
 	    if (!icons.isEmpty()) stage.getIcons().setAll(icons);
 
 	    stage.setTitle("Píldoras");
-	    stage.initStyle(javafx.stage.StageStyle.UNDECORATED); // asegúrate de no usar UNIFIED/TRANSPARENT
+	    stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
 	    stage.setResizable(false);
 	    stage.setScene(scene);
 	    stage.show();
 	}
-
 
 	public static void main(String[] args) {
 		System.setProperty("prism.order", "sw");

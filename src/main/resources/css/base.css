@@ -88,37 +88,37 @@
 }
 
 .icon-btn.danger .ikonli-font-icon {
-  -fx-icon-color: #e53935;
+	-fx-icon-color: #e53935;
 }
 
 
 .icon-btn.danger:hover {
-  -fx-background-color: rgba(229, 57, 53, 0.12);
+	-fx-background-color: rgba(229, 57, 53, 0.12);
 }
 
 /* Solo en filas de la tabla: botón compacto y sin padding */
 .table-row-cell .button.icon-btn {
-  -fx-content-display: graphic-only;
-  -fx-padding: 0 6 !important;
-  -fx-background-insets: 0;
-  -fx-border-insets: 0;
-  -fx-background-color: transparent;
-  -fx-min-width: 0;
-  -fx-min-height: 0;
-  -fx-pref-width: 16;
-  -fx-pref-height: 16;
-  -fx-max-width: 16;
-  -fx-max-height: 16;
+	-fx-content-display: graphic-only;
+	-fx-padding: 0 6 !important;
+	-fx-background-insets: 0;
+	-fx-border-insets: 0;
+	-fx-background-color: transparent;
+	-fx-min-width: 0;
+	-fx-min-height: 0;
+	-fx-pref-width: 16;
+	-fx-pref-height: 16;
+	-fx-max-width: 16;
+	-fx-max-height: 16;
 }
 
 /* Icono pequeño */
 .table-row-cell .button.icon-btn .ikonli-font-icon {
-  -fx-icon-size: 14px;
+	-fx-icon-size: 14px;
 }
 
 /* (opcional) baja un pelín el padding vertical de las celdas para que no “corten” */
 .table-cell {
-  -fx-padding: 2 6 2 6;
+	-fx-padding: 2 6 2 6;
 }
 
 
@@ -343,7 +343,7 @@
 	-fx-text-fill: -fx-text-base-color;
 	-fx-cursor: hand;
 	-fx-padding: 4 10 4 10;
-/*	-fx-padding: 4 8;*/
+	/*	-fx-padding: 4 8;*/
 }
 
 .titlebar-close:hover {
@@ -352,14 +352,16 @@
 	/* rojo sutil */
 }
 
-.titlebar .titlebar-actions { 
-	-fx-alignment: CENTER_RIGHT; 
-	-fx-padding: 0 6 0 0; 
+.titlebar .titlebar-actions {
+	-fx-alignment: CENTER_RIGHT;
+	-fx-padding: 0 6 0 0;
 }
-.v-sep-thin { 
-	-fx-padding: 0 6 0 6; 
+
+.v-sep-thin {
+	-fx-padding: 0 6 0 6;
 	-fx-border-width: 0;
 }
+
 /* Botón pin */
 .button.pin {
 	-fx-background-color: transparent;
@@ -390,177 +392,222 @@
 }
 
 .tag-chip {
-    -fx-background-color: -fx-tag-bg;
-    -fx-background-radius: 12;
-    -fx-padding: 2 8 2 8;
-    -fx-alignment: CENTER_LEFT;
-}
-.tag-chip > .label {
-    -fx-text-fill: -fx-tag-fg;
-    -fx-font-size: 11px;
-}
-.tag-chip .chip-close {
-    -fx-background-color: transparent;
-    -fx-text-fill: -fx-tag-fg;
-    -fx-padding: 0 0 0 4;
-    -fx-cursor: hand;
+	-fx-background-color: -fx-tag-bg;
+	-fx-background-radius: 12;
+	-fx-padding: 2 8 2 8;
+	-fx-alignment: CENTER_LEFT;
 }
 
-.tag-chip .chip-close:hover { -fx-opacity: .75; }
+.tag-chip>.label {
+	-fx-text-fill: -fx-tag-fg;
+	-fx-font-size: 11px;
+}
+
+.tag-chip .chip-close {
+	-fx-background-color: transparent;
+	-fx-text-fill: -fx-tag-fg;
+	-fx-padding: 0 0 0 4;
+	-fx-cursor: hand;
+}
+
+.tag-chip .chip-close:hover {
+	-fx-opacity: .75;
+}
 
 .button.tag-chip:hover {
-  -fx-opacity: 0.9;
+	-fx-opacity: 0.9;
 }
 
 /* Iconos de exportación, heredan color del tema */
 .export-icon {
-  -fx-icon-size: 18px;            /* por si acaso */
-  -fx-fill: -fx-text-base-color;  /* Ikonli respeta esto */
+	-fx-icon-size: 18px;
+	/* por si acaso */
+	-fx-fill: -fx-text-base-color;
+	/* Ikonli respeta esto */
 }
 
 .menu-button.icon-btn {
-  -fx-background-color: transparent;
-  -fx-padding: 6 8;
-  -fx-background-radius: 8;
+	-fx-background-color: transparent;
+	-fx-padding: 6 8;
+	-fx-background-radius: 8;
 }
 
 .menu-button.icon-btn:hover {
-  -fx-background-color: rgba(0,0,0,0.06);
+	-fx-background-color: rgba(0, 0, 0, 0.06);
 }
+
 .root .menu-button.icon-btn:hover {
-  -fx-background-color: rgba(255,255,255,0.06); /* ajuste para dark */
+	-fx-background-color: rgba(255, 255, 255, 0.06);
+	/* ajuste para dark */
 }
 
 /* Ocultar la flecha del MenuButton */
-.menu-button.icon-btn > .arrow-button,
-.menu-button.icon-btn > .arrow-button > .arrow {
-  -fx-padding: 0;
-  -fx-shape: null;
-  -fx-background-color: transparent;
-  -fx-opacity: 0;
-  -fx-max-width: 0;
-  -fx-max-height: 0;
-  -fx-min-width: 0;
-  -fx-min-height: 0;
+.menu-button.icon-btn>.arrow-button,
+.menu-button.icon-btn>.arrow-button>.arrow {
+	-fx-padding: 0;
+	-fx-shape: null;
+	-fx-background-color: transparent;
+	-fx-opacity: 0;
+	-fx-max-width: 0;
+	-fx-max-height: 0;
+	-fx-min-width: 0;
+	-fx-min-height: 0;
 }
 
 /* Icono hereda color */
-.export-icon { -fx-icon-size: 18px; -fx-fill: -fx-text-base-color; }
+.export-icon {
+	-fx-icon-size: 18px;
+	-fx-fill: -fx-text-base-color;
+}
 
 /* Botón de limpiar dentro del CustomTextField */
 .clear-field {
-  -fx-background-color: transparent;
-  -fx-padding: 0 6 0 6;
-  -fx-cursor: hand;
-  -fx-text-fill: -fx-text-inner-color;
-  -fx-opacity: 0.6;
-  -fx-background-insets: 0;
-  -fx-effect: null;
+	-fx-background-color: transparent;
+	-fx-padding: 0 6 0 6;
+	-fx-cursor: hand;
+	-fx-text-fill: -fx-text-inner-color;
+	-fx-opacity: 0.6;
+	-fx-background-insets: 0;
+	-fx-effect: null;
 }
 
 .clear-field:hover {
-  -fx-opacity: 1.0;
+	-fx-opacity: 1.0;
 }
 
 /* Que no cambie el alto del campo al aparecer la ✕ */
-.custom-text-field > .right-pane .clear-field {
-  -fx-min-height: 20;
-  -fx-max-height: 20;
+.custom-text-field>.right-pane .clear-field {
+	-fx-min-height: 20;
+	-fx-max-height: 20;
 }
 
 /* Tamaño fijo y coherente para iconos de la barra de filtros */
 .button.icon-btn,
 .toggle-button.icon-btn {
-  -fx-min-width: 32;
-  -fx-pref-width: 32;
-  -fx-max-width: 32;
-  -fx-min-height: 32;
-  -fx-pref-height: 32;
-  -fx-max-height: 32;
-  -fx-padding: 0;
-  -fx-background-radius: 8;
-  -fx-border-radius: 8;
-  -fx-content-display: graphic-only; /* solo icono */
-  -fx-alignment: CENTER;
+	-fx-min-width: 32;
+	-fx-pref-width: 32;
+	-fx-max-width: 32;
+	-fx-min-height: 32;
+	-fx-pref-height: 32;
+	-fx-max-height: 32;
+	-fx-padding: 0;
+	-fx-background-radius: 8;
+	-fx-border-radius: 8;
+	-fx-content-display: graphic-only;
+	/* solo icono */
+	-fx-alignment: CENTER;
 }
 
 /* Neutraliza el “selected” por defecto de ToggleButton para icon-btn */
 .toggle-button.icon-btn:selected {
-  -fx-background-color: transparent;
-  -fx-border-color: transparent;
+	-fx-background-color: transparent;
+	-fx-border-color: transparent;
 }
 
 /* Hover consistente (ya lo tienes, lo recalco para toggle) */
 .toggle-button.icon-btn:hover,
 .button.icon-btn:hover {
-  -fx-background-color: rgba(0, 0, 0, 0.06);
+	-fx-background-color: rgba(0, 0, 0, 0.06);
 }
+
 .root .toggle-button.icon-btn:hover,
 .root .button.icon-btn:hover {
-  -fx-background-color: rgba(255, 255, 255, 0.06); /* ajuste dark */
+	-fx-background-color: rgba(255, 255, 255, 0.06);
+	/* ajuste dark */
 }
 
 /* ====== Comportamiento específico ====== */
 /* AND/OR: nunca dorado al seleccionar */
 .andor-btn:selected .ikonli-font-icon {
-  -fx-icon-color: -fx-text-base-color; /* se queda neutro */
+	-fx-icon-color: -fx-text-base-color;
+	/* se queda neutro */
 }
 
 /* Favoritas: si quieres mantener dorado al seleccionar, activa esto */
 .fav-btn:selected .ikonli-font-icon {
-  -fx-icon-color: #f6b800;
+	-fx-icon-color: #f6b800;
 }
+
 /* Si NO quieres dorado tampoco en favoritas, comenta el bloque de arriba. */
 .andor-btn:selected,
 .andor-btn:selected .ikonli-font-icon {
-  -fx-background-color: transparent;
-  -fx-border-color: transparent;
-  -fx-icon-color: -fx-text-base-color;
+	-fx-background-color: transparent;
+	-fx-border-color: transparent;
+	-fx-icon-color: -fx-text-base-color;
 }
 
 /* Botón redondo con solo icono dentro */
 .round-toggle {
-  -fx-min-width: 32;   /* mismo tamaño para ambos */
-  -fx-pref-width: 32;
-  -fx-max-width: 32;
-  -fx-min-height: 32;
-  -fx-pref-height: 32;
-  -fx-max-height: 32;
+	-fx-min-width: 32;
+	/* mismo tamaño para ambos */
+	-fx-pref-width: 32;
+	-fx-max-width: 32;
+	-fx-min-height: 32;
+	-fx-pref-height: 32;
+	-fx-max-height: 32;
 
-  -fx-background-color: transparent;
-  -fx-border-color: -fx-box-border;
-  -fx-border-width: 1;
-  -fx-background-radius: 999;
-  -fx-border-radius: 999;
-  -fx-padding: 0;
-  -fx-content-display: graphic-only; /* solo el icono */
-  -fx-cursor: hand;
+	-fx-background-color: transparent;
+	-fx-border-color: -fx-box-border;
+	-fx-border-width: 1;
+	-fx-background-radius: 999;
+	-fx-border-radius: 999;
+	-fx-padding: 0;
+	-fx-content-display: graphic-only;
+	/* solo el icono */
+	-fx-cursor: hand;
 }
 
 /* Hover sutil (opcional) */
 .round-toggle:hover {
-  -fx-background-color: rgba(0,0,0,0.06);
+	-fx-background-color: rgba(0, 0, 0, 0.06);
 }
-.root .round-toggle:hover { /* ajuste para dark */
-  -fx-background-color: rgba(255,255,255,0.06);
+
+.root .round-toggle:hover {
+	/* ajuste para dark */
+	-fx-background-color: rgba(255, 255, 255, 0.06);
 }
 
 /* Icono más pequeño dentro del botón redondo */
 .round-toggle .ikonli-font-icon {
-  -fx-icon-size: 14px;   /* ajusta a 12–14 si lo quieres aún más pequeño */
+	-fx-icon-size: 14px;
+	/* ajusta a 12–14 si lo quieres aún más pequeño */
 }
 
 /* Que al seleccionar NO cambie a “dorado” ni nada raro */
 .round-toggle:selected {
-  -fx-background-color: transparent;
-  -fx-border-color: -fx-box-border;
+	-fx-background-color: transparent;
+	-fx-border-color: -fx-box-border;
 }
+
 /* Favoritas: icono dorado cuando está activo */
 .fav-toggle:selected .ikonli-font-icon {
-  -fx-icon-color: #f6b800;
+	-fx-icon-color: #f6b800;
 }
 
 /* AND/OR: al seleccionar, NO cambies de color (mantenlo neutro) */
 .andor-toggle:selected .ikonli-font-icon {
-  -fx-icon-color: -fx-text-base-color;
+	-fx-icon-color: -fx-text-base-color;
+}
+
+.muted-icon {
+	-fx-icon-color: -fx-muted-icon;
+}
+
+/* ---- Dialogs themed ---- */
+.themed-dialog {
+  -fx-background-color: -c-bg;
+  -fx-border-color: -c-border;
+  -fx-border-width: 1;
+}
+.themed-dialog > .header-panel {
+  -fx-background-color: linear-gradient(to bottom, -c-bg, -c-bg-subtle);
+  -fx-border-color: -c-border;
+  -fx-border-width: 0 0 1 0;
+  -fx-padding: 0; /* la HBox titlebar ya lleva padding */
+}
+.themed-dialog > .content {
+  -fx-background-color: -c-bg;
+}
+.themed-dialog > .button-bar > .container {
+  -fx-background-color: -c-bg;
 }

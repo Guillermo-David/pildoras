@@ -143,59 +143,155 @@ public class DatabaseHelper {
 	// --- Esquema + migraciones idempotentes ---
 
 	private void initializeDatabase() throws SQLException {
-		try (Statement stmt = connection.createStatement()) {
-			stmt.execute("""
-					    CREATE TABLE IF NOT EXISTS pildoras (
-					        id INTEGER PRIMARY KEY AUTOINCREMENT,
-					        titulo TEXT NOT NULL,
-					        descripcion TEXT NOT NULL,
-					        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-					        fecha_actualizacion TIMESTAMP
-					    )
-					""");
+	    try (Statement stmt = connection.createStatement()) {
+	        // Crea tablas base si no existen (ya con el esquema nuevo)
+	        stmt.execute("""
+	            CREATE TABLE IF NOT EXISTS pildoras (
+	                id INTEGER PRIMARY KEY AUTOINCREMENT,
+	                titulo TEXT NOT NULL,
+	                descripcion TEXT,                             -- ahora permite NULL
+	                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	                fecha_actualizacion TIMESTAMP,
+	                favorita INTEGER NOT NULL DEFAULT 0,
+	                pinned   INTEGER NOT NULL DEFAULT 0,
+	                descripcion_cipher BLOB,                      -- puede ser NULL
+	                descripcion_iv     BLOB,                      -- puede ser NULL
+	                protegida INTEGER NOT NULL DEFAULT 0
+	            )
+	        """);
 
-			stmt.execute("""
-					    CREATE TABLE IF NOT EXISTS tags (
-					        id INTEGER PRIMARY KEY AUTOINCREMENT,
-					        nombre TEXT UNIQUE NOT NULL
-					    )
-					""");
+	        stmt.execute("""
+	            CREATE TABLE IF NOT EXISTS tags (
+	                id INTEGER PRIMARY KEY AUTOINCREMENT,
+	                nombre TEXT UNIQUE NOT NULL
+	            )
+	        """);
 
-			stmt.execute("""
-					    CREATE TABLE IF NOT EXISTS pildora_tag (
-					        pildora_id INTEGER NOT NULL,
-					        tag_id INTEGER NOT NULL,
-					        PRIMARY KEY (pildora_id, tag_id),
-					        FOREIGN KEY (pildora_id) REFERENCES pildoras(id) ON DELETE CASCADE,
-					        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE RESTRICT
-					    )
-					""");
+	        stmt.execute("""
+	            CREATE TABLE IF NOT EXISTS pildora_tag (
+	                pildora_id INTEGER NOT NULL,
+	                tag_id     INTEGER NOT NULL,
+	                PRIMARY KEY (pildora_id, tag_id),
+	                FOREIGN KEY (pildora_id) REFERENCES pildoras(id) ON DELETE CASCADE,
+	                FOREIGN KEY (tag_id)     REFERENCES tags(id)     ON DELETE RESTRICT
+	            )
+	        """);
 
-			// Migraciones ya existentes
-			try {
-				stmt.execute("ALTER TABLE pildoras ADD COLUMN favorita INTEGER NOT NULL DEFAULT 0");
-			} catch (SQLException ignore) {
-			}
-			try {
-				stmt.execute("ALTER TABLE pildoras ADD COLUMN pinned   INTEGER NOT NULL DEFAULT 0");
-			} catch (SQLException ignore) {
-			}
+	        // Índices básicos
+	        stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
+	        stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
+	        stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
+	    }
 
-			stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
-			stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
-		}
+	    // --- MIGRACIONES IDEMPOTENTES ---
 
-		// 👇 DEDUPLICAR antes del índice único case-insensitive
-		dedupeTagsCaseInsensitive();
+	    // 1) Añade columnas que falten (si la BD es antigua)
+	    try (Statement s = connection.createStatement()) {
+	        if (!columnExists("pildoras", "protegida")) {
+	            s.execute("ALTER TABLE pildoras ADD COLUMN protegida INTEGER NOT NULL DEFAULT 0");
+	        }
+	        if (!columnExists("pildoras", "descripcion_cipher")) {
+	            s.execute("ALTER TABLE pildoras ADD COLUMN descripcion_cipher BLOB");
+	        }
+	        if (!columnExists("pildoras", "descripcion_iv")) {
+	            s.execute("ALTER TABLE pildoras ADD COLUMN descripcion_iv BLOB");
+	        }
+	    }
 
-		// Ahora ya puede crearse sin violaciones
-		try (Statement s = connection.createStatement()) {
-			s.execute("""
-					    CREATE UNIQUE INDEX IF NOT EXISTS u_tags_nombre_lower
-					    ON tags(lower(nombre))
-					""");
-		}
+	    // 2) Si 'descripcion' está marcada NOT NULL, reconstruye la tabla para permitir NULL
+	    if (isColumnNotNull("pildoras", "descripcion")) {
+	        // reconstrucción en transacción
+	        boolean oldAuto = connection.getAutoCommit();
+	        connection.setAutoCommit(false);
+	        try (Statement s = connection.createStatement()) {
+	            s.execute("""
+	                CREATE TABLE IF NOT EXISTS pildoras_new (
+	                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+	                    titulo TEXT NOT NULL,
+	                    descripcion TEXT,
+	                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	                    fecha_actualizacion TIMESTAMP,
+	                    favorita INTEGER NOT NULL DEFAULT 0,
+	                    pinned   INTEGER NOT NULL DEFAULT 0,
+	                    descripcion_cipher BLOB,
+	                    descripcion_iv     BLOB,
+	                    protegida INTEGER NOT NULL DEFAULT 0
+	                )
+	            """);
+
+	            // Asegúrate de que las columnas existen antes del volcado
+	            if (!columnExists("pildoras", "descripcion_cipher")) {
+	                s.execute("ALTER TABLE pildoras ADD COLUMN descripcion_cipher BLOB");
+	            }
+	            if (!columnExists("pildoras", "descripcion_iv")) {
+	                s.execute("ALTER TABLE pildoras ADD COLUMN descripcion_iv BLOB");
+	            }
+	            if (!columnExists("pildoras", "protegida")) {
+	                s.execute("ALTER TABLE pildoras ADD COLUMN protegida INTEGER NOT NULL DEFAULT 0");
+	            }
+
+	            s.execute("""
+	                INSERT INTO pildoras_new
+	                  (id, titulo, descripcion, fecha_creacion, fecha_actualizacion,
+	                   favorita, pinned, descripcion_cipher, descripcion_iv, protegida)
+	                SELECT
+	                  id, titulo, descripcion, fecha_creacion, fecha_actualizacion,
+	                  favorita, pinned, descripcion_cipher, descripcion_iv, protegida
+	                FROM pildoras
+	            """);
+
+	            s.execute("DROP TABLE pildoras");
+	            s.execute("ALTER TABLE pildoras_new RENAME TO pildoras");
+
+	            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
+	            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
+	            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
+
+	            connection.commit();
+	        } catch (SQLException ex) {
+	            connection.rollback();
+	            throw ex;
+	        } finally {
+	            connection.setAutoCommit(oldAuto);
+	        }
+	    }
+
+	    // 3) Deduplicar tags y crear índice único case-insensitive (como ya tenías)
+	    dedupeTagsCaseInsensitive();
+	    try (Statement s = connection.createStatement()) {
+	        s.execute("""
+	            CREATE UNIQUE INDEX IF NOT EXISTS u_tags_nombre_lower
+	            ON tags(lower(nombre))
+	        """);
+	    }
 	}
+
+	/** Devuelve true si la tabla contiene la columna dada (case-insensitive). */
+	private boolean columnExists(String table, String column) throws SQLException {
+	    try (Statement s = connection.createStatement();
+	         var rs = s.executeQuery("PRAGMA table_info('" + table + "')")) {
+	        while (rs.next()) {
+	            String name = rs.getString("name");
+	            if (name != null && name.equalsIgnoreCase(column)) return true;
+	        }
+	        return false;
+	    }
+	}
+
+	/** Devuelve true si la columna está marcada NOT NULL en el esquema actual. */
+	private boolean isColumnNotNull(String table, String column) throws SQLException {
+	    try (Statement s = connection.createStatement();
+	         var rs = s.executeQuery("PRAGMA table_info('" + table + "')")) {
+	        while (rs.next()) {
+	            String name = rs.getString("name");
+	            if (name != null && name.equalsIgnoreCase(column)) {
+	                return rs.getInt("notnull") == 1;
+	            }
+	        }
+	        return false;
+	    }
+	}
+
 
 	private void dedupeTagsCaseInsensitive() throws SQLException {
 	    // Transacción
