@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.github.guillermo-david</groupId>
 	<artifactId>pildoras</artifactId>
-	<version>1.3.0</version>
-	<name>Knowledge base</name>
+	<version>1.4.0</version>
+	<name>Pildoras</name>
 	<description>Aplicación de escritorio en JavaFX para la creación y gestión
 		de píldoras de conocimiento</description>
 

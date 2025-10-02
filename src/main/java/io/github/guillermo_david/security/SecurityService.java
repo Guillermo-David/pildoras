@@ -37,7 +37,6 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public final class SecurityService {
 	
-	public boolean isUnlocked() { return this.cmk != null; }
 
 	// ==== Singleton ====
 	private static final SecurityService INSTANCE = new SecurityService();
@@ -98,9 +97,26 @@ public final class SecurityService {
 		}
 	}
 
-	// ==== Lockout global ====
 	private static final int MAX_FAILED = 3;
 	private static final long LOCKOUT_MS = 30_000L; // 30s
+	
+	
+	
+	// === Getters ligeros para UI de recuperación ===
+	public String getSecurityQuestion() {
+	    return PREFS.get(K_Q_TEXT, null);
+	}
+	public boolean hasSecurityQuestion() {
+	    return PREFS.get(K_Q_TEXT, null) != null
+	        && PREFS.getByteArray(K_Q_WRAP, null) != null;
+	}
+	public boolean hasRecoveryCode() {
+	    return PREFS.getByteArray(K_RC_WRAP, null) != null;
+	}
+	
+	
+	// ==== Lockout global ====
+	public boolean isUnlocked() { return this.cmk != null; }
 
 	public boolean isLockedOut() {
 		return System.currentTimeMillis() < PREFS.getLong(K_LOCK_UNTIL, 0L);

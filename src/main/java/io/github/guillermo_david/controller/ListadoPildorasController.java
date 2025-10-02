@@ -3,6 +3,7 @@ package io.github.guillermo_david.controller;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
@@ -42,21 +43,28 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -441,77 +449,70 @@ public class ListadoPildorasController {
 		return res.orElse(null);
 	}
 
-	// IMPORTS que vas a necesitar:
-	// import io.github.guillermo_david.security.SecurityService;
-	// import io.github.guillermo_david.javafx.PinDialogs;
-	// import io.github.guillermo_david.javafx.Dialogs;
-	// import javafx.scene.control.Alert;
-	// import javafx.scene.control.Alert.AlertType;
-
 	private boolean ensureUnlockedWithRetries() {
-	    var security = SecurityService.getInstance();
+		var security = SecurityService.getInstance();
 
-	    // Ya desbloqueado o recordado -> OK
-	    if (security.isUnlocked() || security.isRemembered()) return true;
+		// Ya desbloqueado o recordado -> OK
+		if (security.isUnlocked() || security.isRemembered())
+			return true;
 
-	    // Bloqueado ahora mismo -> avisa temado y corta
-	    if (security.isLockedOut()) {
-	        showLockoutAlert();
-	        return false;
-	    }
+		// Bloqueado ahora mismo -> avisa temado y corta
+		if (security.isLockedOut()) {
+			showLockoutAlert();
+			return false;
+		}
 
-	    final int MAX = 3; // debe coincidir con MAX_FAILED del servicio
-	    int attempts = 0;
+		final int MAX = 3; // debe coincidir con MAX_FAILED del servicio
+		int attempts = 0;
 
-	    while (attempts < MAX) {
-	        // PIN temado + foco + “recordar 10 min”
-	        char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
-	        if (pin == null) return false; // cancelado
+		while (attempts < MAX) {
+			// PIN temado + foco + “recordar 10 min”
+			char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
+			if (pin == null)
+				return false; // cancelado
 
-	        try {
-	            if (security.verifyPin(pin)) {
-	                StatusBus.show("Desbloqueado por 10 minutos.", StatusBus.Type.INFO, Duration.seconds(3));
-	                return true;
-	            } else {
-	                attempts++;
-	                // ¿acaba de bloquearse?
-	                if (security.isLockedOut()) {
-	                    showLockoutAlert();
-	                    return false;
-	                }
-	                int left = MAX - attempts;
-	                Alert warn = new Alert(AlertType.WARNING);
-	                warn.setTitle("PIN incorrecto");
-	                warn.setHeaderText(null);
-	                warn.setContentText(
-	                    left > 0
-	                    ? "PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + "."
-	                    : "Has agotado los intentos."
-	                );
-	                Dialogs.decorate(warn, root);   // 👈 temado igual que el resto
-	                warn.showAndWait();
-	            }
-	        } finally {
-	            Arrays.fill(pin, '\0');
-	        }
-	    }
+			try {
+				if (security.verifyPin(pin)) {
+					StatusBus.show("Desbloqueado por 10 minutos.", StatusBus.Type.INFO, Duration.seconds(3));
+					return true;
+				} else {
+					attempts++;
+					// ¿acaba de bloquearse?
+					if (security.isLockedOut()) {
+						showLockoutAlert();
+						return false;
+					}
+					int left = MAX - attempts;
+					Alert warn = new Alert(AlertType.WARNING);
+					warn.setTitle("PIN incorrecto");
+					warn.setHeaderText(null);
+					warn.setContentText(
+							left > 0 ? "PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + "."
+									: "Has agotado los intentos.");
+					Dialogs.decorate(warn, root); // 👈 temado igual que el resto
+					warn.showAndWait();
+				}
+			} finally {
+				Arrays.fill(pin, '\0');
+			}
+		}
 
-	    // Si salimos por agotar intentos, muestra lockout si aplica
-	    if (security.isLockedOut()) showLockoutAlert();
-	    return false;
+		// Si salimos por agotar intentos, muestra lockout si aplica
+		if (security.isLockedOut())
+			showLockoutAlert();
+		return false;
 	}
 
 	private void showLockoutAlert() {
-	    var security = SecurityService.getInstance();
-	    long secs = (security.lockoutRemainingMillis() + 999) / 1000;
-	    Alert lock = new Alert(AlertType.ERROR);
-	    lock.setTitle("Demasiados intentos");
-	    lock.setHeaderText("Has excedido los intentos de PIN");
-	    lock.setContentText("Vuelve a intentarlo en " + secs + " segundos.");
-	    Dialogs.decorate(lock, root);  // 👈 temado
-	    lock.showAndWait();
+		var security = SecurityService.getInstance();
+		long secs = (security.lockoutRemainingMillis() + 999) / 1000;
+		Alert lock = new Alert(AlertType.ERROR);
+		lock.setTitle("Demasiados intentos");
+		lock.setHeaderText("Has excedido los intentos de PIN");
+		lock.setContentText("Vuelve a intentarlo en " + secs + " segundos.");
+		Dialogs.decorate(lock, root); // 👈 temado
+		lock.showAndWait();
 	}
-
 
 	private boolean unlockWithFeedback() {
 
@@ -521,7 +522,7 @@ public class ListadoPildorasController {
 		long lockMs = security.lockoutRemainingMillis();
 		if (lockMs > 0) {
 			StatusBus.show("Has agotado los intentos. Vuelve a probar en " + humanize(lockMs) + ".",
-					StatusBus.Type.ERROR, javafx.util.Duration.seconds(4));
+					StatusBus.Type.ERROR, Duration.seconds(4));
 			return false;
 		}
 
@@ -532,22 +533,22 @@ public class ListadoPildorasController {
 		try {
 			boolean ok = security.verifyPin(pin);
 			if (ok) {
-				StatusBus.show("Desbloqueado.", StatusBus.Type.INFO, javafx.util.Duration.seconds(2));
+				StatusBus.show("Desbloqueado.", StatusBus.Type.INFO, Duration.seconds(2));
 				return true;
 			} else {
 				if (security.isLockedOut()) {
 					long ms = security.lockoutRemainingMillis();
 					StatusBus.show("Has agotado los intentos. Vuelve a probar en " + humanize(ms) + ".",
-							StatusBus.Type.ERROR, javafx.util.Duration.seconds(4));
+							StatusBus.Type.ERROR, Duration.seconds(4));
 				} else {
 					int left = security.attemptsLeft();
 					StatusBus.show("PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + ".",
-							StatusBus.Type.ERROR, javafx.util.Duration.seconds(3));
+							StatusBus.Type.ERROR, Duration.seconds(3));
 				}
 				return false;
 			}
 		} finally {
-			java.util.Arrays.fill(pin, '\0');
+			Arrays.fill(pin, '\0');
 		}
 	}
 
@@ -764,7 +765,8 @@ public class ListadoPildorasController {
 				lbl.setMaxWidth(Double.MAX_VALUE);
 				lbl.setTextOverrun(OverrunStyle.ELLIPSIS);
 				lock.setIconSize(12); // pequeño
-				lock.getStyleClass().add("muted-icon"); // opcional: dale un color atenuado en tu CSS
+				lock.getStyleClass().addAll("muted-icon", "danger"); // opcional: dale un color atenuado en tu CSS
+				
 			}
 
 			@Override
@@ -1345,86 +1347,356 @@ public class ListadoPildorasController {
 	}
 
 	private void initSettingsMenu() {
-		var gear = new FontIcon(FontAwesomeSolid.COG);
-		btnSettings.setText(null);
-		btnSettings.setGraphic(gear);
-		btnSettings.setTooltip(new Tooltip("Ajustes"));
-		btnSettings.getStyleClass().add("icon-btn");
-		btnSettings.getStyleClass().add("primary");
+	    // Limpia y configura el botón (icono engranaje)
+	    btnSettings.getItems().clear();
 
-		// --- Tipografías disponibles (elige las que prefieras) ---
-		// Puedes añadir más familias; si no están instaladas, JavaFX hará fallback.
-		record Family(String label, String css) {
+	    var gear = new FontIcon(FontAwesomeSolid.COG);
+	    btnSettings.setText(null);
+	    btnSettings.setGraphic(gear);
+	    btnSettings.setTooltip(new Tooltip("Ajustes"));
+	    btnSettings.getStyleClass().addAll("icon-btn", "primary");
+
+	    // --- Tipografías ---
+	    record Family(String label, String css) {}
+	    var families = List.of(
+	        new Family("System", "System"),
+	        new Family("Sans (Arial)", "Arial"),
+	        new Family("Serif", "Serif"),
+	        new Family("Monospace", "Consolas")
+	    );
+	    var miFamily = new Menu("Tipografía");
+	    var tgFamily = new ToggleGroup();
+	    String currentFamily = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
+	    for (var f : families) {
+	        var r = new RadioMenuItem(f.label());
+	        r.setToggleGroup(tgFamily);
+	        r.setSelected(f.css().equalsIgnoreCase(currentFamily));
+	        r.setOnAction(e -> {
+	            PREFS.put(PREF_FONT_FAMILY, f.css());
+	            applyTypographyNow();
+	        });
+	        miFamily.getItems().add(r);
+	    }
+
+	    // --- Tamaño letra ---
+	    var miSize = new Menu("Tamaño");
+	    var tgSize = new ToggleGroup();
+	    var sizes = Map.of("Pequeño", "small", "Normal", "normal", "Grande", "large");
+	    String currentSize = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
+	    for (var entry : sizes.entrySet()) {
+	        var r = new RadioMenuItem(entry.getKey());
+	        r.setToggleGroup(tgSize);
+	        r.setSelected(entry.getValue().equalsIgnoreCase(currentSize));
+	        r.setOnAction(e -> {
+	            PREFS.put(PREF_FONT_SIZE, entry.getValue());
+	            applyTypographyNow();
+	        });
+	        miSize.getItems().add(r);
+	    }
+
+	    // --- Tema oscuro ---
+	    var miTemaOscuro = new CheckMenuItem("Tema oscuro");
+	    miTemaOscuro.setSelected(ThemeManager.load() == Theme.DARK);
+	    miTemaOscuro.setOnAction(e -> {
+	        var scene = root.getScene();
+	        if (scene == null) return;
+	        boolean wantsDark = miTemaOscuro.isSelected();
+	        boolean isDark = (ThemeManager.load() == Theme.DARK);
+	        if (wantsDark != isDark) {
+	            Theme t = ThemeManager.toggle(scene);
+	            setLogoFor(t);
+	            StatusBus.show(t == Theme.DARK ? "Tema oscuro" : "Tema claro",
+	                           StatusBus.Type.INFO, javafx.util.Duration.seconds(2));
+	        }
+	    });
+
+	    // =============== Submenú Seguridad ===============
+	    var miSecurity = new Menu("Seguridad");
+
+	    // Crear/Cambiar PIN (texto dinámico)
+	    var miChangePin = new MenuItem(security.hasPin() ? "Cambiar PIN…" : "Crear PIN…");
+	    miChangePin.setOnAction(e -> {
+	        try {
+	            if (!security.hasPin()) {
+	                char[] np = PinDialogs.promptNewPin6(root);
+	                if (np == null) return;
+	                try {
+	                    security.setupPin(np);
+	                    StatusBus.show("PIN creado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+	                    // refresca el menú para que el ítem pase a "Cambiar PIN…"
+	                    initSettingsMenu();
+	                } finally {
+	                    Arrays.fill(np, '\0');
+	                }
+	            } else {
+	                if (!ensureUnlockedWithRetries()) return;
+	                char[] np = PinDialogs.promptNewPin6(root);
+	                if (np == null) return;
+	                try {
+	                    security.changePin(null, np);
+	                    StatusBus.show("PIN cambiado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+	                } finally {
+	                    Arrays.fill(np, '\0');
+	                }
+	            }
+	        } catch (Exception ex) {
+	            StatusBus.show("No se pudo " + (security.hasPin() ? "cambiar" : "crear") + " el PIN.",
+	                           StatusBus.Type.ERROR, Duration.seconds(4));
+	        }
+	    });
+
+	    // Configurar pregunta de seguridad…
+	    var miSetQuestion = new MenuItem("Configurar pregunta de seguridad…");
+	    miSetQuestion.setOnAction(e -> {
+	        try {
+	            if (!security.hasPin()) {
+	                StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
+	                return;
+	            }
+	            if (!ensureUnlockedWithRetries()) return;
+	            showSetupSecurityQuestion(); // tu helper ya temado
+	        } catch (Exception ex) {
+	            StatusBus.show("No se pudo guardar la pregunta.", StatusBus.Type.ERROR, Duration.seconds(4));
+	        }
+	    });
+
+	    // Restablecer PIN con respuesta…
+	    var miResetByAnswer = new MenuItem("Restablecer PIN con respuesta…");
+	    miResetByAnswer.setOnAction(e -> {
+	        try {
+	            if (!security.hasSecurityQuestion()) {
+	                StatusBus.show("No hay pregunta de seguridad configurada.", StatusBus.Type.WARN, Duration.seconds(3));
+	                return;
+	            }
+	            if (security.isLockedOut()) { showLockoutModalFromListado(); return; }
+
+	            String q = security.getSecurityQuestion();
+	            char[] ans = PinDialogs.promptAnswer(root, q);
+	            if (ans == null) return;
+	            char[] np = PinDialogs.promptNewPin6(root);
+	            if (np == null) { Arrays.fill(ans, '\0'); return; }
+
+	            boolean ok;
+	            try {
+	                ok = security.resetPinWithAnswer(ans, np);
+	            } finally {
+	                Arrays.fill(ans, '\0');
+	                Arrays.fill(np, '\0');
+	            }
+
+	            if (ok) {
+	                StatusBus.show("PIN restablecido.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+	                initSettingsMenu(); // por si cambia el estado del menú
+	            } else if (security.isLockedOut()) {
+	                showLockoutModalFromListado();
+	            } else {
+	                StatusBus.show("Respuesta incorrecta.", StatusBus.Type.ERROR, Duration.seconds(3));
+	            }
+	        } catch (Exception ex) {
+	            StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
+	        }
+	    });
+
+	    // Generar código de recuperación…
+	    var miGenRecovery = new MenuItem("Generar código de recuperación…");
+	    miGenRecovery.setOnAction(e -> {
+	        try {
+	            if (!security.hasPin()) {
+	                StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
+	                return;
+	            }
+	            if (!ensureUnlockedWithRetries()) return;
+	            showGenerateRecoveryCode(); // ya te muestra el código temado
+	        } catch (Exception ex) {
+	            StatusBus.show("No se pudo generar el código.", StatusBus.Type.ERROR, Duration.seconds(4));
+	        }
+	    });
+
+	    // Restablecer PIN con código de recuperación…
+	    var miResetByCode = new MenuItem("Restablecer PIN con código…");
+	    miResetByCode.setOnAction(e -> {
+	        try {
+	            if (!security.hasRecoveryCode()) {
+	                StatusBus.show("No hay código de recuperación activo.", StatusBus.Type.WARN, Duration.seconds(3));
+	                return;
+	            }
+	            if (security.isLockedOut()) { showLockoutModalFromListado(); return; }
+
+	            String code = PinDialogs.promptRecoveryCode(root);
+	            if (code == null || code.isBlank()) return;
+	            char[] np = PinDialogs.promptNewPin6(root);
+	            if (np == null) return;
+
+	            boolean ok;
+	            try {
+	                ok = security.resetPinWithRecoveryCode(code, np);
+	            } finally {
+	                Arrays.fill(np, '\0');
+	            }
+
+	            if (ok) {
+	                StatusBus.show("PIN restablecido con código.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+	                initSettingsMenu();
+	            } else if (security.isLockedOut()) {
+	                showLockoutModalFromListado();
+	            } else {
+	                StatusBus.show("Código incorrecto o expirado.", StatusBus.Type.ERROR, Duration.seconds(3));
+	            }
+	        } catch (Exception ex) {
+	            StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
+	        }
+	    });
+
+	    // Bloquear ahora
+	    var miLock = new MenuItem("Bloquear ahora");
+	    miLock.setOnAction(e -> {
+	        security.lockNow();
+	        StatusBus.show("Sesión bloqueada. Se pedirá PIN al acceder a contenido protegido.",
+	                StatusBus.Type.INFO, Duration.seconds(3));
+	    });
+
+	    miSecurity.getItems().addAll(
+	        miChangePin,
+	        new SeparatorMenuItem(),
+	        miSetQuestion,
+	        miResetByAnswer,
+	        new SeparatorMenuItem(),
+	        miGenRecovery,
+	        miResetByCode,
+	        new SeparatorMenuItem(),
+	        miLock
+	    );
+
+	    // --- Atajos ---
+	    var miShortcuts = new MenuItem("Atajos de teclado…");
+	    miShortcuts.setOnAction(e -> showShortcutsDialog());
+
+	    // Menú final (un único setAll)
+	    btnSettings.getItems().setAll(
+	        miFamily,
+	        miSize,
+	        new SeparatorMenuItem(),
+	        miTemaOscuro,
+	        new SeparatorMenuItem(),
+	        miSecurity,
+	        new SeparatorMenuItem(),
+	        miShortcuts
+	    );
+	}
+
+
+
+		// Modal de lockout igual que en editor, pero desde listado
+	private void showLockoutModalFromListado() {
+
+		long secs = Math.max(0L, (security.lockoutRemainingMillis() + 999) / 1000);
+		Alert a = new Alert(Alert.AlertType.WARNING);
+		a.setTitle("Intentos agotados");
+		a.setHeaderText("Has excedido los intentos del PIN");
+		a.setContentText("Podrás volver a intentarlo en " + secs + " segundo" + (secs == 1 ? "" : "s") + ".");
+		Dialogs.decorate(a, root);
+		a.showAndWait();
+	}
+
+	private void showSetupSecurityQuestion() {
+		// Requiere sesión desbloqueada (necesitamos CMK en memoria)
+		if (!ensureUnlockedWithRetries())
+			return;
+
+		Dialog<ButtonType> dlg = new Dialog<>();
+		dlg.setTitle("Pregunta de seguridad");
+		dlg.setHeaderText("Configura una pregunta y su respuesta para recuperar el PIN");
+		Dialogs.decorate(dlg, root); // 👈 tu decorador para tema
+
+		TextField txtQ = new TextField();
+		txtQ.setPromptText("Ej: Nombre de tu primera mascota");
+
+		PasswordField pfA = new PasswordField();
+		pfA.setPromptText("Respuesta");
+
+		PasswordField pfA2 = new PasswordField();
+		pfA2.setPromptText("Repite la respuesta");
+
+		VBox content = new VBox(8, new Label("Pregunta:"), txtQ, new Label("Respuesta:"), pfA,
+				new Label("Confirmar respuesta:"), pfA2);
+		content.setPrefWidth(420);
+		dlg.getDialogPane().setContent(content);
+
+		ButtonType OK = new ButtonType("Guardar", ButtonBar.ButtonData.OK_DONE);
+		ButtonType CANCEL = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+		dlg.getDialogPane().getButtonTypes().setAll(OK, CANCEL);
+
+		// Validación básica
+		Node okBtn = dlg.getDialogPane().lookupButton(OK);
+		okBtn.setDisable(true);
+		Runnable validate = () -> {
+			boolean valid = !txtQ.getText().isBlank() && !pfA.getText().isBlank()
+					&& pfA.getText().equals(pfA2.getText());
+			okBtn.setDisable(!valid);
+		};
+		txtQ.textProperty().addListener((o, a, b) -> validate.run());
+		pfA.textProperty().addListener((o, a, b) -> validate.run());
+		pfA2.textProperty().addListener((o, a, b) -> validate.run());
+		Platform.runLater(txtQ::requestFocus);
+
+		dlg.setResultConverter(bt -> bt);
+
+		var res = dlg.showAndWait();
+		if (res.isEmpty() || res.get() != OK)
+			return;
+
+		char[] ans = pfA.getText().toCharArray();
+		try {
+			security.setSecurityQuestion(txtQ.getText().trim(), ans);
+			StatusBus.show("Pregunta de seguridad guardada.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+		} catch (Exception ex) {
+			StatusBus.show("No se pudo guardar la pregunta: " + ex.getMessage(), StatusBus.Type.ERROR,
+					Duration.seconds(4));
+		} finally {
+			Arrays.fill(ans, '\0');
+			// No podemos vaciar los PasswordField internamente de forma segura, pero está
+			// en memoria UI
 		}
-		var families = java.util.List.of(new Family("System", "System"), new Family("Sans (Arial)", "Arial"),
-				new Family("Serif", "Serif"), new Family("Monospace", "Consolas"));
+	}
 
-		var miFamily = new javafx.scene.control.Menu("Tipografía");
-		var tgFamily = new javafx.scene.control.ToggleGroup();
+	private void showGenerateRecoveryCode() {
+		// Requiere sesión desbloqueada
+		if (!ensureUnlockedWithRetries())
+			return;
 
-		String currentFamily = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
-		for (var f : families) {
-			var r = new javafx.scene.control.RadioMenuItem(f.label());
-			r.setToggleGroup(tgFamily);
-			r.setSelected(f.css().equalsIgnoreCase(currentFamily));
-			r.setOnAction(e -> {
-				PREFS.put(PREF_FONT_FAMILY, f.css());
-				applyTypographyNow();
-			});
-			miFamily.getItems().add(r);
+		String code;
+		try {
+			code = security.generateRecoveryCode();
+		} catch (Exception ex) {
+			StatusBus.show("No se pudo generar el código: " + ex.getMessage(), StatusBus.Type.ERROR,
+					Duration.seconds(4));
+			return;
 		}
 
-		// --- Tamaño de letra ---
-		var miSize = new javafx.scene.control.Menu("Tamaño");
-		var tgSize = new javafx.scene.control.ToggleGroup();
+		// Muestra el código y opción de copiar
+		Dialog<ButtonType> dlg = new Dialog<>();
+		dlg.setTitle("Código de recuperación");
+		dlg.setHeaderText("Guarda este código en un lugar seguro.\nTe permitirá restablecer el PIN si lo olvidas.");
+		Dialogs.decorate(dlg, root);
 
-		var sizes = java.util.Map.of("Pequeño", "small", "Normal", "normal", "Grande", "large");
-		String currentSize = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
-		for (var entry : sizes.entrySet()) {
-			var r = new javafx.scene.control.RadioMenuItem(entry.getKey());
-			r.setToggleGroup(tgSize);
-			r.setSelected(entry.getValue().equalsIgnoreCase(currentSize));
-			r.setOnAction(e -> {
-				PREFS.put(PREF_FONT_SIZE, entry.getValue());
-				applyTypographyNow();
-			});
-			miSize.getItems().add(r);
-		}
-
-		var miTemaOscuro = new CheckMenuItem("Tema oscuro");
-		miTemaOscuro.setSelected(ThemeManager.load() == Theme.DARK);
-		miTemaOscuro.setOnAction(e -> {
-			var scene = root.getScene();
-			if (scene == null)
-				return;
-
-			boolean wantsDark = miTemaOscuro.isSelected();
-			boolean isDark = (ThemeManager.load() == Theme.DARK);
-
-			// Si el estado deseado difiere del actual, alterna
-			if (wantsDark != isDark) {
-				Theme t = ThemeManager.toggle(scene); // tu helper existente
-				setLogoFor(t); // actualiza logo según tema
-				// (opcional) feedback:
-				StatusBus.show(t == Theme.DARK ? "Tema oscuro" : "Tema claro", StatusBus.Type.INFO,
-						Duration.seconds(2));
-			}
+		TextField txt = new TextField(code);
+		txt.setEditable(false);
+		txt.setStyle("-fx-font-family: 'Consolas', 'Menlo', 'Courier New', monospace; -fx-font-size: 14px;");
+		Button btnCopy = new Button("Copiar");
+		btnCopy.setOnAction(ev -> {
+			ClipboardContent cc = new ClipboardContent();
+			cc.putString(code);
+			Clipboard.getSystemClipboard().setContent(cc);
+			StatusBus.show("Código copiado al portapapeles.", StatusBus.Type.INFO, Duration.seconds(2));
 		});
 
-		var miLock = new MenuItem("Bloquear ahora");
-		miLock.setOnAction(e -> {
-			security.lockNow();
-			StatusBus.show("Sesión bloqueada. Se pedirá PIN al acceder a contenido protegido.", StatusBus.Type.INFO,
-					Duration.seconds(3));
-		});
-		btnSettings.getItems().add(0, miLock); // por ejemplo al inicio del menú
+		VBox box = new VBox(12, new Label("Código de recuperación (mostrado una sola vez):"), new HBox(8, txt, btnCopy),
+				new Label("⚠ Si lo pierdes y olvidas el PIN, no podrás recuperar el acceso."));
+		box.setPrefWidth(480);
+		dlg.getDialogPane().setContent(box);
 
-		// --- Atajos de teclado ---
-		var miShortcuts = new MenuItem("Atajos de teclado…");
-		miShortcuts.setOnAction(e -> showShortcutsDialog());
-
-		btnSettings.getItems().setAll(miFamily, miSize, new javafx.scene.control.SeparatorMenuItem(), miTemaOscuro,
-				new SeparatorMenuItem(), miShortcuts);
+		dlg.getDialogPane().getButtonTypes().setAll(new ButtonType("Entendido", ButtonBar.ButtonData.OK_DONE));
+		dlg.showAndWait();
 	}
 
 	/** Aplica familia + tamaño guardados a toda la escena */
@@ -1440,8 +1712,8 @@ public class ListadoPildorasController {
 			String sizeKey = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
 
 			double px = switch (sizeKey) {
-			case "small" -> 13.0;
-			case "large" -> 17.0;
+			case "small" -> 10.0;
+			case "large" -> 20.0;
 			default -> 15.0; // normal
 			};
 
@@ -1482,7 +1754,7 @@ public class ListadoPildorasController {
 		alert.setTitle("Atajos de teclado");
 		alert.setHeaderText(null);
 
-		var ta = new javafx.scene.control.TextArea(sb.toString());
+		var ta = new TextArea(sb.toString());
 		ta.setEditable(false);
 		ta.setWrapText(false); // sin cortes de línea automáticos
 		ta.setFocusTraversable(false);

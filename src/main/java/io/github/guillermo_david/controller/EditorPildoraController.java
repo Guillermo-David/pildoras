@@ -168,9 +168,31 @@ public class EditorPildoraController {
 
 		// Si venía protegida y sigues bloqueado → exige PIN antes de cualquier guardado
 		if (originalProtegida && !security.isUnlocked()) {
-			if (!security.ensureUnlocked(this::promptPinOnce)) {
-				StatusBus.show("No puedes guardar ni desproteger sin PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
-				return;
+			if (originalProtegida && !security.isUnlocked()) {
+			    boolean ok = security.ensureUnlocked(
+			        () -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10))
+			        // alternativa sin fx:id root:
+			        // () -> PinDialogs.promptPin6(txtTitulo.getScene().getRoot(), true, Duration.ofMinutes(10))
+			    );
+			    if (!ok) {
+			        StatusBus.show("No puedes guardar ni desproteger sin PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
+			        return;
+			    }
+			    // Si viene protegida y acabas de desbloquear, rellena el editor con el contenido real
+			    try {
+			        if (pildoraEnEdicion != null &&
+			            pildoraEnEdicion.getDescripcionCipher() != null &&
+			            pildoraEnEdicion.getDescripcionIv() != null) {
+			            String plain = security.decrypt(
+			                pildoraEnEdicion.getDescripcionCipher(),
+			                pildoraEnEdicion.getDescripcionIv()
+			            );
+			            txtDescripcion.setDisable(false);
+			            if (txtDescripcion.getText().isBlank()) {
+			                txtDescripcion.setText(plain);
+			            }
+			        }
+			    } catch (Exception ignored) {}
 			}
 			// Si viene protegida y acabas de desbloquear, rellena el editor con el
 			// contenido real
@@ -328,10 +350,6 @@ public class EditorPildoraController {
 		currentTags.clear();
 		tagsBox.getChildren().clear();
 		tagDao.findByPildoraId(p.getId()).forEach(t -> addTagChip(t.getNombre()));
-	}
-
-	private char[] promptPinOnce() {
-	    return PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
 	}
 
 	/** Muestra un modal con el tiempo restante del lockout (tema aplicado). */

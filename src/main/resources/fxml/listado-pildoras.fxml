@@ -13,16 +13,16 @@
     <top>
 		<VBox spacing="0">
 		  <!-- Title bar fija -->
-		  <HBox fx:id="titleBar" alignment="CENTER_LEFT" styleClass="titlebar">
+			<HBox fx:id="titleBar" alignment="CENTER_LEFT" styleClass="titlebar">
 			  <Label text="Píldoras" styleClass="titlebar-title"/>
 			  <Pane HBox.hgrow="ALWAYS"/>
 			
 			  <!-- Acciones de la barra -->
-			  <HBox spacing="8" styleClass="titlebar-actions">
-			    <MenuButton   fx:id="btnSettings" popupSide="BOTTOM" styleClass="icon-btn settings-btn"/>
-			    <Separator orientation="VERTICAL" styleClass="v-sep"/>
-			    <Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
-			  </HBox>
+				<HBox spacing="8" styleClass="titlebar-actions">
+			    	<MenuButton   fx:id="btnSettings" popupSide="BOTTOM" styleClass="icon-btn settings-btn"/>
+			    	<Separator orientation="VERTICAL" styleClass="v-sep"/>
+			    	<Button fx:id="btnClose" text="✕" styleClass="titlebar-close"/>
+				</HBox>
 			</HBox>
 
 		

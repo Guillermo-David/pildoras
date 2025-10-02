@@ -365,7 +365,7 @@ public class DetallePildoraController {
 					StatusBus.Type.ERROR, Duration.seconds(4));
 			return false;
 		}
-		char[] pin = promptPinOnce();
+		char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
 		if (pin == null)
 			return false;
 		try {
@@ -438,11 +438,6 @@ public class DetallePildoraController {
 			renderWithTheme(ThemeManager.load(), lastHtml);
 		}
 	}
-
-	private char[] promptPinOnce() {
-	    return PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
-	}
-
 
 	private void renderWithTheme(ThemeManager.Theme t, String bodyHtml) {
 		String css = (t == ThemeManager.Theme.DARK) ? cssDark : cssLight;

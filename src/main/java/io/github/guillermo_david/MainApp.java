@@ -40,7 +40,7 @@ public class MainApp extends Application{
 
 	    // 2) Ya puedes cargar los FXML/Controllers con la BD migrada
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
-	    Scene scene = new Scene(fxmlLoader.load(), 1024, 840);
+	    Scene scene = new Scene(fxmlLoader.load(), 1280, 837);
 
 	    var base = MainApp.class.getResource("/css/base.css").toExternalForm();
 	    var light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();

@@ -36,7 +36,11 @@
 
 /* ---------- App header ---------- */
 .app-header {
+	-fx-padding: 10 16 10 10;
 	-fx-background-color: linear-gradient(to bottom, -c-bg, -c-bg-subtle);
+	-fx-min-height: 64;
+	-fx-pref-height: 64;
+	-fx-max-height: 64;
 }
 
 .app-header .separator:vertical {
@@ -87,11 +91,12 @@
 	-fx-icon-color: -fx-accent;
 }
 
+.muted-icon.danger,
 .icon-btn.danger .ikonli-font-icon {
 	-fx-icon-color: #e53935;
 }
 
-
+.muted-icon.danger:hover,
 .icon-btn.danger:hover {
 	-fx-background-color: rgba(229, 57, 53, 0.12);
 }
@@ -274,12 +279,6 @@
 	-fx-icon-size: 16px;
 }
 
-.app-header {
-	-fx-padding: 10 16 10 10;
-	/* top right bottom left */
-	/* si ya usas VBox padding exterior, esto es el padding interno del HBox */
-}
-
 .v-sep {
 	-fx-padding: 0;
 	/* quita holguras del skin */
@@ -335,6 +334,9 @@
 	-fx-font-size: 13px;
 	-fx-font-weight: 600;
 	-fx-padding: 0 0 0 10;
+	-fx-min-height: 48;
+	-fx-pref-height: 48;
+	-fx-max-height: 48;
 }
 
 .titlebar-close {
