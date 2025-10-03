@@ -3,7 +3,6 @@ package io.github.guillermo_david.controller;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
@@ -1381,14 +1380,18 @@ public class ListadoPildorasController {
 	    // --- Tamaño letra ---
 	    var miSize = new Menu("Tamaño");
 	    var tgSize = new ToggleGroup();
-	    var sizes = Map.of("Pequeño", "small", "Normal", "normal", "Grande", "large");
+	    var sizes = List.of(
+	    		new Family("Muy grande", "vlarge"), 
+	    		new Family("Grande", "large"), 
+	    		new Family("Normal", "normal"), 
+	    		new Family("Pequeño", "small"));
 	    String currentSize = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
-	    for (var entry : sizes.entrySet()) {
-	        var r = new RadioMenuItem(entry.getKey());
+	    for (var item : sizes) {
+	        var r = new RadioMenuItem(item.label);
 	        r.setToggleGroup(tgSize);
-	        r.setSelected(entry.getValue().equalsIgnoreCase(currentSize));
+	        r.setSelected(item.css.equalsIgnoreCase(currentSize));
 	        r.setOnAction(e -> {
-	            PREFS.put(PREF_FONT_SIZE, entry.getValue());
+	            PREFS.put(PREF_FONT_SIZE, item.css);
 	            applyTypographyNow();
 	        });
 	        miSize.getItems().add(r);
@@ -1713,8 +1716,9 @@ public class ListadoPildorasController {
 
 			double px = switch (sizeKey) {
 			case "small" -> 10.0;
-			case "large" -> 20.0;
-			default -> 15.0; // normal
+			case "large" -> 18.0;
+			case "vlarge" -> 22.0;
+			default -> 14.0; // normal
 			};
 
 			// Aplica estilo inline al root de la escena (se hereda a todos los nodos)
