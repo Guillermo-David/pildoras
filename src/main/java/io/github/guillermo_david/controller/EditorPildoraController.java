@@ -19,9 +19,11 @@ import io.github.guillermo_david.javafx.PinDialogs;
 import io.github.guillermo_david.javafx.StatusBus;
 import io.github.guillermo_david.javafx.StatusBus.Type;
 import io.github.guillermo_david.javafx.ThemeManager;
+import io.github.guillermo_david.markdown.MarkdownEngine;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
 import io.github.guillermo_david.security.SecurityService;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
@@ -30,6 +32,8 @@ import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
@@ -38,6 +42,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.web.WebView;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
@@ -45,11 +50,16 @@ public class EditorPildoraController {
 
 	@FXML private TextField txtTagInput, txtTitulo;
 	@FXML private TextArea txtDescripcion;
-	@FXML private ToggleSwitch switchProteger;
+	@FXML private ToggleSwitch switchProteger, switchPreview;
 	@FXML private Button btnGuardar, btnCancelar;
 	@FXML private FlowPane tagsBox;
 	@FXML private VBox root;
+	@FXML private SplitPane splitEditor;
+	@FXML private WebView webPreview;
+	@FXML private MenuButton mbMath;
 
+
+	private TextFormatController textFormatController;
 
 	private Runnable onClose;
 	private Pildora pildoraEnEdicion;
@@ -65,8 +75,17 @@ public class EditorPildoraController {
 	private final SecurityService security = SecurityService.getInstance();
 	private boolean originalProtegida = false;
 
+	private MarkdownEngine md = new MarkdownEngine();
+	private String cssLight, cssDark, cssBaseWeb;
+
+
+
+	// Debounce para no renderizar en cada tecla
+	private final PauseTransition previewDebounce = new PauseTransition(Duration.millis(250));
+
 	@FXML
 	public void initialize() {
+
 		btnCancelar.setOnAction(e -> {
 			if (onClose != null)
 				onClose.run();
@@ -77,7 +96,7 @@ public class EditorPildoraController {
 		});
 
 		// (Opcional) Tooltips con pistas
-		btnGuardar.setTooltip(new Tooltip("Guardar (Ctrl+S)"));
+		btnGuardar.setTooltip(new Tooltip("Guardar (Ctrl+S/Ctrl+Enter)"));
 		btnCancelar.setTooltip(new Tooltip("Cancelar (Esc)"));
 
 		// Autocompletado
@@ -155,6 +174,11 @@ public class EditorPildoraController {
 			});
 		}
 
+		textFormatController = new TextFormatController(root, txtDescripcion);
+		textFormatController.initListIndentShortcuts(); 
+		textFormatController.buildMathMenu(mbMath);   // 👈 NUEVO
+
+		initPreview();
 	}
 
 	private void onGuardar() {
@@ -169,30 +193,31 @@ public class EditorPildoraController {
 		// Si venía protegida y sigues bloqueado → exige PIN antes de cualquier guardado
 		if (originalProtegida && !security.isUnlocked()) {
 			if (originalProtegida && !security.isUnlocked()) {
-			    boolean ok = security.ensureUnlocked(
-			        () -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10))
-			        // alternativa sin fx:id root:
-			        // () -> PinDialogs.promptPin6(txtTitulo.getScene().getRoot(), true, Duration.ofMinutes(10))
-			    );
-			    if (!ok) {
-			        StatusBus.show("No puedes guardar ni desproteger sin PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
-			        return;
-			    }
-			    // Si viene protegida y acabas de desbloquear, rellena el editor con el contenido real
-			    try {
-			        if (pildoraEnEdicion != null &&
-			            pildoraEnEdicion.getDescripcionCipher() != null &&
-			            pildoraEnEdicion.getDescripcionIv() != null) {
-			            String plain = security.decrypt(
-			                pildoraEnEdicion.getDescripcionCipher(),
-			                pildoraEnEdicion.getDescripcionIv()
-			            );
-			            txtDescripcion.setDisable(false);
-			            if (txtDescripcion.getText().isBlank()) {
-			                txtDescripcion.setText(plain);
-			            }
-			        }
-			    } catch (Exception ignored) {}
+				boolean ok = security
+						.ensureUnlocked(() -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10))
+						// alternativa sin fx:id root:
+						// () -> PinDialogs.promptPin6(txtTitulo.getScene().getRoot(), true,
+						// Duration.ofMinutes(10))
+						);
+				if (!ok) {
+					StatusBus.show("No puedes guardar ni desproteger sin PIN.", StatusBus.Type.ERROR,
+							Duration.seconds(4));
+					return;
+				}
+				// Si viene protegida y acabas de desbloquear, rellena el editor con el
+				// contenido real
+				try {
+					if (pildoraEnEdicion != null && pildoraEnEdicion.getDescripcionCipher() != null
+							&& pildoraEnEdicion.getDescripcionIv() != null) {
+						String plain = security.decrypt(pildoraEnEdicion.getDescripcionCipher(),
+								pildoraEnEdicion.getDescripcionIv());
+						txtDescripcion.setDisable(false);
+						if (txtDescripcion.getText().isBlank()) {
+							txtDescripcion.setText(plain);
+						}
+					}
+				} catch (Exception ignored) {
+				}
 			}
 			// Si viene protegida y acabas de desbloquear, rellena el editor con el
 			// contenido real
@@ -234,9 +259,10 @@ public class EditorPildoraController {
 						java.util.Arrays.fill(pin, '\0');
 					}
 				}
-				// Garantiza desbloqueo con feedback consistente (status bar + segundos restantes)
+				// Garantiza desbloqueo con feedback consistente (status bar + segundos
+				// restantes)
 				if (!ensureUnlockedForEditor()) {
-				    return;
+					return;
 				}
 
 				var enc = security.encrypt(descripcionPlano == null ? "" : descripcionPlano);
@@ -354,62 +380,60 @@ public class EditorPildoraController {
 
 	/** Muestra un modal con el tiempo restante del lockout (tema aplicado). */
 	private void showLockoutModal() {
-	    
-	    long secs = Math.max(0L, (security.lockoutRemainingMillis() + 999) / 1000);
 
-	    Alert a = new Alert(Alert.AlertType.WARNING);
-	    a.setTitle("Intentos agotados");
-	    a.setHeaderText("Has excedido los intentos del PIN");
-	    a.setContentText("Podrás volver a intentarlo en " + secs + " segundo" + (secs == 1 ? "" : "s") + ".");
-	    Dialogs.decorate(a, root); // 👈 mantiene el tema/estilo de la app
-	    a.showAndWait();
+		long secs = Math.max(0L, (security.lockoutRemainingMillis() + 999) / 1000);
+
+		Alert a = new Alert(Alert.AlertType.WARNING);
+		a.setTitle("Intentos agotados");
+		a.setHeaderText("Has excedido los intentos del PIN");
+		a.setContentText("Podrás volver a intentarlo en " + secs + " segundo" + (secs == 1 ? "" : "s") + ".");
+		Dialogs.decorate(a, root); // 👈 mantiene el tema/estilo de la app
+		a.showAndWait();
 	}
 
 	/** Desbloqueo con reintentos y modal si está bloqueado. */
 	private boolean ensureUnlockedForEditor() {
 
-	    // Ya desbloqueado o recordado
-	    if (security.isUnlocked() || security.isRemembered()) return true;
+		// Ya desbloqueado o recordado
+		if (security.isUnlocked() || security.isRemembered())
+			return true;
 
-	    // Bloqueado: mostrar MODAL con segundos restantes
-	    if (security.isLockedOut()) {
-	        showLockoutModal();
-	        return false;
-	    }
+		// Bloqueado: mostrar MODAL con segundos restantes
+		if (security.isLockedOut()) {
+			showLockoutModal();
+			return false;
+		}
 
-	    // Reintentos (máximo configurado como en listados: 3)
-	    final int MAX = 3;
-	    int attempts = 0;
+		// Reintentos (máximo configurado como en listados: 3)
+		final int MAX = 3;
+		int attempts = 0;
 
-	    while (attempts < MAX) {
-	        char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
-	        if (pin == null) return false; // cancelado
+		while (attempts < MAX) {
+			char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
+			if (pin == null)
+				return false; // cancelado
 
-	        try {
-	            if (security.verifyPin(pin)) {
-	                StatusBus.show("Desbloqueado por 10 minutos.", StatusBus.Type.INFO, Duration.seconds(3));
-	                return true;
-	            } else {
-	                attempts++;
-	                // Si justo aquí entra en lockout, mostrar MODAL (no status bar)
-	                if (security.isLockedOut()) {
-	                    showLockoutModal();
-	                    return false;
-	                }
-	                int left = MAX - attempts;
-	                StatusBus.show(
-	                    "PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + ".",
-	                    StatusBus.Type.WARN,
-	                    Duration.seconds(3)
-	                );
-	            }
-	        } finally {
-	            Arrays.fill(pin, '\0');
-	        }
-	    }
-	    return false;
+			try {
+				if (security.verifyPin(pin)) {
+					StatusBus.show("Desbloqueado por 10 minutos.", StatusBus.Type.INFO, Duration.seconds(3));
+					return true;
+				} else {
+					attempts++;
+					// Si justo aquí entra en lockout, mostrar MODAL (no status bar)
+					if (security.isLockedOut()) {
+						showLockoutModal();
+						return false;
+					}
+					int left = MAX - attempts;
+					StatusBus.show("PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + ".",
+							StatusBus.Type.WARN, Duration.seconds(3));
+				}
+			} finally {
+				Arrays.fill(pin, '\0');
+			}
+		}
+		return false;
 	}
-
 
 	private void commitTagFromInput() {
 		String raw = txtTagInput.getText();
@@ -480,7 +504,7 @@ public class EditorPildoraController {
 
 		editorKeyHandler = e -> {
 			// Ctrl+S → Guardar
-			if (e.isControlDown() && e.getCode() == KeyCode.S) {
+			if (e.isControlDown() && (e.getCode() == KeyCode.S || e.getCode() == KeyCode.ENTER)) {
 				btnGuardar.fire();
 				e.consume();
 				return;
@@ -518,23 +542,108 @@ public class EditorPildoraController {
 	}
 
 	@FXML
-	private void insertBold() {
-		insertarTexto("**negrita**");
+	public void mdBold() {
+		textFormatController.mdBold();
 	}
 
 	@FXML
-	private void insertItalic() {
-		insertarTexto("*cursiva*");
+	public void mdItalic() {
+		textFormatController.mdItalic();
 	}
 
 	@FXML
-	private void insertLink() {
-		insertarTexto("[texto](https://)");
+	public void mdStrike() {
+		textFormatController.mdStrike();
 	}
 
 	@FXML
-	private void insertCode() {
-		insertarTexto("`código`");
+	public void mdCodeInline() {
+		textFormatController.mdCodeInline();
+	}
+
+	@FXML
+	public void mdH1() {
+		textFormatController.mdH1();
+	}
+
+	@FXML
+	public void mdH2() {
+		textFormatController.mdH2();
+	}
+
+	@FXML
+	public void mdH3() {
+		textFormatController.mdH3();
+	}
+
+	@FXML
+	public void mdClearHeading() {
+		textFormatController.mdH3();
+	}
+
+	@FXML
+	public void mdBulletedList() {
+		textFormatController.mdBulletedList();
+	}
+
+	@FXML
+	public void mdNumberedList() {
+		textFormatController.mdNumberedList();
+	}
+
+	@FXML
+	public void mdTaskList() {
+		textFormatController.mdTaskList();
+	}
+
+	@FXML
+	public void mdBlockquote() {
+		textFormatController.mdBlockquote();
+	}
+
+	@FXML
+	public void mdCodeBlock() {
+		textFormatController.mdCodeBlock();
+	}
+
+	@FXML
+	public void mdHorizontalRule() {
+		textFormatController.mdHorizontalRule();
+	}
+
+	@FXML
+	public void mdTable2x2() {
+		textFormatController.mdTable2x2();
+	}
+
+	@FXML
+	public void mdInsertLinkDialog() {
+		textFormatController.mdInsertLinkDialog();
+	}
+
+	@FXML
+	public void mdInsertImageDialog() {
+		textFormatController.mdInsertImageDialog();
+	}
+
+	@FXML
+	public void mdFootnote() {
+		textFormatController.mdFootnote();
+	}
+
+	@FXML
+	public void mdInsertTOC() {
+		textFormatController.mdInsertTOC();
+	}
+
+	@FXML
+	public void mdMathInline() {
+		textFormatController.mdMathInline();
+	}
+
+	@FXML
+	public void mdMathBlock() {
+		textFormatController.mdMathBlock();
 	}
 
 	@FXML
@@ -560,4 +669,122 @@ public class EditorPildoraController {
 	public void setOnClose(Runnable onClose) {
 		this.onClose = onClose;
 	}
+
+	// DRAFTS
+	public void setPrefill(String titulo, String cuerpo, boolean proteger) {
+		txtTitulo.setText(titulo == null ? "" : titulo);
+		switchProteger.setSelected(proteger);
+		// si proteger = true y sesión desbloqueada, permitimos edición directa;
+		// si está bloqueado, tu lógica existente ya mantiene el TextArea
+		// disabled/placeholder.
+		txtDescripcion.setDisable(proteger && !security.isUnlocked());
+		txtDescripcion.setText(cuerpo == null ? "" : cuerpo);
+	}
+
+	private static String loadResourceAsString(String path) {
+		try (var is = EditorPildoraController.class.getResourceAsStream(path)) {
+			if (is == null)
+				return "";
+			return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+		} catch (Exception e) {
+			return "";
+		}
+	}
+
+	private void initPreview() {
+		cssLight    = loadResourceAsString("/css/webview-light.css");
+		cssDark     = loadResourceAsString("/css/webview-dark.css");
+		cssBaseWeb  = loadResourceAsString("/css/base-webview.css");
+
+		// Estado inicial: OFF
+		switchPreview.setSelected(false);
+		switchPreview.setTooltip(new Tooltip("Mostrar vista previa del Markdown"));
+		syncPreview(false);
+
+		// Debounce solo si ON
+		previewDebounce.setOnFinished(e -> renderPreviewNow());
+		txtDescripcion.textProperty().addListener((obs, old, val) -> {
+			if (switchPreview.isSelected())
+				previewDebounce.playFromStart();
+		});
+
+		// Toggle ON/OFF
+		switchPreview.selectedProperty().addListener((o, wasOn, nowOn) -> syncPreview(nowOn));
+
+		// Re-render al cambiar tema (si ON)
+		txtDescripcion.sceneProperty().addListener((obs, oldScene, scene) -> {
+			if (scene == null)
+				return;
+			scene.getStylesheets().addListener((javafx.collections.ListChangeListener<String>) c -> {
+				if (switchPreview.isSelected())
+					renderPreviewNow();
+			});
+		});
+	}
+
+	private void syncPreview(boolean on) {
+		webPreview.setManaged(on);
+		webPreview.setVisible(on);
+		if (on) {
+			if (splitEditor.getDividerPositions().length > 0) {
+				splitEditor.setDividerPositions(0.5);
+			}
+			renderPreviewNow();
+		} else {
+			splitEditor.setDividerPositions(1.0);
+		}
+	}
+
+	// Decide CSS según tema actual
+	private String currentCssForTheme() {
+		var isDark = io.github.guillermo_david.javafx.ThemeManager
+				.load() == io.github.guillermo_david.javafx.ThemeManager.Theme.DARK;
+		return isDark ? cssDark : cssLight;
+	}
+
+	// Renderiza ya (sin debounce)
+	private void renderPreviewNow() {
+	    String mdText = txtDescripcion.getText();
+	    String body = md.toHtml(mdText);
+
+	    boolean wantsMath = mdText != null && (mdText.contains("$$") || mdText.contains("$"));
+	    String themeCss = (ThemeManager.load() == ThemeManager.Theme.DARK) ? cssDark : cssLight;
+	    String cssAll   = cssBaseWeb + "\n" + themeCss;
+
+
+	    String math = wantsMath ? """
+	        <script>
+	          window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] }, svg: {fontCache: 'global'} };
+	        </script>
+	        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+	        """ : "";
+
+	    String html = """
+	        <!doctype html>
+	        <html>
+	        <head>
+	          <meta charset="utf-8">
+	          <style>
+	          		""" + cssAll + """
+	          </style>
+	        </head>
+	        <body class="md-body">
+	        """ + body + math + """
+	        </body>
+	        </html>
+	        """;
+
+	    webPreview.getEngine().loadContent(
+	        """
+	        <!doctype html><html><head>
+	          <meta charset="UTF-8">
+	          <meta name="color-scheme" content="dark light">
+	          <style>%s</style>
+	        </head><body class="md-body">%s</body></html>
+	        """.formatted(cssAll, html)
+	    );
+//	    webPreview.getEngine().loadContent(html, "text/html");
+	}
+
+	
 }

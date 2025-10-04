@@ -54,6 +54,37 @@ public final class Dialogs {
 		});
 	}
 
+	private static HBox buildDialogTitleBar(String title, Stage dlgStage) {
+		Label lbl = new Label(title == null ? "" : title);
+		lbl.getStyleClass().add("dialog-title");
+
+		Button btnClose = new Button("✕");
+		btnClose.getStyleClass().add("dialog-close");
+		btnClose.setOnAction(e -> dlgStage.close());
+
+		Region spacer = new Region();
+		HBox.setHgrow(spacer, Priority.ALWAYS);
+
+		HBox bar = new HBox(10, lbl, spacer, btnClose);
+		bar.getStyleClass().add("dialog-titlebar");
+
+		// Drag mover
+		final double[] off = new double[2];
+		bar.setOnMousePressed(e -> {
+			off[0] = e.getScreenX() - dlgStage.getX();
+			off[1] = e.getScreenY() - dlgStage.getY();
+		});
+		bar.setOnMouseDragged(e -> {
+			dlgStage.setX(e.getScreenX() - off[0]);
+			dlgStage.setY(e.getScreenY() - off[1]);
+		});
+		btnClose.setOnMousePressed(e -> e.consume());
+		btnClose.setOnMouseDragged(e -> e.consume());
+
+		return bar;
+	}
+	
+
 	public static <T> void decorate(Dialog<T> dialog, Parent ownerRoot) {
 		// 1) estilo/owner antes de que se cree el Stage interno
 		dialog.initStyle(StageStyle.UNDECORATED);
@@ -86,38 +117,12 @@ public final class Dialogs {
 		});
 	}
 
-	private static HBox buildDialogTitleBar(String title, Stage dlgStage) {
-		Label lbl = new Label(title == null ? "" : title);
-		lbl.getStyleClass().add("dialog-title");
-
-		Button btnClose = new Button("✕");
-		btnClose.getStyleClass().add("dialog-close");
-		btnClose.setOnAction(e -> dlgStage.close());
-
-		Region spacer = new Region();
-		HBox.setHgrow(spacer, Priority.ALWAYS);
-
-		HBox bar = new HBox(10, lbl, spacer, btnClose);
-		bar.getStyleClass().add("dialog-titlebar");
-
-		// Drag mover
-		final double[] off = new double[2];
-		bar.setOnMousePressed(e -> {
-			off[0] = e.getScreenX() - dlgStage.getX();
-			off[1] = e.getScreenY() - dlgStage.getY();
-		});
-		bar.setOnMouseDragged(e -> {
-			dlgStage.setX(e.getScreenX() - off[0]);
-			dlgStage.setY(e.getScreenY() - off[1]);
-		});
-		btnClose.setOnMousePressed(e -> e.consume());
-		btnClose.setOnMouseDragged(e -> e.consume());
-
-		return bar;
-	}
 
 	private static <T> HBox buildTitleBar(Dialog<T> dialog) {
-		Label title = new Label(dialog.getTitle() == null ? "" : dialog.getTitle());
+//		Label title = new Label(dialog.getTitle() == null ? "" : dialog.getTitle());
+//		title.getStyleClass().add("titlebar-title");
+		Label title = new Label();
+		title.textProperty().bind(dialog.titleProperty());
 		title.getStyleClass().add("titlebar-title");
 
 		Pane spacer = new Pane();
@@ -125,7 +130,10 @@ public final class Dialogs {
 
 		Button close = new Button("✕");
 		close.getStyleClass().add("titlebar-close");
-		close.setOnAction(e -> dialog.setResult(null));
+		close.setOnAction(e -> {
+			dialog.setResult(null);
+			dialog.close();
+		});
 
 		HBox bar = new HBox(8, title, spacer, close);
 		bar.getStyleClass().add("titlebar"); // usa tus estilos .titlebar

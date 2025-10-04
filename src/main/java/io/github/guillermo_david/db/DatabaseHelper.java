@@ -176,11 +176,25 @@ public class DatabaseHelper {
 	                FOREIGN KEY (tag_id)     REFERENCES tags(id)     ON DELETE RESTRICT
 	            )
 	        """);
+	        
+	        stmt.execute("""
+	                CREATE TABLE IF NOT EXISTS drafts (
+	                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+	                    titulo TEXT,
+	                    contenido TEXT,
+	                    contenido_cipher BLOB,
+	                    contenido_iv BLOB,
+	                    protegida INTEGER NOT NULL DEFAULT 0,
+	                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	                    fecha_actualizacion TIMESTAMP
+	                )
+	            """);
 
 	        // Índices básicos
 	        stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
 	        stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
 	        stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
+	        stmt.execute("CREATE INDEX IF NOT EXISTS idx_drafts_fecha ON drafts(fecha_creacion DESC)");
 	    }
 
 	    // --- MIGRACIONES IDEMPOTENTES ---

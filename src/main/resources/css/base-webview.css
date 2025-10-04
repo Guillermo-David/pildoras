@@ -1,0 +1,17 @@
+/* contenedor base */
+.md-body { line-height: 1.5; }
+
+/* TOC */
+.md-body .toc { border: 1px solid rgba(0,0,0,.1); padding: .5rem .75rem; border-radius: .5rem; margin: 0 0 1rem; }
+.md-body .toc ul { list-style: none; padding-left: 0; }
+
+/* Tablas */
+.md-body table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+.md-body th, .md-body td { border: 1px solid rgba(0,0,0,.15); padding: .5rem; }
+.md-body th { text-align: left; }
+
+/* Código */
+.md-body pre { padding: .75rem; border-radius: .5rem; overflow: auto; }
+
+/* Tasklist: flexmark ya pone <input type="checkbox" disabled> */
+.md-body input[type="checkbox"] { transform: scale(1.1); margin-right: .5rem; }

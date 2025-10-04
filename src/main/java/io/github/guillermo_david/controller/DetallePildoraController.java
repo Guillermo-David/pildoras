@@ -2,9 +2,7 @@ package io.github.guillermo_david.controller;
 
 import java.util.function.Consumer;
 
-import org.commonmark.node.Node;
-import org.commonmark.parser.Parser;
-import org.commonmark.renderer.html.HtmlRenderer;
+//import org.commonmark.node.Node;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeBrands;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeRegular;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
@@ -16,6 +14,7 @@ import io.github.guillermo_david.javafx.ColorUtil;
 import io.github.guillermo_david.javafx.PinDialogs;
 import io.github.guillermo_david.javafx.StatusBus;
 import io.github.guillermo_david.javafx.ThemeManager;
+import io.github.guillermo_david.markdown.MarkdownEngine;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
 import io.github.guillermo_david.security.SecurityService;
@@ -41,18 +40,12 @@ import javafx.util.Duration;
 
 public class DetallePildoraController {
 
-	@FXML
-	private VBox root;
-	@FXML
-	private Label lblTitulo, lblFecha;
-	@FXML
-	private FlowPane tagsBox;
-	@FXML
-	private WebView webContenido;
-	@FXML
-	private Button btnVolver, btnEditar, btnBorrar;
-	@FXML
-	private MenuButton btnExportMenu;
+	@FXML private VBox root;
+	@FXML private Label lblTitulo, lblFecha;
+	@FXML private FlowPane tagsBox;
+	@FXML private WebView webContenido;
+	@FXML private Button btnVolver, btnEditar, btnBorrar;
+	@FXML private MenuButton btnExportMenu;
 
 	private final SecurityService security = SecurityService.getInstance();
 
@@ -66,8 +59,7 @@ public class DetallePildoraController {
 	private EventHandler<KeyEvent> escFilter;
 	private KeyCombination kcEditar = new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN);
 
-	private final Parser parser = Parser.builder().build();
-	private final HtmlRenderer renderer = HtmlRenderer.builder().build();
+	private static final MarkdownEngine MD = new MarkdownEngine();
 
 	private boolean shortcutsInstalados = false;
 	private boolean deletingNow = false;
@@ -75,12 +67,28 @@ public class DetallePildoraController {
 	private String cssLight;
 	private String cssDark;
 	private String lastHtml;
+	private String cssBaseWeb;
+	
+	private static final String MATHJAX_SNIPPET = """
+			<script>
+			window.MathJax = {
+			  tex: {
+			    inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+			    displayMath: [['$$','$$'], ['\\\\[','\\\\]']]
+			  },
+			  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] },
+			  svg: { fontCache: 'global' }
+			};
+			</script>
+			<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+			""";
 
 	@FXML
 	public void initialize() {
 
 		cssLight = loadResourceAsString("/css/webview-light.css");
 		cssDark = loadResourceAsString("/css/webview-dark.css");
+		cssBaseWeb = loadResourceAsString("/css/base-webview.css");
 
 		// Fondo transparente del WebView (JavaFX)
 		webContenido.setStyle("-fx-background-color: transparent;");
@@ -95,6 +103,16 @@ public class DetallePildoraController {
 				}
 			});
 		});
+		
+		webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
+	        if (st == javafx.concurrent.Worker.State.SUCCEEDED) {
+	            try {
+	                webContenido.getEngine().executeScript(
+	                    "if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise(); }"
+	                );
+	            } catch (Exception ignored) {}
+	        }
+	    });
 
 		// Acciones botones
 		btnVolver.setOnAction(e -> {
@@ -217,10 +235,14 @@ public class DetallePildoraController {
 			PildoraExporter.exportMarkdown(currentPildora, new TagDao(), file.toPath());
 			StatusBus.show("Exportada a " + file.getName(), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
 		} catch (Exception ex) {
-			ex.printStackTrace();
-			StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR,
-					javafx.util.Duration.seconds(4));
+		    String msg = ex.getMessage();
+		    if (msg != null && msg.contains("Contenido protegido")) {
+		        StatusBus.show("Desbloquea con PIN antes de exportar.", StatusBus.Type.ERROR, Duration.seconds(4));
+		    } else {
+		        StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR, Duration.seconds(4));
+		    }
 		}
+
 	}
 
 	private void exportHtml() {
@@ -240,10 +262,14 @@ public class DetallePildoraController {
 			PildoraExporter.exportHtml(currentPildora, new TagDao(), file.toPath(), extraCss);
 			StatusBus.show("Exportada a " + file.getName(), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
 		} catch (Exception ex) {
-			ex.printStackTrace();
-			StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR,
-					javafx.util.Duration.seconds(4));
+		    String msg = ex.getMessage();
+		    if (msg != null && msg.contains("Contenido protegido")) {
+		        StatusBus.show("Desbloquea con PIN antes de exportar.", StatusBus.Type.ERROR, Duration.seconds(4));
+		    } else {
+		        StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR, Duration.seconds(4));
+		    }
 		}
+
 	}
 
 	private HBox buildTagChipButton(String name) {
@@ -429,8 +455,8 @@ public class DetallePildoraController {
 				bodyMd = p.getDescripcion();
 			}
 
-			Node doc = parser.parse(bodyMd == null ? "" : bodyMd);
-			lastHtml = renderer.render(doc);
+			lastHtml = MD.toHtml(bodyMd);
+			renderWithTheme(ThemeManager.load(), lastHtml);
 			renderWithTheme(ThemeManager.load(), lastHtml);
 
 		} catch (Exception ex) {
@@ -440,24 +466,26 @@ public class DetallePildoraController {
 	}
 
 	private void renderWithTheme(ThemeManager.Theme t, String bodyHtml) {
-		String css = (t == ThemeManager.Theme.DARK) ? cssDark : cssLight;
-		webContenido.getEngine().loadContent(wrapHtmlWithCss(bodyHtml, css));
+	    String themeCss = (t == ThemeManager.Theme.DARK) ? cssDark : cssLight;
+	    String html = wrapHtmlWithCss(bodyHtml, cssBaseWeb + "\n" + themeCss);
+	    webContenido.getEngine().loadContent(html);
 	}
 
-	/** Envuélvelo con HTML + <style> CSS incrustado y fondo transparente */
 	private String wrapHtmlWithCss(String bodyHtml, String css) {
-		return """
-				  <!doctype html>
-				  <html>
-				    <head>
-				      <meta charset="UTF-8">
-				      <meta name="color-scheme" content="dark light">
-				      <style>%s</style>
-				    </head>
-				    <body>%s</body>
-				  </html>
-				""".formatted(css, bodyHtml);
+	    return """
+	      <!doctype html>
+	      <html lang="es">
+	        <head>
+	          <meta charset="UTF-8">
+	          <meta name="color-scheme" content="dark light">
+	          <style>%s</style>
+	          %s
+	        </head>
+	        <body class="md-body">%s</body>
+	      </html>
+	    """.formatted(css == null ? "" : css, MATHJAX_SNIPPET, bodyHtml == null ? "" : bodyHtml);
 	}
+
 
 	private String loadResourceAsString(String path) {
 		try (var is = getClass().getResourceAsStream(path)) {

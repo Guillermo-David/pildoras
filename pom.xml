@@ -81,6 +81,29 @@
 			<artifactId>ikonli-fontawesome6-pack</artifactId>
 			<version>${ikonli.version}</version>
 		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/com.vladsch.flexmark/flexmark-all -->
+		<dependency>
+		    <groupId>com.vladsch.flexmark</groupId>
+		    <artifactId>flexmark-all</artifactId>
+		    <version>0.64.8</version>
+		    <scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.vladsch.flexmark/flexmark -->
+		<!---->
+		
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-tables</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-gfm-strikethrough</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-gfm-tasklist</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-footnotes</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-toc</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-autolink</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-anchorlink</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-emoji</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-attributes</artifactId><version>0.64.8</version></dependency>
+		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-typographic</artifactId><version>0.64.8</version></dependency>
+		<!--<dependency><groupId>tech.catheu</groupId><artifactId>flexmark-ext-math</artifactId><version>0.8.0</version></dependency>-->
 	</dependencies>
 
 	<build>

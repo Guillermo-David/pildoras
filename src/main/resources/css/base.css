@@ -83,7 +83,7 @@
 }
 
 .icon-btn .ikonli-font-icon {
-	-fx-icon-size: 12px;
+	-fx-icon-size: 14px;
 	-fx-icon-color: -fx-text-base-color;
 }
 
@@ -613,3 +613,19 @@
 .themed-dialog > .button-bar > .container {
   -fx-background-color: -c-bg;
 }
+
+/* Badge rojo pequeñito para contadores */
+.badge {
+  -fx-background-color: #d93025;   /* rojo Google-ish */
+  -fx-text-fill: white;
+  -fx-font-size: 8px;
+  -fx-font-weight: 700;
+  -fx-padding: 1 4 1 4;
+  -fx-background-radius: 999;
+  -fx-border-color: white;         /* aro blanco para contraste */
+  -fx-border-width: 1;
+  -fx-border-radius: 999;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 4, 0.2, 0, 1);
+}
+
+

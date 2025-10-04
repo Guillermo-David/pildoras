@@ -13,9 +13,11 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import io.github.guillermo_david.MainApp;
+import io.github.guillermo_david.dao.DraftDao;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.javafx.Dialogs;
+import io.github.guillermo_david.javafx.DraftDialogs;
 import io.github.guillermo_david.javafx.PinDialogs;
 import io.github.guillermo_david.javafx.StatusBus;
 import io.github.guillermo_david.javafx.ThemeManager;
@@ -31,6 +33,7 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
@@ -40,6 +43,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -102,6 +106,10 @@ public class ListadoPildorasController {
 	private String columnaOrden = DEFAULT_ORDER_COL;
 	private String direccionOrden = DEFAULT_ORDER_DIR;
 	private TableColumn<Pildora, ?> lastSortColumn = null;
+	
+	// Campos (arriba en el controller)
+	private long lastWheelNanos = 0L;
+	private static final long WHEEL_THROTTLE_NS = 180_000_000L; // ~180 ms
 
 	private SortState lastState = SortState.NONE;
 	private boolean suppressSort = false;
@@ -117,6 +125,10 @@ public class ListadoPildorasController {
 	private final int DEFAULT_SMALL_ICON_SIZE = 14;
 
 	private double dragOffsetX, dragOffsetY;
+	
+	private Label draftsBadge;
+	private StackPane draftsIconStack;
+
 
 	String base = null;
 	String light = null;
@@ -124,28 +136,17 @@ public class ListadoPildorasController {
 
 	private Node centerBackup;
 
-	@FXML
-	private BorderPane root;
-	@FXML
-	private Button btnNueva, btnAnterior, btnSiguiente, btnClose;
-	@FXML
-	private ToggleButton btnAndOr, btnSoloFav;
-	@FXML
-	private MenuButton btnSettings;
-	@FXML
-	private HBox paginationBox, statusBar, titleBar, appHeader;
-	@FXML
-	private Label lblPagina, lblStatus;
-	@FXML
-	private TableView<Pildora> table;
-	@FXML
-	private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
-	@FXML
-	private TableColumn<Pildora, Void> colFav, colAcciones, colPinned;
-	@FXML
-	private CustomTextField txtFiltroTexto, txtFiltroTags;
-	@FXML
-	private ImageView imgLogo;
+	@FXML private BorderPane root;
+	@FXML private Button btnNueva, btnAnterior, btnSiguiente, btnClose;
+	@FXML private ToggleButton btnAndOr, btnSoloFav;
+	@FXML private MenuButton btnSettings, btnBorradores;
+	@FXML private HBox paginationBox, statusBar, titleBar, appHeader;
+	@FXML private Label lblPagina, lblStatus;
+	@FXML private TableView<Pildora> table;
+	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
+	@FXML private TableColumn<Pildora, Void> colFav, colAcciones, colPinned;
+	@FXML private CustomTextField txtFiltroTexto, txtFiltroTags;
+	@FXML private ImageView imgLogo;
 
 	@FXML
 	public void initialize() {
@@ -165,6 +166,7 @@ public class ListadoPildorasController {
 		setBotones();
 		initSettingsMenu();
 		applyTypographyNow();
+		instalarWheelPagination();
 		cargarTabla(null, null);
 		setLogoFor(ThemeManager.load());
 		setTxtFiltros();
@@ -724,6 +726,7 @@ public class ListadoPildorasController {
 			}
 		});
 
+		if (btnBorradores != null) initDraftsUI();
 	}
 
 	private void setColTitulo() {
@@ -765,7 +768,7 @@ public class ListadoPildorasController {
 				lbl.setTextOverrun(OverrunStyle.ELLIPSIS);
 				lock.setIconSize(12); // pequeño
 				lock.getStyleClass().addAll("muted-icon", "danger"); // opcional: dale un color atenuado en tu CSS
-				
+
 			}
 
 			@Override
@@ -1214,6 +1217,35 @@ public class ListadoPildorasController {
 
 		cargarTabla(texto.isEmpty() ? null : texto, tags.isEmpty() ? null : tags);
 	}
+	
+	private void instalarWheelPagination() {
+	    table.addEventFilter(javafx.scene.input.ScrollEvent.SCROLL, e -> {
+	        // Ignora gestos táctiles o modificadores (Ctrl = zoom del SO, etc.)
+	        if (e.getTouchCount() > 0) return;
+	        if (e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown()) return;
+
+	        // En trackpads puede haber scroll horizontal: prioriza el vertical
+	        double dy = e.getDeltaY();
+	        if (Math.abs(dy) < Math.abs(e.getDeltaX())) return;
+
+	        // Throttle
+	        long now = System.nanoTime();
+	        if (now - lastWheelNanos < WHEEL_THROTTLE_NS) {
+	            e.consume();
+	            return;
+	        }
+	        lastWheelNanos = now;
+
+	        // Rueda abajo -> siguiente página, rueda arriba -> anterior
+	        if (dy < 0) {
+	            if (btnSiguiente != null) btnSiguiente.fire();
+	        } else if (dy > 0) {
+	            if (btnAnterior != null) btnAnterior.fire();
+	        }
+	        e.consume();
+	    });
+	}
+
 
 	private void ocultarFiltrosYPaginacion() {
 		if (!uiOculta) {
@@ -1346,250 +1378,244 @@ public class ListadoPildorasController {
 	}
 
 	private void initSettingsMenu() {
-	    // Limpia y configura el botón (icono engranaje)
-	    btnSettings.getItems().clear();
+		// Limpia y configura el botón (icono engranaje)
+		btnSettings.getItems().clear();
 
-	    var gear = new FontIcon(FontAwesomeSolid.COG);
-	    btnSettings.setText(null);
-	    btnSettings.setGraphic(gear);
-	    btnSettings.setTooltip(new Tooltip("Ajustes"));
-	    btnSettings.getStyleClass().addAll("icon-btn", "primary");
+		var gear = new FontIcon(FontAwesomeSolid.COG);
+		btnSettings.setText(null);
+		btnSettings.setGraphic(gear);
+		btnSettings.setTooltip(new Tooltip("Ajustes"));
+		btnSettings.getStyleClass().addAll("icon-btn", "primary");
 
-	    // --- Tipografías ---
-	    record Family(String label, String css) {}
-	    var families = List.of(
-	        new Family("System", "System"),
-	        new Family("Sans (Arial)", "Arial"),
-	        new Family("Serif", "Serif"),
-	        new Family("Monospace", "Consolas")
-	    );
-	    var miFamily = new Menu("Tipografía");
-	    var tgFamily = new ToggleGroup();
-	    String currentFamily = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
-	    for (var f : families) {
-	        var r = new RadioMenuItem(f.label());
-	        r.setToggleGroup(tgFamily);
-	        r.setSelected(f.css().equalsIgnoreCase(currentFamily));
-	        r.setOnAction(e -> {
-	            PREFS.put(PREF_FONT_FAMILY, f.css());
-	            applyTypographyNow();
-	        });
-	        miFamily.getItems().add(r);
-	    }
+		// --- Tipografías ---
+		record Family(String label, String css) {
+		}
+		var families = List.of(new Family("System", "System"), new Family("Sans (Arial)", "Arial"),
+				new Family("Serif", "Serif"), new Family("Monospace", "Consolas"));
+		var miFamily = new Menu("Tipografía");
+		var tgFamily = new ToggleGroup();
+		String currentFamily = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
+		for (var f : families) {
+			var r = new RadioMenuItem(f.label());
+			r.setToggleGroup(tgFamily);
+			r.setSelected(f.css().equalsIgnoreCase(currentFamily));
+			r.setOnAction(e -> {
+				PREFS.put(PREF_FONT_FAMILY, f.css());
+				applyTypographyNow();
+			});
+			miFamily.getItems().add(r);
+		}
 
-	    // --- Tamaño letra ---
-	    var miSize = new Menu("Tamaño");
-	    var tgSize = new ToggleGroup();
-	    var sizes = List.of(
-	    		new Family("Muy grande", "vlarge"), 
-	    		new Family("Grande", "large"), 
-	    		new Family("Normal", "normal"), 
-	    		new Family("Pequeño", "small"));
-	    String currentSize = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
-	    for (var item : sizes) {
-	        var r = new RadioMenuItem(item.label);
-	        r.setToggleGroup(tgSize);
-	        r.setSelected(item.css.equalsIgnoreCase(currentSize));
-	        r.setOnAction(e -> {
-	            PREFS.put(PREF_FONT_SIZE, item.css);
-	            applyTypographyNow();
-	        });
-	        miSize.getItems().add(r);
-	    }
+		// --- Tamaño letra ---
+		var miSize = new Menu("Tamaño");
+		var tgSize = new ToggleGroup();
+		var sizes = List.of(new Family("Muy grande", "vlarge"), new Family("Grande", "large"),
+				new Family("Normal", "normal"), new Family("Pequeño", "small"));
+		String currentSize = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
+		for (var item : sizes) {
+			var r = new RadioMenuItem(item.label);
+			r.setToggleGroup(tgSize);
+			r.setSelected(item.css.equalsIgnoreCase(currentSize));
+			r.setOnAction(e -> {
+				PREFS.put(PREF_FONT_SIZE, item.css);
+				applyTypographyNow();
+			});
+			miSize.getItems().add(r);
+		}
 
-	    // --- Tema oscuro ---
-	    var miTemaOscuro = new CheckMenuItem("Tema oscuro");
-	    miTemaOscuro.setSelected(ThemeManager.load() == Theme.DARK);
-	    miTemaOscuro.setOnAction(e -> {
-	        var scene = root.getScene();
-	        if (scene == null) return;
-	        boolean wantsDark = miTemaOscuro.isSelected();
-	        boolean isDark = (ThemeManager.load() == Theme.DARK);
-	        if (wantsDark != isDark) {
-	            Theme t = ThemeManager.toggle(scene);
-	            setLogoFor(t);
-	            StatusBus.show(t == Theme.DARK ? "Tema oscuro" : "Tema claro",
-	                           StatusBus.Type.INFO, javafx.util.Duration.seconds(2));
-	        }
-	    });
+		// --- Tema oscuro ---
+		var miTemaOscuro = new CheckMenuItem("Tema oscuro");
+		miTemaOscuro.setSelected(ThemeManager.load() == Theme.DARK);
+		miTemaOscuro.setOnAction(e -> {
+			var scene = root.getScene();
+			if (scene == null)
+				return;
+			boolean wantsDark = miTemaOscuro.isSelected();
+			boolean isDark = (ThemeManager.load() == Theme.DARK);
+			if (wantsDark != isDark) {
+				Theme t = ThemeManager.toggle(scene);
+				setLogoFor(t);
+				StatusBus.show(t == Theme.DARK ? "Tema oscuro" : "Tema claro", StatusBus.Type.INFO,
+						javafx.util.Duration.seconds(2));
+			}
+		});
 
-	    // =============== Submenú Seguridad ===============
-	    var miSecurity = new Menu("Seguridad");
+		// =============== Submenú Seguridad ===============
+		var miSecurity = new Menu("Seguridad");
 
-	    // Crear/Cambiar PIN (texto dinámico)
-	    var miChangePin = new MenuItem(security.hasPin() ? "Cambiar PIN…" : "Crear PIN…");
-	    miChangePin.setOnAction(e -> {
-	        try {
-	            if (!security.hasPin()) {
-	                char[] np = PinDialogs.promptNewPin6(root);
-	                if (np == null) return;
-	                try {
-	                    security.setupPin(np);
-	                    StatusBus.show("PIN creado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-	                    // refresca el menú para que el ítem pase a "Cambiar PIN…"
-	                    initSettingsMenu();
-	                } finally {
-	                    Arrays.fill(np, '\0');
-	                }
-	            } else {
-	                if (!ensureUnlockedWithRetries()) return;
-	                char[] np = PinDialogs.promptNewPin6(root);
-	                if (np == null) return;
-	                try {
-	                    security.changePin(null, np);
-	                    StatusBus.show("PIN cambiado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-	                } finally {
-	                    Arrays.fill(np, '\0');
-	                }
-	            }
-	        } catch (Exception ex) {
-	            StatusBus.show("No se pudo " + (security.hasPin() ? "cambiar" : "crear") + " el PIN.",
-	                           StatusBus.Type.ERROR, Duration.seconds(4));
-	        }
-	    });
+		// Crear/Cambiar PIN (texto dinámico)
+		var miChangePin = new MenuItem(security.hasPin() ? "Cambiar PIN…" : "Crear PIN…");
+		miChangePin.setOnAction(e -> {
+			try {
+				if (!security.hasPin()) {
+					char[] np = PinDialogs.promptNewPin6(root);
+					if (np == null)
+						return;
+					try {
+						security.setupPin(np);
+						StatusBus.show("PIN creado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+						// refresca el menú para que el ítem pase a "Cambiar PIN…"
+						initSettingsMenu();
+					} finally {
+						Arrays.fill(np, '\0');
+					}
+				} else {
+					if (!ensureUnlockedWithRetries())
+						return;
+					char[] np = PinDialogs.promptNewPin6(root);
+					if (np == null)
+						return;
+					try {
+						security.changePin(null, np);
+						StatusBus.show("PIN cambiado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+					} finally {
+						Arrays.fill(np, '\0');
+					}
+				}
+			} catch (Exception ex) {
+				StatusBus.show("No se pudo " + (security.hasPin() ? "cambiar" : "crear") + " el PIN.",
+						StatusBus.Type.ERROR, Duration.seconds(4));
+			}
+		});
 
-	    // Configurar pregunta de seguridad…
-	    var miSetQuestion = new MenuItem("Configurar pregunta de seguridad…");
-	    miSetQuestion.setOnAction(e -> {
-	        try {
-	            if (!security.hasPin()) {
-	                StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
-	                return;
-	            }
-	            if (!ensureUnlockedWithRetries()) return;
-	            showSetupSecurityQuestion(); // tu helper ya temado
-	        } catch (Exception ex) {
-	            StatusBus.show("No se pudo guardar la pregunta.", StatusBus.Type.ERROR, Duration.seconds(4));
-	        }
-	    });
+		// Configurar pregunta de seguridad…
+		var miSetQuestion = new MenuItem("Configurar pregunta de seguridad…");
+		miSetQuestion.setOnAction(e -> {
+			try {
+				if (!security.hasPin()) {
+					StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
+					return;
+				}
+				if (!ensureUnlockedWithRetries())
+					return;
+				showSetupSecurityQuestion(); // tu helper ya temado
+			} catch (Exception ex) {
+				StatusBus.show("No se pudo guardar la pregunta.", StatusBus.Type.ERROR, Duration.seconds(4));
+			}
+		});
 
-	    // Restablecer PIN con respuesta…
-	    var miResetByAnswer = new MenuItem("Restablecer PIN con respuesta…");
-	    miResetByAnswer.setOnAction(e -> {
-	        try {
-	            if (!security.hasSecurityQuestion()) {
-	                StatusBus.show("No hay pregunta de seguridad configurada.", StatusBus.Type.WARN, Duration.seconds(3));
-	                return;
-	            }
-	            if (security.isLockedOut()) { showLockoutModalFromListado(); return; }
+		// Restablecer PIN con respuesta…
+		var miResetByAnswer = new MenuItem("Restablecer PIN con respuesta…");
+		miResetByAnswer.setOnAction(e -> {
+			try {
+				if (!security.hasSecurityQuestion()) {
+					StatusBus.show("No hay pregunta de seguridad configurada.", StatusBus.Type.WARN,
+							Duration.seconds(3));
+					return;
+				}
+				if (security.isLockedOut()) {
+					showLockoutModalFromListado();
+					return;
+				}
 
-	            String q = security.getSecurityQuestion();
-	            char[] ans = PinDialogs.promptAnswer(root, q);
-	            if (ans == null) return;
-	            char[] np = PinDialogs.promptNewPin6(root);
-	            if (np == null) { Arrays.fill(ans, '\0'); return; }
+				String q = security.getSecurityQuestion();
+				char[] ans = PinDialogs.promptAnswer(root, q);
+				if (ans == null)
+					return;
+				char[] np = PinDialogs.promptNewPin6(root);
+				if (np == null) {
+					Arrays.fill(ans, '\0');
+					return;
+				}
 
-	            boolean ok;
-	            try {
-	                ok = security.resetPinWithAnswer(ans, np);
-	            } finally {
-	                Arrays.fill(ans, '\0');
-	                Arrays.fill(np, '\0');
-	            }
+				boolean ok;
+				try {
+					ok = security.resetPinWithAnswer(ans, np);
+				} finally {
+					Arrays.fill(ans, '\0');
+					Arrays.fill(np, '\0');
+				}
 
-	            if (ok) {
-	                StatusBus.show("PIN restablecido.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-	                initSettingsMenu(); // por si cambia el estado del menú
-	            } else if (security.isLockedOut()) {
-	                showLockoutModalFromListado();
-	            } else {
-	                StatusBus.show("Respuesta incorrecta.", StatusBus.Type.ERROR, Duration.seconds(3));
-	            }
-	        } catch (Exception ex) {
-	            StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
-	        }
-	    });
+				if (ok) {
+					StatusBus.show("PIN restablecido.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+					initSettingsMenu(); // por si cambia el estado del menú
+				} else if (security.isLockedOut()) {
+					showLockoutModalFromListado();
+				} else {
+					StatusBus.show("Respuesta incorrecta.", StatusBus.Type.ERROR, Duration.seconds(3));
+				}
+			} catch (Exception ex) {
+				StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
+			}
+		});
 
-	    // Generar código de recuperación…
-	    var miGenRecovery = new MenuItem("Generar código de recuperación…");
-	    miGenRecovery.setOnAction(e -> {
-	        try {
-	            if (!security.hasPin()) {
-	                StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
-	                return;
-	            }
-	            if (!ensureUnlockedWithRetries()) return;
-	            showGenerateRecoveryCode(); // ya te muestra el código temado
-	        } catch (Exception ex) {
-	            StatusBus.show("No se pudo generar el código.", StatusBus.Type.ERROR, Duration.seconds(4));
-	        }
-	    });
+		// Generar código de recuperación…
+		var miGenRecovery = new MenuItem("Generar código de recuperación…");
+		miGenRecovery.setOnAction(e -> {
+			try {
+				if (!security.hasPin()) {
+					StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
+					return;
+				}
+				if (!ensureUnlockedWithRetries())
+					return;
+				showGenerateRecoveryCode(); // ya te muestra el código temado
+			} catch (Exception ex) {
+				StatusBus.show("No se pudo generar el código.", StatusBus.Type.ERROR, Duration.seconds(4));
+			}
+		});
 
-	    // Restablecer PIN con código de recuperación…
-	    var miResetByCode = new MenuItem("Restablecer PIN con código…");
-	    miResetByCode.setOnAction(e -> {
-	        try {
-	            if (!security.hasRecoveryCode()) {
-	                StatusBus.show("No hay código de recuperación activo.", StatusBus.Type.WARN, Duration.seconds(3));
-	                return;
-	            }
-	            if (security.isLockedOut()) { showLockoutModalFromListado(); return; }
+		// Restablecer PIN con código de recuperación…
+		var miResetByCode = new MenuItem("Restablecer PIN con código…");
+		miResetByCode.setOnAction(e -> {
+			try {
+				if (!security.hasRecoveryCode()) {
+					StatusBus.show("No hay código de recuperación activo.", StatusBus.Type.WARN, Duration.seconds(3));
+					return;
+				}
+				if (security.isLockedOut()) {
+					showLockoutModalFromListado();
+					return;
+				}
 
-	            String code = PinDialogs.promptRecoveryCode(root);
-	            if (code == null || code.isBlank()) return;
-	            char[] np = PinDialogs.promptNewPin6(root);
-	            if (np == null) return;
+				String code = PinDialogs.promptRecoveryCode(root);
+				if (code == null || code.isBlank())
+					return;
+				char[] np = PinDialogs.promptNewPin6(root);
+				if (np == null)
+					return;
 
-	            boolean ok;
-	            try {
-	                ok = security.resetPinWithRecoveryCode(code, np);
-	            } finally {
-	                Arrays.fill(np, '\0');
-	            }
+				boolean ok;
+				try {
+					ok = security.resetPinWithRecoveryCode(code, np);
+				} finally {
+					Arrays.fill(np, '\0');
+				}
 
-	            if (ok) {
-	                StatusBus.show("PIN restablecido con código.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-	                initSettingsMenu();
-	            } else if (security.isLockedOut()) {
-	                showLockoutModalFromListado();
-	            } else {
-	                StatusBus.show("Código incorrecto o expirado.", StatusBus.Type.ERROR, Duration.seconds(3));
-	            }
-	        } catch (Exception ex) {
-	            StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
-	        }
-	    });
+				if (ok) {
+					StatusBus.show("PIN restablecido con código.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+					initSettingsMenu();
+				} else if (security.isLockedOut()) {
+					showLockoutModalFromListado();
+				} else {
+					StatusBus.show("Código incorrecto o expirado.", StatusBus.Type.ERROR, Duration.seconds(3));
+				}
+			} catch (Exception ex) {
+				StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
+			}
+		});
 
-	    // Bloquear ahora
-	    var miLock = new MenuItem("Bloquear ahora");
-	    miLock.setOnAction(e -> {
-	        security.lockNow();
-	        StatusBus.show("Sesión bloqueada. Se pedirá PIN al acceder a contenido protegido.",
-	                StatusBus.Type.INFO, Duration.seconds(3));
-	    });
+		// Bloquear ahora
+		var miLock = new MenuItem("Bloquear ahora");
+		miLock.setOnAction(e -> {
+			security.lockNow();
+			StatusBus.show("Sesión bloqueada. Se pedirá PIN al acceder a contenido protegido.", StatusBus.Type.INFO,
+					Duration.seconds(3));
+		});
 
-	    miSecurity.getItems().addAll(
-	        miChangePin,
-	        new SeparatorMenuItem(),
-	        miSetQuestion,
-	        miResetByAnswer,
-	        new SeparatorMenuItem(),
-	        miGenRecovery,
-	        miResetByCode,
-	        new SeparatorMenuItem(),
-	        miLock
-	    );
+		miSecurity.getItems().addAll(miChangePin, new SeparatorMenuItem(), miSetQuestion, miResetByAnswer,
+				new SeparatorMenuItem(), miGenRecovery, miResetByCode, new SeparatorMenuItem(), miLock);
 
-	    // --- Atajos ---
-	    var miShortcuts = new MenuItem("Atajos de teclado…");
-	    miShortcuts.setOnAction(e -> showShortcutsDialog());
+		// --- Atajos ---
+		var miShortcuts = new MenuItem("Atajos de teclado…");
+		miShortcuts.setOnAction(e -> showShortcutsDialog());
 
-	    // Menú final (un único setAll)
-	    btnSettings.getItems().setAll(
-	        miFamily,
-	        miSize,
-	        new SeparatorMenuItem(),
-	        miTemaOscuro,
-	        new SeparatorMenuItem(),
-	        miSecurity,
-	        new SeparatorMenuItem(),
-	        miShortcuts
-	    );
+		// Menú final (un único setAll)
+		btnSettings.getItems().setAll(miFamily, miSize, new SeparatorMenuItem(), miTemaOscuro, new SeparatorMenuItem(),
+				miSecurity, new SeparatorMenuItem(), miShortcuts);
 	}
 
-
-
-		// Modal de lockout igual que en editor, pero desde listado
+	// Modal de lockout igual que en editor, pero desde listado
 	private void showLockoutModalFromListado() {
 
 		long secs = Math.max(0L, (security.lockoutRemainingMillis() + 999) / 1000);
@@ -1732,45 +1758,250 @@ public class ListadoPildorasController {
 
 	/** Diálogo con los atajos principales */
 	private void showShortcutsDialog() {
-		var sb = new StringBuilder();
-		sb.append("LISTADO\n").append("────────\n").append("Ctrl+F            – Foco en filtro de texto\n")
-				.append("Ctrl+T            – Foco en filtro de tags\n").append("Ctrl+N            – Nueva píldora\n")
-				.append("Ctrl+O            – Abrir detalle de la fila seleccionada\n")
-				.append("Ctrl+E            – Editar la fila seleccionada\n")
-				.append("Supr              – Eliminar la fila seleccionada\n")
-				.append("M                 – (Tabla enfocada) Alternar favorita\n")
-				.append("Ctrl+Shift+F      – Mostrar solo favoritas (toggle)\n")
-				.append("Ctrl+Shift+O      – Cambiar OR/AND para filtro de tags\n")
-				.append("PageUp / Ctrl+←   – Página anterior\n").append("PageDown / Ctrl+→ – Página siguiente\n")
-				.append("Esc               – Limpiar filtros (si hay foco en filtros) / Volver\n")
-				.append("Doble clic fila   – Abrir detalle\n\n").append("DETALLE\n").append("───────\n")
-				.append("Ctrl+E            – Editar\n").append("Supr              – Eliminar\n")
-				.append("Esc               – Volver al listado\n")
-				.append("Click en tag      – Filtrar listado por ese tag\n\n").append("EDITOR\n").append("──────\n")
-				.append("Ctrl+S            – Guardar\n").append("Esc               – Cancelar y volver\n")
-				.append("Ctrl+B            – Insertar **negrita**\n").append("Ctrl+I            – Insertar *cursiva*\n")
-				.append("Ctrl+K            – Insertar [enlace](https://)\n")
-				.append("Ctrl+E            – Insertar `código`\n")
-				.append("Enter / ','       – Confirmar tag en el campo de tags\n")
-				.append("Backspace (tags)  – Con input vacío, borrar el último tag\n");
+	    var sb = new StringBuilder();
 
-		var alert = new Alert(Alert.AlertType.INFORMATION);
-		alert.setTitle("Atajos de teclado");
-		alert.setHeaderText(null);
+	    sb.append("LISTADO\n")
+	      .append("───────\n")
+	      .append("Rueda ratón                – Página anterior / siguiente\n")
+	      .append("PageUp / Ctrl+←            – Página anterior\n")
+	      .append("PageDown / Ctrl+→          – Página siguiente\n")
+	      .append("Ctrl+F                     – Foco en filtro de texto\n")
+	      .append("Ctrl+T                     – Foco en filtro de tags\n")
+	      .append("Ctrl+N                     – Nueva píldora\n")
+	      .append("Ctrl+O                     – Abrir detalle de la fila seleccionada\n")
+	      .append("Ctrl+E                     – Editar la fila seleccionada\n")
+	      .append("Supr                       – Eliminar la fila seleccionada\n")
+	      .append("M                          – (Tabla enfocada) Alternar favorita\n")
+	      .append("Ctrl+Shift+F               – Mostrar solo favoritas (toggle)\n")
+	      .append("Ctrl+Shift+O               – Cambiar OR/AND para filtro de tags\n")
+	      .append("Esc                        – Limpiar filtros (si hay foco en filtros) / Volver\n")
+	      .append("Doble clic fila            – Abrir detalle\n\n")
 
-		var ta = new TextArea(sb.toString());
-		ta.setEditable(false);
-		ta.setWrapText(false); // sin cortes de línea automáticos
-		ta.setFocusTraversable(false);
-		ta.setPrefColumnCount(48); // ancho aprox
-		ta.setPrefRowCount(24); // alto aprox
-		ta.setStyle("-fx-font-family: 'Consolas','Monospaced'; -fx-font-size: 13px;");
+	      .append("DETALLE\n")
+	      .append("───────\n")
+	      .append("Ctrl+E                     – Editar\n")
+	      .append("Supr                       – Eliminar\n")
+	      .append("Esc                        – Volver al listado\n")
+	      .append("Click en tag               – Filtrar listado por ese tag\n\n")
 
-		alert.getDialogPane().setContent(ta);
-		alert.getDialogPane().setPrefWidth(560); // opcional, asegura buen ancho
+	      .append("EDITOR\n")
+	      .append("──────\n")
+	      .append("Ctrl+S / Ctrl+Enter       – Guardar\n")
+	      .append("Esc                       – Cancelar y volver\n")
+	      .append("Ctrl+B                    – Insertar **negrita**\n")
+	      .append("Ctrl+I                    – Insertar *cursiva*\n")
+	      .append("Ctrl+K                    – Insertar [enlace](https://)\n")
+	      .append("Ctrl+E                    – Insertar `código`\n")
+	      .append("Tab / Shift+Tab           – Indentar / desindentar líneas (listas)\n")
+	      .append("Vista previa              – Conmutador en la barra de herramientas\n")
+	      .append("Enter / ','               – Confirmar tag en el campo de tags\n")
+	      .append("Backspace (tags)          – Con input vacío, borrar el último tag\n\n")
 
-		Dialogs.decorate(alert, root);
-		alert.showAndWait();
+	      .append("BORRADORES\n")
+	      .append("──────────\n")
+	      .append("Desde Ajustes → Borradores\n")
+	      .append("  Nuevo borrador…         – Diálogo rápido\n")
+	      .append("  Bandeja de borradores…  – Lista de borradores\n")
+	      .append("Bandeja\n")
+	      .append("  Doble clic fila         – Editar borrador\n")
+	      .append("  Supr                    – Eliminar borrador seleccionado\n")
+	      .append("Diálogo rápido de borrador\n")
+	      .append("  Ctrl+S / Ctrl+Enter     – Guardar\n");
+
+
+	    var alert = new Alert(Alert.AlertType.INFORMATION);
+	    alert.setTitle("Atajos de teclado");
+	    alert.setHeaderText(null);
+
+	    var ta = new TextArea(sb.toString());
+	    ta.setEditable(false);
+	    ta.setWrapText(false);
+	    ta.setFocusTraversable(false);
+	    ta.setPrefColumnCount(56);
+	    ta.setPrefRowCount(28);
+	    ta.setStyle("-fx-font-family: 'Consolas','Monospaced'; -fx-font-size: 13px;");
+
+	    alert.getDialogPane().setContent(ta);
+	    alert.getDialogPane().setPrefWidth(620);
+
+	    Dialogs.decorate(alert, root);
+	    alert.showAndWait();
 	}
 
+
+	// DRAFTS:
+	private void initDraftsUI() {
+		if (btnBorradores == null) return;
+
+	    // Icono
+	    var eraser = new FontIcon(FontAwesomeSolid.ERASER);
+	    eraser.setIconSize(16);
+
+	    // Badge
+	    draftsBadge = new Label();
+	    draftsBadge.getStyleClass().add("badge");
+	    draftsBadge.setVisible(false);
+	    draftsBadge.setManaged(false); // no ocupa sitio cuando está oculto
+
+	    // Wrapper 24x24 para que no recorte el badge
+	    draftsIconStack = new StackPane(eraser, draftsBadge);
+	    draftsIconStack.setMinSize(24, 24);
+	    draftsIconStack.setPrefSize(24, 24);
+	    draftsIconStack.setMaxSize(24, 24);
+
+	    StackPane.setAlignment(eraser, Pos.CENTER);
+	    StackPane.setAlignment(draftsBadge, Pos.TOP_RIGHT);
+	    // SIN translate fuera del wrapper: mantenlo dentro
+	    // Si quieres un pequeño ajuste interno:
+	    draftsBadge.setTranslateX(8); // hacia dentro
+	    draftsBadge.setTranslateY(-8);  // hacia abajo
+	    draftsBadge.setMaxSize(16, 16);
+
+	    btnBorradores.setText(null);
+	    btnBorradores.setGraphic(draftsIconStack);
+	    btnBorradores.setContentDisplay(ContentDisplay.GRAPHIC_ONLY); // asegura solo gráfico
+	    btnBorradores.setTooltip(new Tooltip("Borradores"));
+	    btnBorradores.getStyleClass().addAll("icon-btn");
+
+		// Menú
+		var miNuevo = new MenuItem("Nuevo borrador…");
+		miNuevo.setOnAction(e -> {
+			var res = DraftDialogs.showQuickDraftDialog(root, null, null, false);
+			if (res == null)
+				return;
+
+			switch (res.action) {
+			case SAVE -> {
+				new DraftDao().insertar(res.draft);
+				StatusBus.show("Borrador guardado.", StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(2));
+				refreshDraftBadge();
+			}
+			case CONVERT -> {
+				// Convertir: abrir editor con prefill (y NO guardamos el borrador)
+				openEditorPrefilled(res.draft.getTitulo(),
+						// si viene protegido, ya pedimos PIN y desciframos antes de crear el borrador;
+						// aquí res.draft.contenido está en claro si no es protegido (para diálogo
+						// rápido)
+						res.draft.isProtegida() ? tryDecryptDraftToString(res.draft) // seguridad
+								: res.draft.getContenido(),
+						res.draft.isProtegida());
+			}
+			default -> {
+			}
+			}
+		});
+
+		var miBandeja = new MenuItem("Bandeja de borradores…");
+		miBandeja.setOnAction(e -> {
+			DraftDialogs.showDraftsTray(root,
+					// onEdit
+					dft -> {
+						// abre diálogo pre-rellenado y actualiza/convierte
+						var plain = dft.isProtegida() ? tryDecryptDraftToString(dft) : dft.getContenido();
+						var res = DraftDialogs.showQuickDraftDialog(root,
+								dft.getTitulo(), plain, dft.isProtegida());
+						if (res == null)
+							return;
+
+						switch (res.action) {
+						case SAVE -> {
+							// actualizar borrador existente (ojo: si cambio de protegido->no protegido y
+							// viceversa)
+							dft.setTitulo(res.draft.getTitulo());
+							dft.setProtegida(res.draft.isProtegida());
+							dft.setContenido(res.draft.getContenido());
+							dft.setContenidoCipher(res.draft.getContenidoCipher());
+							dft.setContenidoIv(res.draft.getContenidoIv());
+							new DraftDao().actualizar(dft);
+							StatusBus.show("Borrador actualizado.", StatusBus.Type.SUCCESS,
+									javafx.util.Duration.seconds(2));
+						}
+						case CONVERT -> {
+							openEditorPrefilled(res.draft.getTitulo(),
+									res.draft.isProtegida() ? tryDecryptDraftToString(res.draft)
+											: res.draft.getContenido(),
+									res.draft.isProtegida());
+							// elimina tras convertir
+							new DraftDao().eliminar(dft.getId());
+						}
+						default -> {
+						}
+						}
+						refreshDraftBadge();
+					},
+					// onConvert directo (desde la bandeja)
+					dft -> {
+						openEditorPrefilled(dft.getTitulo(),
+								dft.isProtegida() ? tryDecryptDraftToString(dft) : dft.getContenido(),
+								dft.isProtegida());
+						refreshDraftBadge();
+					},
+					// onDelete (ya elimina por dentro, aquí solo feedback/extra lógica)
+					dft -> StatusBus.show("Borrador eliminado.", StatusBus.Type.INFO, javafx.util.Duration.seconds(2)));
+			refreshDraftBadge();
+		});
+
+		btnBorradores.getItems().setAll(miNuevo, miBandeja);
+
+		// badge inicial
+		refreshDraftBadge();
+	}
+
+	private String tryDecryptDraftToString(io.github.guillermo_david.model.Draft dft) {
+		try {
+			if (dft == null || !dft.isProtegida())
+				return dft == null ? "" : (dft.getContenido() == null ? "" : dft.getContenido());
+			if (!security.isUnlocked()) {
+				if (!security
+						.ensureUnlocked(() -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10)))) {
+					return "";
+				}
+			}
+			return security.decrypt(dft.getContenidoCipher(), dft.getContenidoIv());
+		} catch (Exception ex) {
+			return "";
+		}
+	}
+
+	private void refreshDraftBadge() {
+	    int count = new DraftDao().contar();
+
+	    btnBorradores.setTooltip(new Tooltip("Borradores (" + count + ")"));
+
+	    if (draftsBadge != null) {
+	        if (count > 0) {
+	            draftsBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+	            draftsBadge.setVisible(true);
+	            draftsBadge.setManaged(true);
+	        } else {
+	            draftsBadge.setVisible(false);
+	            draftsBadge.setManaged(false);
+	        }
+	    }
+	}
+
+	/**
+	 * Abre el editor en modo NUEVA con datos precargados (título/cuerpo/proteger).
+	 */
+	private void openEditorPrefilled(String titulo, String cuerpo, boolean proteger) {
+		try {
+			var loader = new FXMLLoader(getClass().getResource("/fxml/editor-pildora.fxml"));
+			Node rootEditor = loader.load();
+			EditorPildoraController ctrl = loader.getController();
+
+			// método nuevo en tu EditorPildoraController
+			ctrl.setPrefill(titulo, cuerpo, proteger);
+
+			ctrl.setOnClose(() -> {
+				// al cerrar, volvemos al listado
+				root.setCenter(table); // o restaurar como ya haces en tus flujos
+				refrescarTabla();
+			});
+
+			root.setCenter(rootEditor);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			StatusBus.show("No se pudo abrir el editor.", StatusBus.Type.ERROR, javafx.util.Duration.seconds(3));
+		}
+	}
 }
