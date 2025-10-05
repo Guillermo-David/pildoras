@@ -1,17 +1,15 @@
-Píldoras — Contexto actualizado
-Stack / build / empaquetado
+Stack / Build / Empaquetado
 
-Stack: Java 21, JavaFX 21, ControlsFX (autocompletado), Ikonli (iconos), SQLite JDBC.
+Stack: Java 21, JavaFX 21 (controls, fxml, web), ControlsFX (autocompletado), Ikonli (FA6), SQLite JDBC.
 
-Build: Maven + maven-shade-plugin.
+Build: Maven + maven-shade-plugin (fat JAR).
 
 Empaquetado: jpackage (app-image + MSI) vía build-msi.ps1.
-
-No empaquetar la base de datos dentro del app-image/MSI.
+No empaquetar la BD dentro del MSI/app-image.
 
 Ejecución local (Eclipse)
 
-Run as Java Application (no Maven).
+Ejecutar como Java Application (no Maven).
 
 VM args:
 
@@ -20,23 +18,18 @@ VM args:
 --add-exports=javafx.base/com.sun.javafx.event=ALL-UNNAMED
 
 
-ControlsFX requiere el --add-exports anterior.
+(el --add-exports es por ControlsFX).
 
-Script de empaquetado (Windows)
+jpackage
 
-mvn clean package -DskipTests.
-
-Copia *-shaded.jar a target/jpkg/app.jar.
-
-jpackage app-image con:
+App-image:
 
 --module-path "$env:JAVA_HOME\jmods;$env:PATH_JAVAFX_JMODS"
-
 --add-modules java.sql,java.xml,java.logging,java.desktop,jdk.crypto.ec,jdk.localedata,javafx.controls,javafx.fxml,javafx.web,javafx.graphics
-
 --java-options "-Dprism.order=sw --add-exports=javafx.base/com.sun.javafx.event=ALL-UNNAMED"
 
-jpackage MSI (sin --win-console) con --win-upgrade-uuid fijo.
+
+MSI: sin --win-console, con UUID fijo en --win-upgrade-uuid.
 
 Variables requeridas: JAVA_HOME y PATH_JAVAFX_JMODS (carpeta jmods de JavaFX).
 
@@ -44,301 +37,261 @@ Base de datos (SQLite)
 
 Ruta: %APPDATA%\Pildoras\knowledgebase.db (Roaming).
 
-Migración primer arranque: si no existe en Roaming, mover desde %LOCALAPPDATA%\Pildoras\knowledgebase.db (+ -wal y -shm).
+Migración primer arranque: si falta en Roaming, mover desde %LOCALAPPDATA%\Pildoras\knowledgebase.db incluyendo -wal y -shm.
 
 PRAGMAs al abrir: foreign_keys=ON, journal_mode=WAL, synchronous=NORMAL, busy_timeout=5000.
 
+Conexión y ciclo de vida
+
+DatabaseHelper mantiene una única conexión abierta (singleton).
+Los DAO no deben cerrarla. Usar savepoints si se anidan operaciones en transacción.
+
 Esquema actual
 
-pildoras(id, titulo, descripcion, fecha_creacion, fecha_actualizacion, favorita, pinned)
+pildoras(id, titulo, descripcion NULL, fecha_creacion, fecha_actualizacion, favorita, pinned, descripcion_cipher BLOB, descripcion_iv BLOB, protegida INTEGER NOT NULL DEFAULT 0)
 
 tags(id, nombre)
 
-pildora_tag(pildora_id, tag_id) (FKs, PK compuesta)
+pildora_tag(pildora_id, tag_id) (PK compuesta, FKs)
 
-Normalización de tags
+drafts(id, titulo, contenido NULL, contenido_cipher BLOB, contenido_iv BLOB, protegida, fechas)
 
-TagDao.findOrCreate() normaliza a lowerCase(Locale.ROOT).
+pildora_link(from_id, to_id, kind TEXT DEFAULT 'ref', position INTEGER NULL, created_at, UNIQUE(from_id,to_id,kind), FKs ON DELETE CASCADE)
 
-En startup: deduplicación por lower(nombre), UPDATE tags SET nombre = lower(nombre), CREATE UNIQUE INDEX IF NOT EXISTS u_tags_nombre_lower ON tags(lower(nombre)).
+Migraciones idempotentes clave
 
-UI / UX (estado actual)
-Temas / CSS
+Añadir columnas si faltan (protegida, descripcion_cipher, descripcion_iv).
 
-base.css + theme-light.css / theme-dark.css.
+Si pildoras.descripcion era NOT NULL, reconstrucción a NULL.
 
-Toggle de tema se ha eliminado del header y ahora es una opción del menú de Ajustes.
+Tags normalizados: deduplicación case-insensitive +
+CREATE UNIQUE INDEX IF NOT EXISTS u_tags_nombre_lower ON tags(lower(nombre)).
 
-ThemeManager sincroniza iconos/estilo (logo claro/oscuro).
+Drafts y pildora_link creadas si no existen.
 
-Tipografía configurable (familia y tamaño pequeño/normal/grande) guardada en Preferences y aplicada a toda la escena con estilo inline (-fx-font-family y -fx-font-size heredados).
+Seguridad (PIN y cifrado)
 
-Title bar custom (undecorated)
+PIN: 6 dígitos. Lockout global: 3 intentos → 30s.
+“Recordar PIN” en memoria por ventana temporal.
 
-Barra superior mínima con botón ✕ (cerrar), arrastre por la barra, y acciones a la derecha.
+Cifrado: CMK AES-256 envuelta con KEK derivada del PIN (PBKDF2-SHA256).
+Datos protegidos con AES/GCM (IV 12 bytes) por registro.
+Nunca se guarda el PIN en claro.
 
-Altura reducida: padding ~4 8, spacing 6–8, borde inferior 1px.
-
-Botón ✕ con hover rojo sutil.
-
-Listado
-
-Tabla paginada (20 por página).
-
-Ordenación tri-estado por columna: primer clic ASC, segundo DESC, tercero NONE (sin flecha y vuelve al orden por defecto: fecha_creacion DESC).
-
-Implementación estable con setSortPolicy, control de estado lastSortColumn/lastState y flag suppressSort para evitar recursividad (esto solucionó el StackOverflow/loops de sort).
-
-Doble clic abre el detalle.
-
-Columnas de acciones con botones compactos (editar/borrar) y HBox con spacing 10–12 (no se cortan, tamaño consistente con la altura de la fila).
-
-Clases CSS: .icon-btn reducida dentro de fila; se remató para que el botón no sea más alto que la celda.
-
-Favoritas y Pinned
-
-Columna “estrella”:
-
-Botón con Ikonli (FontAwesomeSolid.STAR/FontAwesomeRegular.STAR).
-
-Clase star-icon + star-fav para dorado cuando está activa.
-
-Columna “pin”:
-
-Botón con THUMBTACK (solid), inclinación opcional, clase pin-active para estado activo (dorado).
-
-Al fijar/desfijar, se refresca la tabla por si el ORDER BY usa pinned.
-
-Filtros
-
-Texto y Tags (CustomTextField de ControlsFX) con botón de limpiar integrado a la derecha (Icono usado: PLUS rotado 45° como “X”), tamaño fijo del slot para que el ancho del input no cambie al aparecer/desaparecer.
-
-Ancho aumentado de los filtros (se ajustó prefColumnCount o -fx-pref-width).
-
-AND/OR ahora es ToggleButton con icono:
-
-OR → CODE_BRANCH (múltiples ramas: al menos un tag).
-
-AND → LINK (cadena: deben estar todos).
-
-Mantiene mismo tamaño redondo que “Solo favoritas”.
-
-No se colorea de dorado al togglear (solo cambia el icono).
-
-Solo favoritas es ToggleButton redondo del mismo tamaño que AND/OR, con estrella dorada al activar (solo el icono, no el fondo).
-
-Menú de Ajustes (⚙)
-
-MenuButton con icono COG.
-
-Opciones:
-
-Tipografía (familias: System, Arial, Serif, Monospace…).
-
-Tamaño (Pequeño/Normal/Grande).
-
-Tema (Claro / Oscuro) — movido aquí.
-
-Atajos de teclado… (dialog informativo bonito con secciones y monoespaciado).
-
-Se oculta la flecha del MenuButton por CSS; solo se ve el icono.
-
-Status bar
-
-Mensajes autoexpiran con PauseTransition.
-
-Se muestran mensajes al cambiar:
-
-“Solo favoritas activado/desactivado”.
-
-“Filtro OR/AND”.
-
-Detalle
-
-Chips de tags son botones (misma estética que el editor, colores deterministas).
-
-Al pulsar un tag: cierra el detalle, vuelve al listado, aplica filtro por ese tag (modo OR), va a página 1, muestra toast/status.
-
-Exportar (arriba dcha):
-
-Markdown (.md) y HTML (.html).
-
-En HTML, se inyecta extraCss con colores de chips idénticos a la app.
-
-WebView:
-
-CSS incrustado claro/oscuro.
-
-Re-render al cambiar de tema.
-
-Atajos: Ctrl+E (editar), Supr (borrar), Esc (volver).
-
-Editor
-
-Chips de tags (FlowPane) con autocompletado ControlsFX (TagDao.listAllLike).
-
-Enter o coma → añade chip; botón ✕ elimina chip.
-
-Guardado: reescribe relaciones y usa findOrCreate() (tags en minúsculas).
-
-Snippets Markdown con botones y atajos: Ctrl+B/I/K/E.
-
-(Pendiente por seguridad): añadir toggle “Proteger píldora” aquí.
-
-Iconos (Ikonli / FA6)
-
-Estrella: FontAwesomeSolid.STAR / FontAwesomeRegular.STAR (+ star-fav dorado).
-
-Pinned: FontAwesomeSolid.THUMBTACK.
-
-Nueva: FontAwesomeSolid.FOLDER_PLUS (sustituyó al PLUS simple).
-
-AND/OR: LINK (AND) / CODE_BRANCH (OR).
-
-Ajustes: COG.
-
-Export: FILE_EXPORT; Markdown: MARKDOWN; HTML: FILE_CODE.
-
-Atajos de teclado (resumen UX)
-
-Listado:
-Ctrl+F (filtro texto), Ctrl+T (filtro tags), Ctrl+N (nueva),
-Ctrl+O (detalle), Ctrl+E (editar), Supr (borrar),
-M (favorita toggle, con tabla enfocada),
-Ctrl+Shift+F (Solo favoritas), Ctrl+Shift+O (OR/AND),
-PageUp / Ctrl+← (página -1), PageDown / Ctrl+→ (página +1),
-Esc (limpiar filtros si hay foco en filtros / volver).
-
-Detalle: Ctrl+E (editar), Supr (borrar), Esc (volver), click en tag → filtra listado por ese tag.
-
-Editor: Ctrl+S (guardar), Esc (cancelar), Ctrl+B/I/K/E (snippets), Enter o , para confirmar tag, Backspace con input vacío borra último chip.
-
-Preferencias (recuerdos)
-
-PREF_SOLO_FAV (boolean).
-
-PREF_AND_OR (boolean).
-
-PREF_FONT_FAMILY (string).
-
-PREF_FONT_SIZE = small|normal|large (string).
-
-El tema se gestiona con ThemeManager (persistencia propia).
-
-Cambios de layout/estilo aplicados
-
-Botones redondos iguales (SoloFav / AND-OR): 36×36 aprox., icono interior más pequeño; el AND/OR no se colorea en dorado.
-
-Ajustes para que la estrella dorada solo afecte al icono, no al fondo del botón.
-
-Estabilidad de ancho de las dos primeras columnas (estrella/pin) cuando se activa/desactiva SoloFav.
-
-Botones de acciones en celdas: tamaño pequeño, sin recortar, mayor separación (HBox.setSpacing(10–12)), centrados verticalmente.
-
-Seguridad — Diseño aprobado (pendiente de integrar)
-
-Objetivo: permitir “proteger” una píldora. Al activar protección, su contenido queda cifrado, y en el listado solo se muestra el título; la descripción se sustituye por “Contenido protegido” (sin tooltip). Para leer/editar, se solicita PIN.
-
-Decisiones cerradas:
-
-PIN como factor único; 4 dígitos (sencillo y suficiente para tu caso).
-(Se puede permitir también PIN de longitud 4–8 si quisieras.)
-
-Lockout global: 3 intentos fallidos → bloquea 30s. Estado global de la app.
-
-Recordar PIN temporal: ventana de “recuerdo” en memoria (no repide durante X minutos).
-
-Recuperación:
-
-Pregunta de seguridad (respuesta hash/secreta; no revelamos el PIN).
-
-Código de recuperación one-time (mostrar al crear; guardar hash).
-Se podrá recuperar el PIN con una de las dos vías (o ambas, si las configuró).
-
-Cifrado:
-
-Generar CMK (AES-256) aleatoria y guardarla envuelta con KEK derivada del PIN (PBKDF2-HMAC-SHA256).
-
-Datos cifrados con AES/GCM/NoPadding (IV de 12 bytes por registro).
-
-Nunca guardar el PIN en claro.
-
-Almacenamiento para esta app 1-usuario:
-
-Hashes, salts, CMK envuelta, estado de lockouts/remember en Preferences.
-
-(Más adelante, si quieres, mover a DB).
+Recuperación: Pregunta de seguridad y código one-time.
 
 UI:
 
-Editor: toggle “Proteger” (si no hay PIN configurado, asistente para crear PIN + pregunta + código).
+Listado: si protegida, la descripción muestra “Contenido protegido”.
 
-Detalle: si está protegida y no hay CMK en memoria → pedir PIN (o usar “recordar”).
+Detalle: si protegida y bloqueado, pedir PIN; si desbloqueado, descifrar on-demand.
 
-Listado: filas protegidas muestran “Contenido protegido” en descripción, sin tooltip.
+Editor: toggle “Proteger contenido” (cifra al guardar).
 
-DAO/DB (extensión a realizar):
+Borradores: soporte de protección (ver sección Drafts).
 
-Añadir a pildoras: protegida INTEGER NOT NULL DEFAULT 0, descripcion_cipher BLOB, descripcion_iv BLOB.
+Servicio: SecurityService con ensureUnlocked(...), encrypt(...), decrypt(...), intentos, lockout, etc.
 
-Opción A: migrar descripcion a cifrado (vaciar texto en claro al proteger).
+Markdown y vista previa
 
-Opción B: mantener ambos y mostrar uno u otro según protegida (recomendado para migraciones suaves).
+Parser/renderer: Flexmark (sustituye a commonmark), con extensiones:
+tables, strikethrough, autolink, gfm-tasklist, footnotes,
+attributes, toc, anchorlink (no “heading-anchor”).
 
-Servicio de seguridad (API planeada):
+Math: sin flexmark-math (evitamos GraalVM).
+MathJax v3 en WebView y en HTML exportado. Soporta $…$ y $$…$$.
 
-SecurityService singleton con:
+Editor inserta plantillas correctas para \sum, \prod, \int con llaves escapadas en Markdown (p. ej. $\sum_\{i=1\}^\{n\}{}$).
 
-Setup/verificación PIN, cambio de PIN (re-envuelve CMK).
+Delimitadores \left...\right (menú de corchetes/llaves) listos para teclado español.
 
-Estado global de lockout (3 intentos/30s).
+CSS WebView: base-webview.css + tema claro/oscuro.
+Evita unidades rem (JavaFX CSS no las soporta).
 
-“Remember window” (minutos).
+Detalle / WebView bridge:
 
-Recuperación por pregunta y por código.
+wrapHtmlWithCss(bodyHtml, css, mathjax, interceptLinks).
 
-encrypt(plain) / decrypt(cipher, iv) con AES-GCM (usa CMK en memoria).
+interceptLinks=true: intercepta pildora:<id> y llama a window.app.openPildora(id) (navegación interna).
 
-ensureUnlocked(Supplier<char[]>) para pedir PIN cuando haga falta.
+mathjax=true carga MathJax 3.
 
-Siguiente paso inmediato: integrar la implementación de SecurityService (ya diseñada) + migración de esquema + ganchos de UI (toggle en editor, prompt PIN/recuperación, y lógica en listado/detalle/DAO).
+Editor
 
-Estado de bugs relevantes ya resueltos en este chat
+Toolbar Markdown con: B, I, tachado, código inline, encabezados H1/H2/H3, limpiar encabezado, listas con viñetas/numeradas, task-list (- [ ]), blockquote, bloque de código, regla horizontal, tabla 2x2, insertar enlace/imagen con diálogos, TOC, footnote, Math inline y Math block (con plantillas).
 
-Ordenación: el tercer clic dejaba la flecha pero no reset; se corrigió con manejo explícito de primary == null post-clear, suppressSort, y reset a DEFAULT_ORDER_COL/DIR.
+Atajos:
+Ctrl+S / Ctrl+Enter guardar · Esc cancelar ·
+Ctrl+B/I/K/E formato · Tab/Shift+Tab para indentar/desindentar selección.
 
-Tamaños de botones en celdas: se regularon vía CSS y fábrica de celdas para que no superen la altura de fila (evitar recortes).
+Preview: conmutador (ToggleSwitch) “👁 Vista previa” a la derecha de la toolbar.
+SplitPane editor/preview, apagado por defecto. Debounce (~250ms).
 
-Ancho columnas pin/fav: estabilizado para que no “salten” al activar SoloFav.
+Tags: FlowPane con chips; Enter o , → añade; Backspace con input vacío → borra el último chip.
 
-Clear button de filtros: slot fijo (no cambia el ancho del input), posición y márgenes afinados.
+Enlaces internos entre píldoras
 
-Preferencias clave (actuales)
+Sintaxis: [título](pildora:123) (Markdown).
 
-soloFavoritas – boolean.
+Inserción: mdInsertInternalLink() abre PildoraPicker; inserta el enlace (usa selección como texto si existe).
 
-filtroAndOr – boolean.
+Render: WebView intercepta y abre la píldora destino (sin salir de la app).
 
-uiFontFamily – String.
+Listado
 
-uiFontSize – small|normal|large.
+Tabla paginada (tamaño fijo por página).
+Rueda del ratón → cambia de página (no hay scroll vertical).
 
-To-Do inmediato (prioridad)
+Ordenación tri-estado por columna (ASC → DESC → NONE) con restauración del estado visual (control de lastSortColumn/lastState y suppressSort).
 
-Seguridad
+Acciones por fila: editar/borrar con botones compactos, sin desbordes.
 
-Añadir columnas protegida, descripcion_cipher, descripcion_iv (+ migración).
+Favoritos (estrella) y Pinned (chincheta) con iconos Ikonli; solo el icono se colorea.
 
-Implementar SecurityService y llamadas desde UI/DAO:
+Filtros:
 
-Editor: toggle “Proteger” (y wizard de alta PIN si no existe).
+Texto y Tags con Clear integrado (ControlsFX CustomTextField). El ancho no “baila” al aparecer la X.
 
-Al guardar protegida: cifrar descripcion → cipher+iv; limpiar descripcion en claro.
+AND/OR es Toggle redondo: LINK (AND) / CODE_BRANCH (OR).
+“Solo favoritas” es un toggle redondo homólogo (estrella dorada).
 
-Detalle/Listado: si protegida → mostrar “Contenido protegido”; para ver, ensureUnlocked() y descifrar on-demand.
+Paginación (label): “X–Y de Z”.
 
-Recuperación (pregunta / código) accesible desde Ajustes o desde el prompt.
+Atajos:
+Ctrl+F filtro texto · Ctrl+T filtro tags · Ctrl+N nueva ·
+Ctrl+O detalle · Ctrl+E editar · Supr borrar ·
+M toggle favorita (con foco en tabla) ·
+Ctrl+Shift+F solo favoritas · Ctrl+Shift+O OR/AND ·
+PageUp / Ctrl+← pág. anterior · PageDown / Ctrl+→ pág. siguiente ·
+Esc limpia filtros (si foco) / vuelve.
 
-Ajustes → Tema (si no está ya): añadir acciones “Claro / Oscuro” en el menú ⚙ y persistir con ThemeManager.
+Detalle
 
-Export/Import ZIP (plan futuro): empaquetar BD + assets; importar con confirmación y backup.
+Chips de tags (botones coloridos deterministas). Click → vuelve al listado filtrando por ese tag (modo OR).
+
+Exportar: Markdown y HTML.
+HTML reutiliza Flexmark con las mismas extensiones, inyecta MathJax y añade extraCss con colores de chips idénticos a la app.
+
+WebView: CSS claro/oscuro + re-render al cambiar tema.
+Usa wrapHtmlWithCss(..., mathjax=true, interceptLinks=true).
+
+Referencias entre píldoras (cross-links):
+
+Tabla pildora_link (kind='ref').
+
+En detalle se muestran dos secciones:
+
+Referencias (salientes, p → otros)
+
+Enlazadas aquí (entrantes, otros → p)
+
+Chips clicables con 🔒 si la destino está protegida.
+
+Implementación unificada: loadRefsSection(pId) + chipForLink(...).
+(Se eliminó la duplicación previa de métodos/controles.)
+
+Atajos: Ctrl+E editar · Supr borrar · Esc volver.
+
+Drafts (Borradores)
+
+Menú (icono goma de borrar):
+
+Nuevo borrador… → diálogo rápido:
+
+Título opcional, área de texto, [ ] Proteger con PIN.
+
+Botones: Guardar (borrador) / Convertir a píldora / Cancelar.
+
+Si se marca “Proteger”, cifra el cuerpo (usa SecurityService.ensureUnlocked).
+
+Atajos: Ctrl+S / Ctrl+Enter → Guardar.
+
+Bandeja de borradores… → TableView con:
+
+Columnas Título y Contenido (si protegido, se muestra 🔒 Contenido protegido).
+
+Doble clic fila → edita en el diálogo rápido (con descifrado si procede).
+
+Supr → borrar seleccionado (con confirmación).
+
+Columna Acciones con botón Eliminar.
+
+Badge/contador: el tooltip del botón muestra “Borradores (N)”.
+(Overlay visual opcional, pendiente si se desea).
+
+Ajustes (⚙)
+
+Tipografía: familia (System, Arial, Serif, Monospace…) y tamaño (small/normal/large + vlarge). Persistencia en Preferences.
+
+Tema: claro/oscuro (con ThemeManager).
+
+Atajos de teclado…: diálogo monoespaciado con secciones (incluye bloque Borradores).
+
+Seguridad (submenú): bloquear, configurar pregunta, generar código, etc.
+
+CSS / Estilo
+
+App: base.css + theme-light.css / theme-dark.css.
+
+Variables “chip” compatibles con JavaFX:
+
+.tag-chip {
+  -chip-bg: #eef2ff; -chip-fg: #3730a3;
+  -fx-background-color: -chip-bg;
+  -fx-text-fill: -chip-fg;
+  -fx-background-radius: 999px;
+  -fx-padding: 2px 8px;
+}
+
+
+Evitar rem y border: 1px solid rgba(...) con medidas no soportadas por JavaFX CSS en partes no WebView.
+
+WebView: base-webview.css (sí se pueden usar unidades CSS estándar).
+
+DAO destacados
+
+TagDao: findOrCreate() normaliza a minúsculas (Locale.ROOT).
+
+PildoraLinkDao:
+
+replaceRefs(int fromId, Collection<Integer> toIds) usa savepoint si ya hay transacción activa; no cierra la conexión global.
+
+listOutgoingRefs(...) / listIncomingRefs(...) devuelven Píldoras mínimas (id, título, protegida).
+
+Al guardar protegidas: se guarda descripcion_cipher + descripcion_iv y la descripcion puede ser NULL.
+
+Atajos (resumen)
+
+Listado: Ctrl+F, Ctrl+T, Ctrl+N, Ctrl+O, Ctrl+E, Supr, M, Ctrl+Shift+F, Ctrl+Shift+O, PageUp/Ctrl+←, PageDown/Ctrl+→, Esc.
+
+Detalle: Ctrl+E, Supr, Esc, click en tag → filtrar.
+
+Editor: Ctrl+S/Ctrl+Enter guardar, Esc cancelar, Ctrl+B/I/K/E, Tab/Shift+Tab indentación, Enter/, para confirmar tag, Backspace (input vacío) elimina último tag.
+
+Drafts:
+
+Bandeja: doble clic edita; Supr elimina.
+
+Diálogo rápido: Ctrl+S / Ctrl+Enter guardar.
+
+Pendientes / Ideas (parking)
+
+Overlay numérico en botón de borradores (badge visual).
+
+Export/Import ZIP (BD + assets) con backup y confirmación.
+
+SMTP/“Compartir por email” (diseñar estrategia credenciales).
+
+Más tipos de “píldora” (tarea, receta, etc.) y vistas específicas (en pausa).
+
+Notas de integración clave (para nuevos colaboradores)
+
+Usar Flexmark (no Commonmark) con las extensiones indicadas. Para anchors, usar flexmark-ext-anchorlink (no “heading-anchor”).
+
+Math siempre con MathJax v3 (WebView y export HTML). No incluir dependencias Graal/JS.
+
+WebView debe cargar contenido con wrapHtmlWithCss(bodyHtml, css, /*mathjax*/true, /*interceptLinks*/true) en Detalle, para soportar enlaces internos y fórmulas.
+
+No cerrar la conexión de DatabaseHelper. En DAOs, si hace falta transacción anidada, usar savepoints.
+
+Protección: respetar SecurityService.ensureUnlocked(...) antes de descifrar y cifrar con AES-GCM al guardar.
