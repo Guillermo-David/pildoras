@@ -9,35 +9,62 @@
       fx:controller="io.github.guillermo_david.controller.DetallePildoraController"
       fx:id="root"
       spacing="10">
-  <padding>
-    <Insets top="15" right="15" bottom="15" left="15"/>
-  </padding>
+	<padding>
+		<Insets top="15" right="15" bottom="15" left="15"/>
+	</padding>
+	
+	<!-- CABECERA: izquierda (título/fecha/tags) + derecha (exportar) -->
+	<HBox spacing="10" alignment="TOP_LEFT">
+		<VBox spacing="4">
+	    	<Label fx:id="lblTitulo" styleClass="detail-title"/>
+	    	<Label fx:id="lblFecha"  styleClass="detail-meta"/>
+	    	<FlowPane fx:id="tagsBox" hgap="6" vgap="6"/>
+		</VBox>
+	
+	  <!-- expansor para empujar a la derecha -->
+		<Pane HBox.hgrow="ALWAYS"/>
+	
+		<MenuButton fx:id="btnExportMenu"
+	              styleClass="icon-btn"
+	              popupSide="BOTTOM"/>
+	</HBox>
+	  
+	<Label text="Enlaces" styleClass="section-title"/>
 
-  <!-- CABECERA: izquierda (título/fecha/tags) + derecha (exportar) -->
-  <HBox spacing="10" alignment="TOP_LEFT">
-    <VBox spacing="4">
-        <Label fx:id="lblTitulo" styleClass="detail-title"/>
-        <Label fx:id="lblFecha"  styleClass="detail-meta"/>
-        <FlowPane fx:id="tagsBox" hgap="6" vgap="6"/>
-    </VBox>
+	<HBox spacing="20">
+	    <VBox spacing="6">
+	        <Label text="Enlaza a:"/>
+	        <FlowPane fx:id="linksOutBox" hgap="6" vgap="6"/>
+	    </VBox>
+	    <VBox spacing="6">
+	        <Label text="Referenciada por:"/>
+	        <FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
+	    </VBox>
+	</HBox>
 
-    <!-- expansor para empujar a la derecha -->
-    <Pane HBox.hgrow="ALWAYS"/>
+	<!--<TitledPane text="Referencias" expanded="true">
+		<content>
+		    <VBox spacing="6">
+		    	<Label text="Enlaza a:" styleClass="detail-meta"/>
+		    	<FlowPane fx:id="linksOutBox" hgap="6" vgap="6"/>
+		    	<Label text="Enlazada desde:" styleClass="detail-meta"/>
+		    	<FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
+		    </VBox>
+		</content>
+	</TitledPane>-->
 
-    <MenuButton fx:id="btnExportMenu"
-                styleClass="icon-btn"
-                popupSide="BOTTOM"/>
-  </HBox>
+	<Separator/>
 
-  <Separator/>
-
-  <WebView fx:id="webContenido" VBox.vgrow="ALWAYS"/>
-
-  <!-- Barra inferior, tal cual la tenías -->
-  <HBox spacing="10" alignment="CENTER_RIGHT">
-    <Button fx:id="btnBorrar" text="🗑 Borrar" style="-fx-text-fill: red;"/>
-    <Button fx:id="btnEditar" text="✏ Editar"/>
-    <Button fx:id="btnVolver" text="⬅ Volver al listado"/>
-  </HBox>
+	<WebView fx:id="webContenido" VBox.vgrow="ALWAYS"/>
+	<Label fx:id="lblRefs" text="Referencias" visible="false" managed="false"/>
+	<FlowPane fx:id="boxRefs" hgap="6" vgap="6" visible="false" managed="false"/>
+	<Label fx:id="lblBacklinks" text="Mencionada en" visible="false" managed="false"/>
+	<FlowPane fx:id="boxBacklinks" hgap="6" vgap="6" visible="false" managed="false"/>
+	
+	<HBox spacing="10" alignment="CENTER_RIGHT">
+		<Button fx:id="btnBorrar" text="🗑 Borrar" style="-fx-text-fill: red;"/>
+	    <Button fx:id="btnEditar" text="✏ Editar"/>
+	    <Button fx:id="btnVolver" text="⬅ Volver al listado"/>
+	</HBox>
 </VBox>
 

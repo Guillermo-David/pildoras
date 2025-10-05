@@ -1,6 +1,8 @@
 package io.github.guillermo_david.controller;
 
 import io.github.guillermo_david.javafx.Dialogs;
+import io.github.guillermo_david.javafx.PildoraPickerDialogs;
+import io.github.guillermo_david.model.Pildora;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.ButtonBar;
@@ -33,7 +35,7 @@ public class TextFormatController {
 	private int selEnd()   { return txtDescripcion.getSelection().getEnd(); }
 
 	// Reemplaza la selección por texto y recoloca el cursor al final de lo insertado
-	private void replaceSel(String text) {
+	public void replaceSel(String text) {
 	    int s = selStart();
 	    txtDescripcion.replaceText(s, selEnd(), text);
 	    txtDescripcion.positionCaret(s + text.length());
@@ -421,6 +423,48 @@ public class TextFormatController {
 	// Delimitadores con \left \right
 	public void mdMathDelimsParen() { wrapWithLeftRight("(", ")"); }
 	public void mdMathDelimsBrack() { wrapWithLeftRight("[", "]"); }
+	
+	// En TextFormatController
+
+	public void mdInsertInternalLink() {
+	    var pick = PildoraPickerDialogs.show(root);
+	    if (pick == null) return;
+	    mdInsertInternalLink(pick);
+	}
+
+	public void mdInsertInternalLink(Pildora p) {
+	    // Si el usuario seleccionó texto, úsalo como texto del enlace
+	    String linkText = txtDescripcion.getSelectedText();
+	    if (linkText == null || linkText.isBlank()) {
+	        String t = p.getTitulo();
+	        linkText = (t == null || t.isBlank()) ? ("#" + p.getId()) : t;
+	    }
+	    // Escapa corchetes en el texto del enlace por si el título los contiene
+	    String md = "[" + escapeMdText(linkText) + "](pildora:" + p.getId() + ")";
+	    replaceSelectionOrInsert(md);
+	}
+
+	/* --- Helpers públicos para no usar reflexión --- */
+
+	// Inserta reemplazando selección si existe; si no, inserta en el caret
+	public void replaceSelectionOrInsert(String text) {
+	    int s = txtDescripcion.getSelection().getStart();
+	    int e = txtDescripcion.getSelection().getEnd();
+	    if (s != e) {
+	        txtDescripcion.replaceText(s, e, text);
+	        txtDescripcion.positionCaret(s + text.length());
+	    } else {
+	        int pos = txtDescripcion.getCaretPosition();
+	        txtDescripcion.insertText(pos, text);
+	        txtDescripcion.positionCaret(pos + text.length());
+	    }
+	}
+
+	// Escapa solo lo necesario para el label de un enlace Markdown
+	private static String escapeMdText(String s) {
+	    return s.replace("[", "\\[").replace("]", "\\]");
+	}
+
 	
 	private void wrapWithLeftRight(String open, String close) {
 	    int s = selStart(), e = selEnd();

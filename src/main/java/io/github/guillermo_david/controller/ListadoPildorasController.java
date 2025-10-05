@@ -1116,6 +1116,17 @@ public class ListadoPildorasController {
 					}
 				});
 			});
+			
+			controller.setOnOpenPildoraId((Integer id) -> {
+			    // Cierra actual, restaura y abre el nuevo detalle
+			    // (o navega directamente sin restaurar si prefieres comportamiento “pila”)
+			    Pildora destino = pildoraDao.buscarPorId(id);
+			    if (destino != null) {
+			        controller.dispose();
+			        // reutiliza tu mismo flujo de abrir detalle:
+			        abrirDetallePildora(destino);
+			    }
+			});
 
 		} catch (IOException ex) {
 			ex.printStackTrace();

@@ -110,6 +110,7 @@ public final class PildoraExporter {
         String bodyMd = resolveMarkdownBody(p);
         Node doc = MD_PARSER.parse(bodyMd == null ? "" : bodyMd);
         String bodyHtml = HTML_REND.render(doc);
+        bodyHtml = bodyHtml.replaceAll("href\\s*=\\s*\"pill://(\\d+)\"", "href=\"#pill-$1\"");
 
         // CSS de “página” (layout/tipografía/chips). Lo de markdown vive en base-webview.css
         String pageCss = """

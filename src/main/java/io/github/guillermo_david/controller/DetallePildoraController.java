@@ -8,6 +8,7 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeRegular;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import io.github.guillermo_david.dao.PildoraLinkDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.export.PildoraExporter;
 import io.github.guillermo_david.javafx.ColorUtil;
@@ -21,6 +22,7 @@ import io.github.guillermo_david.security.SecurityService;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
+import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -37,15 +39,20 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
 import javafx.util.Duration;
+import netscape.javascript.JSObject;
 
 public class DetallePildoraController {
 
 	@FXML private VBox root;
-	@FXML private Label lblTitulo, lblFecha;
-	@FXML private FlowPane tagsBox;
+	@FXML private Label lblTitulo, lblFecha, lblRefs, lblBacklinks;
+	@FXML private FlowPane tagsBox, boxRefs, boxBacklinks;
 	@FXML private WebView webContenido;
 	@FXML private Button btnVolver, btnEditar, btnBorrar;
 	@FXML private MenuButton btnExportMenu;
+	@FXML private FlowPane linksOutBox;
+	@FXML private FlowPane linksInBox;
+
+	private Consumer<Integer> onOpenPildoraId;
 
 	private final SecurityService security = SecurityService.getInstance();
 
@@ -67,28 +74,16 @@ public class DetallePildoraController {
 	private String cssLight;
 	private String cssDark;
 	private String lastHtml;
-	private String cssBaseWeb;
 	
-	private static final String MATHJAX_SNIPPET = """
-			<script>
-			window.MathJax = {
-			  tex: {
-			    inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-			    displayMath: [['$$','$$'], ['\\\\[','\\\\]']]
-			  },
-			  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] },
-			  svg: { fontCache: 'global' }
-			};
-			</script>
-			<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-			""";
+	private Consumer<Integer> onOpenPildora; // callback (lo engancha Listado para abrir por id)
+	public void setOnOpenPildora(Consumer<Integer> c) { this.onOpenPildora = c; }
+	
 
 	@FXML
 	public void initialize() {
 
 		cssLight = loadResourceAsString("/css/webview-light.css");
 		cssDark = loadResourceAsString("/css/webview-dark.css");
-		cssBaseWeb = loadResourceAsString("/css/base-webview.css");
 
 		// Fondo transparente del WebView (JavaFX)
 		webContenido.setStyle("-fx-background-color: transparent;");
@@ -192,6 +187,10 @@ public class DetallePildoraController {
 
 		setupExportMenu();
 	}
+	
+	public void setOnOpenPildoraId(Consumer<Integer> c) {
+		this.onOpenPildoraId = c;
+	}
 
 	private void setupExportMenu() {
 		// Icono principal del botón (sin texto)
@@ -271,7 +270,7 @@ public class DetallePildoraController {
 		}
 
 	}
-
+	
 	private HBox buildTagChipButton(String name) {
 		name = name == null ? "" : name.trim().toLowerCase();
 
@@ -284,7 +283,7 @@ public class DetallePildoraController {
 		boolean dark = ThemeManager.load() == ThemeManager.Theme.DARK;
 		String bg = ColorUtil.colorForTag(name, dark);
 		String fg = ColorUtil.bestTextOn(bg);
-		btn.setStyle(String.format("-fx-tag-bg:%s; -fx-tag-fg:%s;", bg, fg));
+		btn.setStyle(String.format("-chip-bg: %s; -chip-fg: %s;", bg, fg));
 
 		// Acción: invocar callback si existe
 		final String nameFinal = name;
@@ -308,7 +307,7 @@ public class DetallePildoraController {
 				String name = btn.getText();
 				String bg = ColorUtil.colorForTag(name, dark);
 				String fg = ColorUtil.bestTextOn(bg);
-				btn.setStyle(String.format("-fx-tag-bg:%s; -fx-tag-fg:%s;", bg, fg));
+				btn.setStyle(String.format("-chip-bg: %s; -chip-fg: %s;", bg, fg));
 			}
 		}
 	}
@@ -425,6 +424,8 @@ public class DetallePildoraController {
 
 	public void mostrarPildora(Pildora p) {
 		this.currentPildora = p;
+		
+		loadRefsSection(p.getId());
 
 		lblTitulo.setText(p.getTitulo());
 		lblFecha.setText("Creada: " + (p.getFechaCreacion() != null
@@ -438,7 +439,62 @@ public class DetallePildoraController {
 		repaintTagChipsForTheme();
 
 		renderContenido(p);
+		
+	}
+	
+	private Button chipForLink(io.github.guillermo_david.model.Pildora p) {
+	    var b = new Button(p.getTitulo() == null ? ("#" + p.getId()) : p.getTitulo());
+	    b.getStyleClass().addAll("tag-chip"); // reutiliza estilos de chip
+	    b.setOnAction(e -> {
+	        if (onOpenPildora != null) onOpenPildora.accept(p.getId());
+	    });
+	    return b;
+	}
 
+	private void loadRefsSection(int currentId) {
+	    var dao = new PildoraLinkDao();
+	    var out = dao.listOutgoingRefs(currentId);
+	    var inb = dao.listIncomingRefs(currentId);
+
+	    boxRefs.getChildren().setAll(out.stream().map(this::chipForLink).toList());
+	    boxBacklinks.getChildren().setAll(inb.stream().map(this::chipForLink).toList());
+
+	    boolean showOut = !out.isEmpty();
+	    boolean showIn  = !inb.isEmpty();
+
+	    lblRefs.setVisible(showOut);      lblRefs.setManaged(showOut);
+	    boxRefs.setVisible(showOut);      boxRefs.setManaged(showOut);
+	    lblBacklinks.setVisible(showIn);  lblBacklinks.setManaged(showIn);
+	    boxBacklinks.setVisible(showIn);  boxBacklinks.setManaged(showIn);
+	}
+	
+	public void openPildora(int id) { // llamado desde JS
+	    if (onOpenPildoraId != null) {
+	        javafx.application.Platform.runLater(() -> onOpenPildoraId.accept(id));
+	    }
+	}
+	
+	public final class JsBridge {
+	    public void openPildora(Object num) {
+	        int id;
+	        if (num instanceof Number n) id = n.intValue();
+	        else {
+	            try { id = Integer.parseInt(String.valueOf(num)); } catch (Exception ex) { return; }
+	        }
+	        if (onOpenPildora != null) {
+	            javafx.application.Platform.runLater(() -> onOpenPildora.accept(id));
+	        }
+	    }
+	}
+
+	// Llama a esto cada vez que recargas el HTML:
+	private void installJsBridgeAfterLoad() {
+	    webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
+	        if (st == Worker.State.SUCCEEDED) {
+	            JSObject win = (JSObject) webContenido.getEngine().executeScript("window");
+	            win.setMember("app", new JsBridge());
+	        }
+	    });
 	}
 
 	private void renderContenido(Pildora p) {
@@ -466,26 +522,96 @@ public class DetallePildoraController {
 	}
 
 	private void renderWithTheme(ThemeManager.Theme t, String bodyHtml) {
-	    String themeCss = (t == ThemeManager.Theme.DARK) ? cssDark : cssLight;
-	    String html = wrapHtmlWithCss(bodyHtml, cssBaseWeb + "\n" + themeCss);
+	    String css = (t == ThemeManager.Theme.DARK) ? cssDark : cssLight;
+
+	    String html = wrapHtmlWithCss(lastHtml, css, /*mathjax*/true, /*interceptLinks*/true);
 	    webContenido.getEngine().loadContent(html);
+	    installJsBridgeAfterLoad();
+	    
+	    // Detalle: queremos MathJax y también interceptar enlaces pildora:
+//	    boolean mathjax = true;
+//	    boolean interceptLinks = true;
+	    
+//	    webContenido.getEngine().loadContent(
+//	        wrapHtmlWithCss(bodyHtml, css, mathjax, interceptLinks)
+//	    );
+
+	    // Instala el “bridge” para que el JS pueda llamar a Java (window.app.openPildora)
+	    webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
+	        if (st == Worker.State.SUCCEEDED) {
+	            try {
+	                JSObject win = (JSObject) webContenido.getEngine().executeScript("window");
+	                win.setMember("app", new Object() {
+	                    @SuppressWarnings("unused")
+						public void openPildora(int id) {
+	                        javafx.application.Platform.runLater(() -> openPildoraFromJs(id));
+	                    }
+	                });
+	            } catch (Throwable ignore) {}
+	        }
+	    });
+	}
+	
+	private void openPildoraFromJs(int id) {
+	    try {
+	        var dao = new io.github.guillermo_david.dao.PildoraDao();
+	        var target = dao.buscarPorId(id);
+	        if (target == null) {
+	            StatusBus.show("Píldora no encontrada (" + id + ")", StatusBus.Type.WARN, Duration.seconds(3));
+	            return;
+	        }
+	        if (target.isProtegida() && !security.isUnlocked()) {
+	            if (!security.ensureUnlocked(() -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10)))) {
+	                return;
+	            }
+	        }
+	        mostrarPildora(target); // navega dentro del propio detalle
+	    } catch (Exception ex) {
+	        StatusBus.show("No se pudo abrir la píldora.", StatusBus.Type.ERROR, Duration.seconds(3));
+	    }
 	}
 
-	private String wrapHtmlWithCss(String bodyHtml, String css) {
+	private String wrapHtmlWithCss(String bodyHtml, String css, boolean mathjax, boolean interceptLinks) {
+	    String intercept = !interceptLinks ? "" : """
+	      <script>
+	      document.addEventListener('click', function(e){
+	        const a = e.target.closest('a');
+	        if(!a) return;
+	        const href = a.getAttribute('href') || '';
+	        if(href.startsWith('pildora:')){
+	          e.preventDefault();
+	          var id = parseInt(href.substring(8), 10);
+	          if(!isNaN(id) && window.app && typeof window.app.openPildora === 'function'){
+	            window.app.openPildora(id);
+	          }
+	        }
+	      });
+	      </script>
+	    """;
+
+	    String mj = !mathjax ? "" : """
+	      <script>
+	        window.MathJax = {
+	          tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },
+	          options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+	          svg: { fontCache: 'global' }
+	        };
+	      </script>
+	      <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+	    """;
+
 	    return """
 	      <!doctype html>
-	      <html lang="es">
+	      <html>
 	        <head>
 	          <meta charset="UTF-8">
 	          <meta name="color-scheme" content="dark light">
 	          <style>%s</style>
-	          %s
 	        </head>
-	        <body class="md-body">%s</body>
+	        <body>%s%s%s</body>
 	      </html>
-	    """.formatted(css == null ? "" : css, MATHJAX_SNIPPET, bodyHtml == null ? "" : bodyHtml);
+	    """.formatted(css, bodyHtml, intercept, mj);
 	}
-
 
 	private String loadResourceAsString(String path) {
 		try (var is = getClass().getResourceAsStream(path)) {

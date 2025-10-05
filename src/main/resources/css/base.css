@@ -394,9 +394,14 @@
 }
 
 .tag-chip {
-	-fx-background-color: -fx-tag-bg;
+	-chip-bg: #eef2ff;
+	-chip-fg: #3730a3;
+	
+	-fx-background-color: -chip-bg;
+	-fx-text-fill: -chip-fg;
+	
 	-fx-background-radius: 12;
-	-fx-padding: 2 8 2 8;
+	-fx-padding: 2px 8px;	  
 	-fx-alignment: CENTER_LEFT;
 }
 
@@ -414,6 +419,10 @@
 
 .tag-chip .chip-close:hover {
 	-fx-opacity: .75;
+}
+
+.tag-chip:focused { 
+	-fx-effect: dropshadow(gaussian, rgba(0,0,0,.2), 6, 0, 0, 1);
 }
 
 .button.tag-chip:hover {

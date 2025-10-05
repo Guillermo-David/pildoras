@@ -21,68 +21,77 @@
 
     <Label text="Contenido (Markdown):"/>
     <ToolBar>
-    <!-- Estilo básico -->
-    <Button text="B"    onAction="#mdBold"/>
-    <Button text="I"    onAction="#mdItalic"/>
-    <Button text="~~"   onAction="#mdStrike"/>
-    <Button text="`"    onAction="#mdCodeInline"/>
-    <Separator/>
+	    <!-- Estilo básico -->
+	    <Button text="B"    onAction="#mdBold"/>
+	    <Button text="I"    onAction="#mdItalic"/>
+	    <Button text="~~"   onAction="#mdStrike"/>
+	    <Button text="`"    onAction="#mdCodeInline"/>
+	    <Separator/>
+	    <SplitMenuButton text="🔗" onAction="#mdInsertLinkDialog" >
+		    <items>
+		        <MenuItem text="Enlace externo…"    onAction="#mdInsertLinkDialog"/>
+		        <MenuItem text="Enlace a píldora…"  onAction="#mdInsertInternalLink"/>
+		    </items>
+		</SplitMenuButton>
 
-    <!-- Encabezados -->
-    <MenuButton text="H#">
-        <items>
-            <MenuItem text="H1" onAction="#mdH1"/>
-            <MenuItem text="H2" onAction="#mdH2"/>
-            <MenuItem text="H3" onAction="#mdH3"/>
-            <SeparatorMenuItem/>
-            <MenuItem text="Quitar encabezado" onAction="#mdClearHeading"/>
-        </items>
-    </MenuButton>
-
-    <!-- Listas -->
-    <MenuButton text="Listas">
-        <items>
-            <MenuItem text="• Viñetas"     onAction="#mdBulletedList"/>
-            <MenuItem text="1. Numerada"   onAction="#mdNumberedList"/>
-            <MenuItem text="☐ Tareas"      onAction="#mdTaskList"/>
-        </items>
-    </MenuButton>
-
-    <!-- Bloques -->
-    <MenuButton text="Bloques">
-        <items>
-            <MenuItem text="Cita (>)"        onAction="#mdBlockquote"/>
-            <MenuItem text="Bloque de código" onAction="#mdCodeBlock"/>
-            <MenuItem text="Regla ---"        onAction="#mdHorizontalRule"/>
-            <MenuItem text="Tabla 2×2"        onAction="#mdTable2x2"/>
-        </items>
-    </MenuButton>
-
-    <!-- Insertar -->
-    <MenuButton text="Insertar">
-        <items>
-            <MenuItem text="Enlace…" onAction="#mdInsertLinkDialog"/>
-            <MenuItem text="Imagen…" onAction="#mdInsertImageDialog"/>
-        </items>
-    </MenuButton>
-    
-    <!-- Avanzado (requiere extensiones en tu renderer si quieres que se vean chulas) -->
-    <MenuButton text="Avanzado">
-        <items>
-            <MenuItem text="Nota al pie"     onAction="#mdFootnote"/>
-            <MenuItem text="Índice (TOC)"    onAction="#mdInsertTOC"/>
-            <MenuItem text="Math inline $…$" onAction="#mdMathInline"/>
-            <MenuItem text="Math bloque $$"  onAction="#mdMathBlock"/>
-        </items>
-    </MenuButton>
-
-    <MenuButton fx:id="mbMath" text="Σ Matemáticas"/>
-
-	<Separator/>
-
-	<Pane HBox.hgrow="ALWAYS"/>
-	<ToggleSwitch fx:id="switchPreview" text="👁 Vista previa"/>
-</ToolBar>
+	    <Separator/>
+	
+	    <!-- Encabezados -->
+	    <MenuButton text="H#">
+	        <items>
+	            <MenuItem text="H1" onAction="#mdH1"/>
+	            <MenuItem text="H2" onAction="#mdH2"/>
+	            <MenuItem text="H3" onAction="#mdH3"/>
+	            <SeparatorMenuItem/>
+	            <MenuItem text="Quitar encabezado" onAction="#mdClearHeading"/>
+	        </items>
+	    </MenuButton>
+	
+	    <!-- Listas -->
+	    <MenuButton text="Listas">
+	        <items>
+	            <MenuItem text="• Viñetas"     onAction="#mdBulletedList"/>
+	            <MenuItem text="1. Numerada"   onAction="#mdNumberedList"/>
+	            <MenuItem text="☐ Tareas"      onAction="#mdTaskList"/>
+	        </items>
+	    </MenuButton>
+	
+	    <!-- Bloques -->
+	    <MenuButton text="Bloques">
+	        <items>
+	            <MenuItem text="Cita (>)"        onAction="#mdBlockquote"/>
+	            <MenuItem text="Bloque de código" onAction="#mdCodeBlock"/>
+	            <MenuItem text="Regla ---"        onAction="#mdHorizontalRule"/>
+	            <MenuItem text="Tabla 2×2"        onAction="#mdTable2x2"/>
+	        </items>
+	    </MenuButton>
+	
+	    <!-- Insertar -->
+	    <MenuButton text="Insertar">
+	        <items>
+	            <MenuItem text="Enlace…" onAction="#mdInsertLinkDialog"/>
+	            <MenuItem text="Imagen…" onAction="#mdInsertImageDialog"/>
+	        </items>
+	    </MenuButton>
+	    
+	    <!-- Avanzado (requiere extensiones en tu renderer si quieres que se vean chulas) -->
+	    <MenuButton text="Avanzado">
+	        <items>
+	            <MenuItem text="Nota al pie"     onAction="#mdFootnote"/>
+	            <MenuItem text="Índice (TOC)"    onAction="#mdInsertTOC"/>
+	            <MenuItem text="Math inline $…$" onAction="#mdMathInline"/>
+	            <MenuItem text="Math bloque $$"  onAction="#mdMathBlock"/>
+	        </items>
+	    </MenuButton>
+	
+	    <MenuButton fx:id="mbMath" text="Σ Matemáticas"/>
+	    
+	
+		<Separator/>
+	
+		<Pane HBox.hgrow="ALWAYS"/>
+		<ToggleSwitch fx:id="switchPreview" text="👁 Vista previa"/>
+	</ToolBar>
 
 	   
 	<SplitPane fx:id="splitEditor" dividerPositions="0.5" VBox.vgrow="ALWAYS">

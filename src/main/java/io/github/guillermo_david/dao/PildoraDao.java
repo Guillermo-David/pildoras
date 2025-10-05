@@ -279,6 +279,43 @@ public class PildoraDao {
 		}
 		return null;
 	}
+	
+	public List<Pildora> buscarPorTitulo(String q, int limit) {
+        String sql = """
+            SELECT id, titulo, fecha_creacion, fecha_actualizacion, favorita, pinned, protegida
+            FROM pildoras
+            WHERE (? IS NULL OR ? = '' OR lower(titulo) LIKE lower(?) )
+            ORDER BY COALESCE(fecha_actualizacion, fecha_creacion) DESC, id DESC
+            LIMIT ?
+            """;
+        List<Pildora> out = new java.util.ArrayList<>();
+        try (var cx = DatabaseHelper.getInstance().getConnection();
+             var ps = cx.prepareStatement(sql)) {
+            String like = (q == null || q.isBlank()) ? "" : "%" + q.trim() + "%";
+            ps.setString(1, q);
+            ps.setString(2, q);
+            ps.setString(3, like);
+            ps.setInt(4, Math.max(1, limit));
+            try (var rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Pildora p = new Pildora();
+                    p.setId(rs.getInt("id"));
+                    p.setTitulo(rs.getString("titulo"));
+                    p.setFavorita(rs.getInt("favorita") == 1);
+                    p.setPinned(rs.getInt("pinned") == 1);
+                    p.setProtegida(rs.getInt("protegida") == 1);
+                    var fc = rs.getTimestamp("fecha_creacion");
+                    var fa = rs.getTimestamp("fecha_actualizacion");
+                    if (fc != null) p.setFechaCreacion(fc.toLocalDateTime());
+                    if (fa != null) p.setFechaActualizacion(fa.toLocalDateTime());
+                    out.add(p);
+                }
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException("Error buscando píldoras", ex);
+        }
+        return out;
+    }
 
 	public void actualizar(Pildora p) {
 		String sql = """

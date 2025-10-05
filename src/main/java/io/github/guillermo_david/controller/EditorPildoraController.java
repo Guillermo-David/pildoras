@@ -2,15 +2,18 @@ package io.github.guillermo_david.controller;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.controlsfx.control.ToggleSwitch;
 import org.controlsfx.control.textfield.AutoCompletionBinding;
 import org.controlsfx.control.textfield.TextFields;
 
 import io.github.guillermo_david.dao.PildoraDao;
+import io.github.guillermo_david.dao.PildoraLinkDao;
 import io.github.guillermo_david.dao.PildoraTagDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.javafx.ColorUtil;
@@ -38,6 +41,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -58,7 +63,6 @@ public class EditorPildoraController {
 	@FXML private WebView webPreview;
 	@FXML private MenuButton mbMath;
 
-
 	private TextFormatController textFormatController;
 
 	private Runnable onClose;
@@ -78,6 +82,7 @@ public class EditorPildoraController {
 	private MarkdownEngine md = new MarkdownEngine();
 	private String cssLight, cssDark, cssBaseWeb;
 
+	private static final Pattern P_PILDORA_ID = Pattern.compile("\\b[pP]ildora:(\\d+)");
 
 
 	// Debounce para no renderizar en cada tecla
@@ -176,12 +181,25 @@ public class EditorPildoraController {
 
 		textFormatController = new TextFormatController(root, txtDescripcion);
 		textFormatController.initListIndentShortcuts(); 
-		textFormatController.buildMathMenu(mbMath);   // 👈 NUEVO
+		textFormatController.buildMathMenu(mbMath);
+		
+		root.sceneProperty().addListener((o, old, sc) -> {
+		    if (sc == null) return;
+		    var kc = new KeyCodeCombination(
+		        KeyCode.K,
+		        KeyCombination.CONTROL_DOWN,
+		        KeyCombination.SHIFT_DOWN
+		    );
+		    sc.getAccelerators().put(kc, this::mdInsertInternalLink);
+		});
+
 
 		initPreview();
 	}
 
 	private void onGuardar() {
+		String bodyForLinks = txtDescripcion.getText(); // <- antes de cifrar/limpiar
+
 		String titulo = txtTitulo.getText().trim();
 		boolean proteger = switchProteger.isSelected();
 
@@ -271,9 +289,10 @@ public class EditorPildoraController {
 				descripcionPlano = null; // BD: NULL cuando está protegida
 			}
 
+			Pildora nueva = new Pildora();
 			// --- Guardado en BD ---
 			if (pildoraEnEdicion == null) {
-				Pildora nueva = new Pildora(titulo, descripcionPlano, proteger, cipher, iv);
+				nueva = new Pildora(titulo, descripcionPlano, proteger, cipher, iv);
 				pildoraDao.insertar(nueva);
 				persistTags(nueva.getId());
 			} else {
@@ -286,6 +305,14 @@ public class EditorPildoraController {
 				pildoraDao.actualizar(pildoraEnEdicion);
 				persistTags(pildoraEnEdicion.getId());
 			}
+			
+			try {
+				var ids = extractLinkedIds(bodyForLinks);
+				new PildoraLinkDao().replaceRefs((pildoraEnEdicion == null ? nueva.getId() : pildoraEnEdicion.getId()), ids);
+			} catch (Exception ex) {
+				StatusBus.show("No se pudieron sincronizar las referencias.", StatusBus.Type.WARN, Duration.seconds(3));
+			}
+
 
 			// --- Mensaje único + re-bloqueo si procede ---
 			boolean becameProtected = (pildoraEnEdicion == null && switchProteger.isSelected())
@@ -293,7 +320,7 @@ public class EditorPildoraController {
 
 			String msg = "Píldora guardada correctamente.";
 			if (becameProtected) {
-				io.github.guillermo_david.security.SecurityService.getInstance().lockNow();
+				SecurityService.getInstance().lockNow();
 				msg = "Píldora guardada y protegida. Se pedirá PIN al abrirla.";
 			}
 
@@ -306,6 +333,19 @@ public class EditorPildoraController {
 			ex.printStackTrace();
 			StatusBus.show("Error al guardar: " + ex.getMessage(), Type.ERROR, Duration.seconds(4));
 		}
+	}
+	
+	private static java.util.Set<Integer> extractLinkedIds(String md) {
+	    var ids = new HashSet<Integer>();
+	    if (md == null || md.isBlank()) return ids;
+	    var m = P_PILDORA_ID.matcher(md);
+	    while (m.find()) {
+	        try {
+	            int id = Integer.parseInt(m.group(1));
+	            if (id > 0) ids.add(id);
+	        } catch (NumberFormatException ignore) {}
+	    }
+	    return ids;
 	}
 
 	private char[] askPin6() {
@@ -470,7 +510,7 @@ public class EditorPildoraController {
 
 		String bg = ColorUtil.colorForTag(name, ThemeManager.load() == ThemeManager.Theme.DARK);
 		String fg = ColorUtil.bestTextOn(bg);
-		box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
+		box.setStyle(String.format("-chip-bg: %s; -chip-fg: %s;", bg, fg));
 		return box;
 	}
 
@@ -490,7 +530,7 @@ public class EditorPildoraController {
 				String name = lbl.getText();
 				String bg = ColorUtil.colorForTag(name, dark);
 				String fg = ColorUtil.bestTextOn(bg);
-				box.setStyle(String.format("-fx-tag-bg: %s; -fx-tag-fg: %s;", bg, fg));
+				box.setStyle(String.format("-chip-bg: %s; -chip-fg: %s;", bg, fg));
 			}
 		});
 	}
@@ -659,6 +699,11 @@ public class EditorPildoraController {
 				""");
 		ayuda.showAndWait();
 	}
+	
+	@FXML
+	public void mdInsertInternalLink() {
+	    textFormatController.mdInsertInternalLink();
+	}
 
 	private void insertarTexto(String snippet) {
 		int pos = txtDescripcion.getCaretPosition();
@@ -736,6 +781,7 @@ public class EditorPildoraController {
 	}
 
 	// Decide CSS según tema actual
+	@SuppressWarnings("unused")
 	private String currentCssForTheme() {
 		var isDark = io.github.guillermo_david.javafx.ThemeManager
 				.load() == io.github.guillermo_david.javafx.ThemeManager.Theme.DARK;
@@ -785,6 +831,5 @@ public class EditorPildoraController {
 	    );
 //	    webPreview.getEngine().loadContent(html, "text/html");
 	}
-
 	
 }
