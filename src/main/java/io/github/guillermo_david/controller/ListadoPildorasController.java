@@ -1187,7 +1187,27 @@ public class ListadoPildorasController {
 				TAMANIO_PAGINA, columnaOrden, direccionOrden);
 
 		table.setItems(FXCollections.observableArrayList(todas));
-		lblPagina.setText("Página " + paginaActual + " de " + totalPaginas);
+		
+		//Pagina 1 de 2
+//		lblPagina.setText("Página " + paginaActual + " de " + totalPaginas);
+		
+		//Pagina 1 de 2 - 23 elementos
+//		String totalTxt = (total == 1) ? "1 elemento" : (total + " elementos");
+//	    lblPagina.setText("Página " + paginaActual + " de " + totalPaginas + " — " + totalTxt);
+	    
+		//Página 1 de 2 - mostrandos 1-20 de 23
+//		int desde = (total == 0) ? 0 : (paginaActual - 1) * TAMANIO_PAGINA + 1;
+//		int hasta = (total == 0) ? 0 : Math.min(paginaActual * TAMANIO_PAGINA, total);
+//		lblPagina.setText(String.format(
+//		    "Página %d de %d — mostrando %d–%d de %d",
+//		    paginaActual, totalPaginas, desde, hasta, total));
+		
+		int desde = (total == 0) ? 0 : (paginaActual - 1) * TAMANIO_PAGINA + 1;
+		int hasta = (total == 0) ? 0 : Math.min(paginaActual * TAMANIO_PAGINA, total);
+		lblPagina.setText(String.format(
+				"%d–%d de %d",
+				desde, hasta, total));
+		
 
 		// Restaura el indicador visual del orden elegido por el usuario
 		suppressSort = true;
