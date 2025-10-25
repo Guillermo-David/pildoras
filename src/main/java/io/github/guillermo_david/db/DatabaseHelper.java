@@ -33,11 +33,11 @@ public class DatabaseHelper {
             initializeDatabase();
 
             // DEBUG útil
-            System.out.println("[DB] APPDATA=" + System.getenv("APPDATA"));
-            System.out.println("[DB] LOCALAPPDATA=" + System.getenv("LOCALAPPDATA"));
-            System.out.println("[DB] user.dir=" + System.getProperty("user.dir"));
-            System.out.println("[DB] DB_PATH=" + DatabaseHelper.getDatabasePathForDebug());
-            System.out.println("[DB] JDBC URL=" + jdbcUrl);
+//            System.out.println("[DB] APPDATA=" + System.getenv("APPDATA"));
+//            System.out.println("[DB] LOCALAPPDATA=" + System.getenv("LOCALAPPDATA"));
+//            System.out.println("[DB] user.dir=" + System.getProperty("user.dir"));
+//            System.out.println("[DB] DB_PATH=" + DatabaseHelper.getDatabasePathForDebug());
+//            System.out.println("[DB] JDBC URL=" + jdbcUrl);
 
         } catch (SQLException | IOException e) {
             throw new RuntimeException("Error inicializando la base de datos", e);
@@ -396,6 +396,32 @@ public class DatabaseHelper {
         } finally {
             connection.setAutoCommit(oldAuto);
         }
+    }
+    
+ // --- Helpers para sync/snapshot ---
+    public synchronized void checkpointNow() {
+        try {
+            reopenIfNeeded();
+            try (Statement s = connection.createStatement()) {
+                // Fuerza checkpoint de WAL para snapshot consistente (FULL = mueve el contenido a DB)
+                s.execute("PRAGMA wal_checkpoint(FULL)");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("No se pudo ejecutar wal_checkpoint(FULL)", e);
+        }
+    }
+
+    public Path getDbFile() {
+        return getDbPath();
+    }
+    public Path getWalFile() {
+        return getDbPath().resolveSibling(getDbPath().getFileName().toString() + "-wal");
+    }
+    public Path getShmFile() {
+        return getDbPath().resolveSibling(getDbPath().getFileName().toString() + "-shm");
+    }
+    public Path getDbDir() {
+        return getDbPath().getParent();
     }
 
 }

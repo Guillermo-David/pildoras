@@ -15,10 +15,21 @@ public final class AppPaths {
     }
 
     public static Path dbPath() {
-        return dataDir().resolve("pildoras.db");
+        return dataDir().resolve("knowledgebase.db");
     }
 
     public static void ensureDataDir() throws IOException {
         Files.createDirectories(dataDir());
     }
+    
+    public static Path syncStateFile() {
+        return dataDir().resolve("sync_state.json");
+    }
+    public static Path logsDir() {
+        return dataDir().resolve("logs");
+    }
+    public static Path syncLogFile() {
+        return logsDir().resolve("sync.log");
+    }
+
 }

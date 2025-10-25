@@ -59,6 +59,26 @@ $JpkgDir       = Join-Path $TargetDir 'jpkg'
 $ImageDir      = Join-Path $TargetDir 'image'
 $InstallerDir  = Join-Path $TargetDir 'installer'
 
+# --- 0) Asegurar que no hay locks sobre el app-image ---
+Write-Info "Cerrando Pildoras.exe/javaw.exe y liberando target/image..."
+$procs = "Pildoras","javaw"
+foreach($p in $procs){
+  Get-Process $p -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+}
+
+$exePath = Join-Path (Resolve-Path .\target) "image\Pildoras\Pildoras.exe"
+if (Test-Path $exePath) {
+  # quitar solo lectura y reintentar borrar si está caliente por Defender
+  try { attrib -R (Join-Path (Split-Path $exePath) '*') /S /D 2>$null } catch {}
+  for($i=0; $i -lt 10 -and (Test-Path $exePath); $i++){
+    try {
+      Remove-Item -LiteralPath $exePath -Force
+    } catch {
+      Start-Sleep -Milliseconds 700
+    }
+  }
+}
+
 # --- 4) Build limpio + shaded JAR ---
 Write-Info "Limpieza y compilación (mvn clean package -DskipTests)"
 & mvn -q clean package -DskipTests
@@ -82,13 +102,14 @@ New-Item -ItemType Directory -Force -Path $ImageDir | Out-Null
 $IconPath = Resolve-Path -LiteralPath .\src\main\resources\icons\gdg.ico
 
 # Módulos a incluir (JDK + JavaFX)
+# Módulos a incluir (JDK + JavaFX)
 $Modules = @(
   'java.sql','java.xml','java.logging','java.desktop',
-  'jdk.crypto.ec','jdk.localedata',
+  'jdk.crypto.ec','jdk.localedata','jdk.charsets',      # <- añadido charsets
   'javafx.controls','javafx.fxml','javafx.web','javafx.graphics'
 ) -join ','
 
-# Construir argumentos comunes
+# Construir argumentos comunes (cada --java-options por separado)
 $appImageArgs = @(
   '--type','app-image',
   '--name','Pildoras',
@@ -98,10 +119,17 @@ $appImageArgs = @(
   '--icon', $IconPath,
   '--module-path', "$Jmods;$($env:PATH_JAVAFX_JMODS)",
   '--add-modules', $Modules,
-  '--java-options','-Dprism.order=sw --add-exports=javafx.base/com.sun.javafx.event=ALL-UNNAMED --add-opens=javafx.base/com.sun.javafx.event=ALL-UNNAMED',
+  '--java-options','-Dprism.order=sw',
+  '--java-options','--add-exports=javafx.base/com.sun.javafx.event=ALL-UNNAMED',
+  '--java-options','--add-opens=javafx.base/com.sun.javafx.event=ALL-UNNAMED',
+  '--java-options','-Dfile.encoding=UTF-8',
+  '--java-options','-Dsun.stdout.encoding=UTF-8',
+  '--java-options','-Dsun.stderr.encoding=UTF-8',
+  '--java-options',"-Dapp.version=$Version",
   '--dest', $ImageDir,
   '--verbose'
 )
+
 
 if ($WinConsole) {
   $appImageArgs += '--win-console'
@@ -125,6 +153,7 @@ $msiArgs = @(
   '--vendor','Guillermo David García',
   '--app-version', $Version,
   '--win-menu',
+  '--win-menu-group','Píldoras'
   '--win-shortcut',
   '--win-per-user-install',
   '--win-dir-chooser',

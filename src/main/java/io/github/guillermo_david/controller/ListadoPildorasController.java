@@ -1,5 +1,6 @@
 package io.github.guillermo_david.controller;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -16,6 +17,8 @@ import io.github.guillermo_david.MainApp;
 import io.github.guillermo_david.dao.DraftDao;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
+import io.github.guillermo_david.importer.MarkdownImportService;
+import io.github.guillermo_david.importer.MarkdownImportService.Result;
 import io.github.guillermo_david.javafx.Dialogs;
 import io.github.guillermo_david.javafx.DraftDialogs;
 import io.github.guillermo_david.javafx.PinDialogs;
@@ -25,11 +28,13 @@ import io.github.guillermo_david.javafx.ThemeManager.Theme;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
 import io.github.guillermo_david.security.SecurityService;
+import io.github.guillermo_david.util.AppVersion;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -79,6 +84,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -101,8 +107,10 @@ public class ListadoPildorasController {
 	private boolean shortcutsInstalados = false;
 	private boolean ignoreNextDelete = false;
 
-	private static final String DEFAULT_ORDER_COL = "fecha_creacion";
-	private static final String DEFAULT_ORDER_DIR = "DESC";
+	private static final String DEFAULT_ORDER_COL = "titulo";
+	private static final String DEFAULT_ORDER_DIR = "ASC";
+//	private static final String DEFAULT_ORDER_COL = "fecha_creacion";
+//	private static final String DEFAULT_ORDER_DIR = "DESC";
 	private String columnaOrden = DEFAULT_ORDER_COL;
 	private String direccionOrden = DEFAULT_ORDER_DIR;
 	private TableColumn<Pildora, ?> lastSortColumn = null;
@@ -156,6 +164,7 @@ public class ListadoPildorasController {
 		dark = MainApp.class.getResource("/css/theme-dark.css").toExternalForm();
 
 		setStatusBar();
+		addVersionBadge();
 		setTableProperties();
 		setColFav();
 		setColPinned();
@@ -257,6 +266,18 @@ public class ListadoPildorasController {
 			});
 			pause.play();
 		});
+	}
+	
+	private void addVersionBadge() {
+	    // Empuja lblStatus para que la versión quede a la derecha
+	    HBox.setHgrow(lblStatus, Priority.ALWAYS);
+	    lblStatus.setMaxWidth(Double.MAX_VALUE);
+
+	    String v = AppVersion.get();
+	    Label lblVer = new Label("v" + v);
+	    lblVer.getStyleClass().add("version-badge");
+	    lblVer.setOpacity(0.8);     // por si no quieres tocar CSS
+	    statusBar.getChildren().add(lblVer);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1418,6 +1439,10 @@ public class ListadoPildorasController {
 		btnSettings.setTooltip(new Tooltip("Ajustes"));
 		btnSettings.getStyleClass().addAll("icon-btn", "primary");
 
+		// --- Importar (.md) ---
+		var miImport = new MenuItem("Importar (.md)…");
+		miImport.setOnAction(e -> handleImportMarkdown());
+
 		// --- Tipografías ---
 		record Family(String label, String css) {
 		}
@@ -1642,8 +1667,17 @@ public class ListadoPildorasController {
 		miShortcuts.setOnAction(e -> showShortcutsDialog());
 
 		// Menú final (un único setAll)
-		btnSettings.getItems().setAll(miFamily, miSize, new SeparatorMenuItem(), miTemaOscuro, new SeparatorMenuItem(),
-				miSecurity, new SeparatorMenuItem(), miShortcuts);
+		btnSettings.getItems().setAll(
+				miImport,
+				new SeparatorMenuItem(),
+				miFamily, 
+				miSize, 
+				new SeparatorMenuItem(), 
+				miTemaOscuro, 
+				new SeparatorMenuItem(),
+				miSecurity, 
+				new SeparatorMenuItem(), 
+				miShortcuts);
 	}
 
 	// Modal de lockout igual que en editor, pero desde listado
@@ -2035,4 +2069,64 @@ public class ListadoPildorasController {
 			StatusBus.show("No se pudo abrir el editor.", StatusBus.Type.ERROR, javafx.util.Duration.seconds(3));
 		}
 	}
+	
+	private void handleImportMarkdown() {
+	    var scene = root.getScene();
+	    if (scene == null) return;
+
+	    FileChooser fc = new FileChooser();
+	    fc.setTitle("Importar (.md)...");
+	    fc.getExtensionFilters().addAll(
+	        new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"),
+	        new FileChooser.ExtensionFilter("Todos los archivos", "*.*")
+	    );
+
+	    List<File> files = fc.showOpenMultipleDialog(scene.getWindow());
+	    if (files == null || files.isEmpty()) return;
+
+	    Task<Void> task = new Task<>() {
+	        @Override protected Void call() {
+	            var svc = new MarkdownImportService();
+	            int ok = 0, fail = 0;
+
+	            for (int i = 0; i < files.size(); i++) {
+	                try {
+	                    svc.importFile(files.get(i));
+	                    ok++;
+	                } catch (Exception ex) {
+	                    fail++;
+	                }
+	                updateProgress(i + 1, files.size());
+	            }
+
+	            // 👇 Copias finales para usarlas en el lambda
+	            final int okCount = ok;
+	            final int failCount = fail;
+	            final int totalCount = okCount + failCount;
+
+	            javafx.application.Platform.runLater(() -> {
+	                paginaActual = 1;
+	                refrescarTabla();
+	                StatusBus.show(
+	                    (failCount == 0
+	                        ? ("Importadas " + okCount + " píldoras.")
+	                        : ("Importadas " + okCount + " de " + totalCount + " (" + failCount + " con error).")),
+	                    (failCount == 0 ? StatusBus.Type.SUCCESS : StatusBus.Type.WARN),
+	                    javafx.util.Duration.seconds(5)
+	                );
+	            });
+	            return null;
+	        }
+	    };
+
+	    task.setOnRunning(e -> root.setDisable(true));
+	    task.setOnSucceeded(e -> root.setDisable(false));
+	    task.setOnFailed(e -> {
+	        root.setDisable(false);
+	        StatusBus.show("Error inesperado en importación.", StatusBus.Type.ERROR, javafx.util.Duration.seconds(5));
+	    });
+
+	    new Thread(task, "ImportMarkdown").start();
+	}
+	
 }

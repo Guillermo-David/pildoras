@@ -637,4 +637,9 @@
   -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 4, 0.2, 0, 1);
 }
 
+.version-badge {
+  -fx-font-size: 11px;
+  -fx-text-fill: -fx-text-background-color; /* hereda tema */
+  -fx-opacity: 0.8;
+}
 
