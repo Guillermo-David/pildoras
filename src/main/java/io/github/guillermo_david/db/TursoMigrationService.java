@@ -30,34 +30,59 @@ public final class TursoMigrationService {
         public int total() { return pildoras + tags + pildoraTag + drafts + pildoraLink; }
     }
 
-    public static Result migrateLocalToTurso() throws SQLException {
+    public static Result migrateLocalToTurso() throws Exception {
         if (!TursoConfig.isConfigured()) {
-            throw new IllegalStateException("Turso no está configurado.");
+            throw new IllegalStateException("Turso no esta configurado.");
         }
 
         Path localDb = getLocalDbPath();
+        System.out.println("[Migration] Local DB path: " + localDb);
+        System.out.println("[Migration] Local DB exists: " + Files.exists(localDb));
         if (!Files.exists(localDb)) {
-            throw new IllegalStateException("No se encontró la base de datos local en: " + localDb);
+            throw new IllegalStateException("No se encontro la base de datos local en: " + localDb);
         }
 
         String localUrl = "jdbc:sqlite:" + localDb;
         String tursoUrl = TursoConfig.toJdbcUrl(TursoConfig.getUrl());
+        System.out.println("[Migration] Turso JDBC URL: " + tursoUrl);
+
         String tursoToken = TursoConfig.getToken();
 
-        try (Connection local = DriverManager.getConnection(localUrl);
-             Connection turso = DriverManager.getConnection(tursoUrl, null, tursoToken)) {
+        System.out.println("[Migration] Opening local connection...");
+        try (Connection local = DriverManager.getConnection(localUrl)) {
+            System.out.println("[Migration] Local connection OK");
 
-            try (Statement s = local.createStatement()) {
-                s.execute("PRAGMA foreign_keys=OFF");
+            System.out.println("[Migration] Opening Turso connection...");
+            try (Connection turso = DriverManager.getConnection(tursoUrl, null, tursoToken)) {
+                System.out.println("[Migration] Turso connection OK");
+
+                try (Statement s = local.createStatement()) {
+                    s.execute("PRAGMA foreign_keys=OFF");
+                }
+
+                System.out.println("[Migration] Migrating pildoras...");
+                int nPildoras = migratePildoras(local, turso);
+                System.out.println("[Migration] pildoras: " + nPildoras);
+
+                System.out.println("[Migration] Migrating tags...");
+                int nTags = migrateTags(local, turso);
+                System.out.println("[Migration] tags: " + nTags);
+
+                System.out.println("[Migration] Migrating pildora_tag...");
+                int nPildoraTag = migratePildoraTag(local, turso);
+                System.out.println("[Migration] pildora_tag: " + nPildoraTag);
+
+                System.out.println("[Migration] Migrating drafts...");
+                int nDrafts = migrateDrafts(local, turso);
+                System.out.println("[Migration] drafts: " + nDrafts);
+
+                System.out.println("[Migration] Migrating pildora_link...");
+                int nPildoraLink = migratePildoraLink(local, turso);
+                System.out.println("[Migration] pildora_link: " + nPildoraLink);
+
+                System.out.println("[Migration] Done!");
+                return new Result(nPildoras, nTags, nPildoraTag, nDrafts, nPildoraLink);
             }
-
-            int nPildoras = migratePildoras(local, turso);
-            int nTags = migrateTags(local, turso);
-            int nPildoraTag = migratePildoraTag(local, turso);
-            int nDrafts = migrateDrafts(local, turso);
-            int nPildoraLink = migratePildoraLink(local, turso);
-
-            return new Result(nPildoras, nTags, nPildoraTag, nDrafts, nPildoraLink);
         }
     }
 

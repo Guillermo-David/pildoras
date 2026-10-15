@@ -2263,9 +2263,19 @@ public class ListadoPildorasController {
 	    task.setOnFailed(e -> {
 	        root.setDisable(false);
 	        Throwable ex = task.getException();
-	        StatusBus.show(
-	            "Error en migracion: " + (ex == null ? "desconocido" : ex.getMessage()),
-	            StatusBus.Type.ERROR, Duration.seconds(6));
+	        if (ex != null) ex.printStackTrace();
+	        String detail = "desconocido";
+	        if (ex != null) {
+	            detail = ex.getClass().getSimpleName();
+	            if (ex.getMessage() != null) detail += ": " + ex.getMessage();
+	            if (ex.getCause() != null) {
+	                detail += " [causa: " + ex.getCause().getClass().getSimpleName();
+	                if (ex.getCause().getMessage() != null) detail += ": " + ex.getCause().getMessage();
+	                detail += "]";
+	            }
+	        }
+	        StatusBus.show("Error en migracion: " + detail,
+	            StatusBus.Type.ERROR, Duration.seconds(15));
 	    });
 
 	    new Thread(task, "MigrateToTurso").start();
