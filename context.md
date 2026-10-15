@@ -297,6 +297,8 @@ SMTP/”Compartir por email” (diseñar estrategia credenciales).
 
 Más tipos de “píldora” (tarea, receta, etc.) y vistas específicas (en pausa).
 
+Modo offline con espejo local: si Turso no responde, arrancar con la BD local en solo lectura. Al conectar con Turso, volcar periódicamente Turso → local para mantener la copia actualizada. Sin sync bidireccional (solo Turso → local).
+
 Notas de integración clave (para nuevos colaboradores)
 
 Usar Flexmark (no Commonmark) con las extensiones indicadas. Para anchors, usar flexmark-ext-anchorlink (no “heading-anchor”).
