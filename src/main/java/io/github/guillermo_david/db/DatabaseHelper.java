@@ -18,35 +18,56 @@ public class DatabaseHelper {
 
 	private static DatabaseHelper instance;
 	private Connection connection;
+	private boolean usingTurso;
 
 	private DatabaseHelper() {
 		try {
-			Path target = getDbPath();
-			migrateOldLocationIfNeeded(target); // mueve/copias si procede
-			Files.createDirectories(target.getParent());
-
-			String url = "jdbc:sqlite:" + target.toString();
-			connection = DriverManager.getConnection(url);
-
-			// PRAGMAs recomendables
-			try (Statement s = connection.createStatement()) {
-				s.execute("PRAGMA foreign_keys=ON");
-				s.execute("PRAGMA journal_mode=WAL");
-				s.execute("PRAGMA synchronous=NORMAL");
-				s.execute("PRAGMA busy_timeout=5000");
+			if (TursoConfig.isConfigured()) {
+				connectTurso();
+			} else {
+				connectLocal();
 			}
 
 			initializeDatabase();
 
-			// DEBUG útil
-			System.out.println("[DB] APPDATA=" + System.getenv("APPDATA"));
-			System.out.println("[DB] LOCALAPPDATA=" + System.getenv("LOCALAPPDATA"));
-			System.out.println("[DB] user.dir=" + System.getProperty("user.dir"));
-			System.out.println("[DB] DB_PATH=" + DatabaseHelper.getDatabasePathForDebug());
-			System.out.println("[DB] JDBC URL=" + url);
+			System.out.println("[DB] Using Turso: " + usingTurso);
+			if (!usingTurso) {
+				System.out.println("[DB] DB_PATH=" + getDatabasePathForDebug());
+			}
 
 		} catch (SQLException | IOException e) {
 			throw new RuntimeException("Error inicializando la base de datos", e);
+		}
+	}
+
+	private void connectTurso() throws SQLException {
+		String jdbcUrl = TursoConfig.toJdbcUrl(TursoConfig.getUrl());
+		String token = TursoConfig.getToken();
+
+		connection = DriverManager.getConnection(jdbcUrl, null, token);
+		usingTurso = true;
+
+		try (Statement s = connection.createStatement()) {
+			s.execute("PRAGMA foreign_keys=ON");
+		}
+
+		System.out.println("[DB] Connected to Turso: " + TursoConfig.getUrl());
+	}
+
+	private void connectLocal() throws SQLException, IOException {
+		Path target = getDbPath();
+		migrateOldLocationIfNeeded(target);
+		Files.createDirectories(target.getParent());
+
+		String url = "jdbc:sqlite:" + target.toString();
+		connection = DriverManager.getConnection(url);
+		usingTurso = false;
+
+		try (Statement s = connection.createStatement()) {
+			s.execute("PRAGMA foreign_keys=ON");
+			s.execute("PRAGMA journal_mode=WAL");
+			s.execute("PRAGMA synchronous=NORMAL");
+			s.execute("PRAGMA busy_timeout=5000");
 		}
 	}
 
@@ -60,9 +81,22 @@ public class DatabaseHelper {
 		return connection;
 	}
 
+	public boolean isUsingTurso() {
+		return usingTurso;
+	}
+
+	public static synchronized void reconnect() {
+		if (instance != null) {
+			try {
+				instance.connection.close();
+			} catch (SQLException ignore) {}
+			instance = null;
+		}
+		getInstance();
+	}
+
 	// --- Paths ---
 
-	/** Devuelve %APPDATA% (solo el directorio Roaming base). */
 	private static Path getRoamingDir() {
 		String appdata = System.getenv("APPDATA");
 		if (appdata == null || appdata.isBlank()) {
@@ -71,25 +105,18 @@ public class DatabaseHelper {
 		return Paths.get(appdata).toAbsolutePath().normalize();
 	}
 
-	/** Devuelve %LOCALAPPDATA% (solo el directorio Local base). */
 	private static Path getLocalDir() {
 		String local = System.getenv("LOCALAPPDATA");
 		if (local != null && !local.isBlank())
 			return Paths.get(local);
-		// Fallback: %USERPROFILE%\AppData\Local
 		Path home = Paths.get(System.getProperty("user.home"));
 		return home.resolve("AppData").resolve("Local");
 	}
 
-	/**
-	 * Ruta completa al fichero de BD en Roaming:
-	 * %APPDATA%\Pildoras\knowledgebase.db
-	 */
 	private static Path getDbPath() {
 		return getRoamingDir().resolve(APP_FOLDER).resolve(DB_NAME).toAbsolutePath().normalize();
 	}
 
-	/** Para logs: ruta completa al fichero de BD. */
 	public static Path getDatabasePathForDebug() {
 		return getDbPath();
 	}
@@ -98,33 +125,25 @@ public class DatabaseHelper {
 		Path dstDir = dstDb.getParent();
 		Files.createDirectories(dstDir);
 
-		// 1) Si ya hay BD en Roaming y tiene contenido, no tocar
 		if (Files.exists(dstDb) && Files.size(dstDb) > 0)
 			return;
 
-		// 2) Origen antiguo (LocalAppData)
 		Path srcDb = getLocalDir().resolve(APP_FOLDER).resolve(DB_NAME);
 		if (!Files.exists(srcDb)) {
-			// No hay nada que migrar. Si dst no existe, más tarde se creará schema nuevo.
 			return;
 		}
 
-		// 3) Si el destino existe pero está vacío, lo sustituimos.
 		boolean dstExists = Files.exists(dstDb);
 		if (dstExists && Files.size(dstDb) == 0) {
-			// opcional: backup del vacío si quieres
-			// Files.move(dstDb, dstDb.resolveSibling(DB_NAME + ".bak"), REPLACE_EXISTING);
+			// dst vacío, lo sustituimos
 		}
 
 		try {
 			Files.move(srcDb, dstDb, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 		} catch (AtomicMoveNotSupportedException ex) {
 			Files.copy(srcDb, dstDb, StandardCopyOption.REPLACE_EXISTING);
-			// opcional: borrar el antiguo si quieres
-			// Files.deleteIfExists(srcDb);
 		}
 
-		// 4) Migrar también -wal y -shm si existen
 		moveSiblingIfPresent(srcDb.resolveSibling(DB_NAME + "-wal"), dstDb.resolveSibling(DB_NAME + "-wal"));
 		moveSiblingIfPresent(srcDb.resolveSibling(DB_NAME + "-shm"), dstDb.resolveSibling(DB_NAME + "-shm"));
 	}
@@ -136,7 +155,6 @@ public class DatabaseHelper {
 			Files.move(src, dst, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 		} catch (AtomicMoveNotSupportedException ex) {
 			Files.copy(src, dst, StandardCopyOption.REPLACE_EXISTING);
-			// opcional: Files.deleteIfExists(src);
 		}
 	}
 
@@ -171,7 +189,6 @@ public class DatabaseHelper {
 					    )
 					""");
 
-			// Migraciones ya existentes
 			try {
 				stmt.execute("ALTER TABLE pildoras ADD COLUMN favorita INTEGER NOT NULL DEFAULT 0");
 			} catch (SQLException ignore) {
@@ -185,10 +202,8 @@ public class DatabaseHelper {
 			stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
 		}
 
-		// 👇 DEDUPLICAR antes del índice único case-insensitive
 		dedupeTagsCaseInsensitive();
 
-		// Ahora ya puede crearse sin violaciones
 		try (Statement s = connection.createStatement()) {
 			s.execute("""
 					    CREATE UNIQUE INDEX IF NOT EXISTS u_tags_nombre_lower
@@ -198,13 +213,10 @@ public class DatabaseHelper {
 	}
 
 	private void dedupeTagsCaseInsensitive() throws SQLException {
-	    // Transacción
 	    boolean oldAuto = connection.getAutoCommit();
 	    connection.setAutoCommit(false);
 	    try (Statement s = connection.createStatement()) {
 
-	        // 0) Si no hay duplicados, salir rápido (opcional pero útil)
-	        //    Duplicado = mismo lower(nombre) con más de 1 id
 	        try (var rs = s.executeQuery("""
 	            SELECT COUNT(*) AS dup_grps
 	            FROM (
@@ -215,7 +227,6 @@ public class DatabaseHelper {
 	            )
 	        """)) {
 	            if (rs.next() && rs.getInt("dup_grps") == 0) {
-	                // Asegura normalización por si llegan mayúsculas sueltas
 	                s.execute("UPDATE tags SET nombre = lower(nombre)");
 	                connection.commit();
 	                connection.setAutoCommit(oldAuto);
@@ -223,7 +234,6 @@ public class DatabaseHelper {
 	            }
 	        }
 
-	        // 1) Para cada grupo case-insensitive decide un id "canónico" (mínimo id)
 	        s.execute("""
 	            CREATE TEMP TABLE IF NOT EXISTS tag_group AS
 	            SELECT lower(nombre) AS k, MIN(id) AS keep_id
@@ -231,7 +241,6 @@ public class DatabaseHelper {
 	            GROUP BY lower(nombre)
 	        """);
 
-	        // 2) Mapeo old_id -> new_id (canónico)
 	        s.execute("""
 	            CREATE TEMP TABLE IF NOT EXISTS tag_map AS
 	            SELECT t.id AS old_id, g.keep_id AS new_id
@@ -239,8 +248,6 @@ public class DatabaseHelper {
 	            JOIN tag_group g ON lower(t.nombre) = g.k
 	        """);
 
-	        // 3) Re-crear los enlaces con el id canónico SIN romper la PK (pildora_id, tag_id)
-	        //    (Insertamos primero y luego borramos los viejos)
 	        int ins = s.executeUpdate("""
 	            INSERT OR IGNORE INTO pildora_tag (pildora_id, tag_id)
 	            SELECT pt.pildora_id, m.new_id
@@ -249,7 +256,6 @@ public class DatabaseHelper {
 	            WHERE m.old_id <> m.new_id
 	        """);
 
-	        // 4) Eliminar los enlaces antiguos (los que iban al old_id duplicado)
 	        int delPt = s.executeUpdate("""
 	            DELETE FROM pildora_tag
 	            WHERE tag_id IN (
@@ -257,10 +263,8 @@ public class DatabaseHelper {
 	            )
 	        """);
 
-	        // 5) Normalizar el texto a minúsculas
 	        int upd = s.executeUpdate("UPDATE tags SET nombre = lower(nombre)");
 
-	        // 6) Borrar los tags duplicados (conservar solo el id canónico)
 	        int delTags = s.executeUpdate("""
 	            DELETE FROM tags
 	            WHERE id IN (
@@ -268,13 +272,11 @@ public class DatabaseHelper {
 	            )
 	        """);
 
-	        // 7) Limpiar temporales
 	        s.execute("DROP TABLE IF EXISTS tag_map");
 	        s.execute("DROP TABLE IF EXISTS tag_group");
 
 	        connection.commit();
 
-	        // (Opcional) logs para verificar en consola lo que pasó
 	        System.out.println("[DB][dedupe] insert_pt=" + ins + " delete_pt=" + delPt + " upd_text=" + upd + " del_tags=" + delTags);
 
 	    } catch (SQLException ex) {
@@ -284,6 +286,4 @@ public class DatabaseHelper {
 	        connection.setAutoCommit(oldAuto);
 	    }
 	}
-
-
 }

@@ -81,6 +81,15 @@
   - Drag en la barra para mover el diálogo.
   - Iconos copiados del `Stage` principal.
 
+## Sincronización (Turso)
+- **Opcional**: la app puede conectarse a una BD remota en Turso (LibSQL) para sincronizar datos entre dispositivos.
+- **Configuración**: desde Ajustes → "Configurar Turso…", el usuario introduce la URL (`libsql://...`) y el token de autenticación.
+- **Driver JDBC**: `com.dbeaver.jdbc:com.dbeaver.jdbc.driver.libsql` (URL: `jdbc:dbeaver:libsql:https://...`, token como password).
+- **Fallback**: si no hay configuración de Turso, la app usa SQLite local como siempre.
+- **`TursoConfig`**: guarda URL y token en `Preferences` de Java. Método `toJdbcUrl()` convierte `libsql://` a formato JDBC.
+- **`DatabaseHelper.reconnect()`**: cierra la conexión actual y reconecta (a Turso o local según configuración).
+- **Desconexión**: desde el mismo menú de ajustes, el usuario puede desconectar y volver a SQLite local.
+
 ## Exportación
 - **Detalle → Exportar**:
 - **Markdown (.md)**: título, fecha, tags y contenido (en Markdown).
