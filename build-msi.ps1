@@ -150,7 +150,7 @@ $msiArgs = @(
   '--type','msi',
   '--name','Pildoras',
   '--app-image', (Join-Path $ImageDir 'Pildoras'),
-  '--vendor','Guillermo David García',
+  '--vendor','Guillermo David Garcia',
   '--app-version', $Version,
   '--win-menu',
   '--win-menu-group','Píldoras'

@@ -2,6 +2,8 @@ package io.github.guillermo_david.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -18,7 +20,6 @@ import io.github.guillermo_david.dao.DraftDao;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.importer.MarkdownImportService;
-import io.github.guillermo_david.importer.MarkdownImportService.Result;
 import io.github.guillermo_david.javafx.Dialogs;
 import io.github.guillermo_david.javafx.DraftDialogs;
 import io.github.guillermo_david.javafx.PinDialogs;
@@ -27,7 +28,10 @@ import io.github.guillermo_david.javafx.ThemeManager;
 import io.github.guillermo_david.javafx.ThemeManager.Theme;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
+import io.github.guillermo_david.restore.DriveRestoreService;
 import io.github.guillermo_david.security.SecurityService;
+import io.github.guillermo_david.settings.SettingsStore;
+import io.github.guillermo_david.sync.SyncService;
 import io.github.guillermo_david.util.AppVersion;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -84,6 +88,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -1428,6 +1433,11 @@ public class ListadoPildorasController {
 		tf.textProperty().addListener((o, a, b) -> update.run());
 		update.run();
 	}
+	
+	private void updateToggleBackupsText(MenuItem mi) {
+	    boolean on = (io.github.guillermo_david.settings.SettingsStore.getBackupsBaseDir() != null);
+	    mi.setText(on ? "Desactivar backups" : "Activar backups…");
+	}
 
 	private void initSettingsMenu() {
 		// Limpia y configura el botón (icono engranaje)
@@ -1442,6 +1452,9 @@ public class ListadoPildorasController {
 		// --- Importar (.md) ---
 		var miImport = new MenuItem("Importar (.md)…");
 		miImport.setOnAction(e -> handleImportMarkdown());
+		
+		var miRestore = new MenuItem("Restaurar desde ZIP…");
+		miRestore.setOnAction(e -> handleRestoreFromZip());
 
 		// --- Tipografías ---
 		record Family(String label, String css) {
@@ -1665,9 +1678,42 @@ public class ListadoPildorasController {
 		// --- Atajos ---
 		var miShortcuts = new MenuItem("Atajos de teclado…");
 		miShortcuts.setOnAction(e -> showShortcutsDialog());
+		
+		var miSetBackupDir = new MenuItem("Ubicación de backups…");
+		miSetBackupDir.setOnAction(e -> chooseBackupBase());
+
+		var miToggleBackups = new MenuItem();
+		updateToggleBackupsText(miToggleBackups);
+
+		// refresca el texto cada vez que se abre el menú
+		btnSettings.setOnShowing(e -> updateToggleBackupsText(miToggleBackups));
+
+		miToggleBackups.setOnAction(e -> {
+		    boolean on = (io.github.guillermo_david.settings.SettingsStore.getBackupsBaseDir() != null);
+		    if (on) {
+		        // Apagar
+		        var s = io.github.guillermo_david.settings.SettingsStore.load();
+		        s.backupsBaseDir = null;
+		        io.github.guillermo_david.settings.SettingsStore.save(s);
+		        io.github.guillermo_david.sync.SyncService.get().reloadBackupsLocation();
+		        io.github.guillermo_david.javafx.StatusBus.show(
+		            "Copias de seguridad desactivadas en este equipo.",
+		            io.github.guillermo_david.javafx.StatusBus.Type.INFO,
+		            javafx.util.Duration.seconds(4)
+		        );
+		    } else {
+		        // Encender: reutiliza tu selector
+		        chooseBackupBase(); // esto ya guarda, crea carpetas y llama a reloadBackupsLocation()
+		    }
+		    updateToggleBackupsText(miToggleBackups);
+		});
 
 		// Menú final (un único setAll)
 		btnSettings.getItems().setAll(
+				miSetBackupDir,
+				miToggleBackups,
+			    new SeparatorMenuItem(),
+				miRestore,
 				miImport,
 				new SeparatorMenuItem(),
 				miFamily, 
@@ -2129,4 +2175,126 @@ public class ListadoPildorasController {
 	    new Thread(task, "ImportMarkdown").start();
 	}
 	
+	private void handleRestoreFromZip() {
+	    var scene = root.getScene();
+	    if (scene == null) return;
+
+	    FileChooser fc = new FileChooser();
+	    fc.setTitle("Restaurar desde ZIP (Drive)");
+	    fc.getExtensionFilters().addAll(
+	        new FileChooser.ExtensionFilter("Backups de Píldoras (*.zip)", "*.zip"),
+	        new FileChooser.ExtensionFilter("Todos los archivos", "*.*")
+	    );
+
+	    // Inicializa en la carpeta de backups si existe
+	    Path init = guessBackupsFolder();
+	    if (init != null && Files.isDirectory(init)) {
+	        try { fc.setInitialDirectory(init.toFile()); } catch (Exception ignore) {}
+	    }
+
+	    File f = fc.showOpenDialog(scene.getWindow());
+	    if (f == null) return;
+
+	    Task<io.github.guillermo_david.restore.DriveRestoreService.Result> task = new Task<>() {
+	        @Override protected io.github.guillermo_david.restore.DriveRestoreService.Result call() throws Exception {
+	            var svc = new DriveRestoreService();
+	            return svc.restoreFromZip(f, /*backupExisting*/ true);
+	        }
+	    };
+
+	    task.setOnRunning(e -> root.setDisable(true));
+	    task.setOnSucceeded(e -> {
+	        root.setDisable(false);
+	        io.github.guillermo_david.restore.DriveRestoreService.Result r = task.getValue();
+	        // fuerza reapertura/recarga de datos
+	        paginaActual = 1;
+	        refrescarTabla();
+
+	        String ver = r.verified ? "verificado" : "sin verificación";
+	        String extra = (r.deviceId != null ? (" — origen: " + r.deviceId) : "");
+	        io.github.guillermo_david.javafx.StatusBus.show(
+	            "Restauración completada (" + ver + ")" + extra,
+	            io.github.guillermo_david.javafx.StatusBus.Type.SUCCESS,
+	            javafx.util.Duration.seconds(5)
+	        );
+	    });
+	    task.setOnFailed(e -> {
+	        root.setDisable(false);
+	        Throwable ex = task.getException();
+	        io.github.guillermo_david.javafx.StatusBus.show(
+	            "Error al restaurar: " + (ex == null ? "desconocido" : ex.getMessage()),
+	            io.github.guillermo_david.javafx.StatusBus.Type.ERROR,
+	            javafx.util.Duration.seconds(6)
+	        );
+	    });
+
+	    new Thread(task, "RestoreFromZip").start();
+	}
+
+	// Intenta deducir la carpeta de backups según PILDORAS_DRIVE_BASE o defaults
+	private Path guessBackupsFolder() {
+	    String base = System.getenv("PILDORAS_DRIVE_BASE");
+	    if (base != null && !base.isBlank()) {
+	        return Path.of(base).resolve("backups");
+	    }
+	    // Defaults comunes: "Mi unidad" (ES) y "My Drive" (EN)
+	    Path es = Path.of("G:/Mi unidad/Pildoras/backups");
+	    if (Files.isDirectory(es)) return es;
+	    Path en = Path.of("G:/My Drive/Pildoras/backups");
+	    if (Files.isDirectory(en)) return en;
+	    return null;
+	}
+
+	private void chooseBackupBase() {
+	    var scene = root.getScene();
+	    if (scene == null) return;
+
+	    DirectoryChooser dc = new DirectoryChooser();
+	    dc.setTitle("Elegir carpeta base para backups de Píldoras");
+
+	    // Sugerir actual si existe
+	    var cur = SettingsStore.getBackupsBaseDir();
+	    if (cur != null && Files.isDirectory(cur)) {
+	        try { dc.setInitialDirectory(cur.toFile()); } catch (Exception ignore) {}
+	    }
+
+	    var dir = dc.showDialog(scene.getWindow());
+	    if (dir == null) return;
+
+	    // Normaliza selección y corrige si el usuario ha elegido directamente "backups"
+	    Path chosen = Path.of(dir.getAbsolutePath()).toAbsolutePath().normalize();
+	    if (chosen.getFileName() != null
+	            && chosen.getFileName().toString().equalsIgnoreCase("backups")
+	            && chosen.getParent() != null) {
+	        chosen = chosen.getParent(); // la base debe ser el padre de "backups"
+	    }
+
+	    // Guardar
+	    var s = SettingsStore.load();
+	    s.backupsBaseDir = chosen.toString();
+	    SettingsStore.save(s);
+
+	    // Reconfigurar SyncService en caliente
+	    SyncService.get().reloadBackupsLocation();
+
+	    // Crear subcarpetas estándar bajo “…/backups”
+	    try {
+	        var backupsRoot = SettingsStore.getBackupsRoot(); // “…/Pildoras/backups”
+	        if (backupsRoot != null) {
+	            Files.createDirectories(backupsRoot);
+	            Files.createDirectories(backupsRoot.resolve("_tmp"));
+	            Files.createDirectories(backupsRoot.resolve("hist"));
+	        }
+	    } catch (Exception ex) {
+	        StatusBus.show("No se pudieron preparar las carpetas de backup.", StatusBus.Type.WARN,
+	                javafx.util.Duration.seconds(4));
+	    }
+
+	    StatusBus.show("Ubicación de backups guardada. Se usará en próximos snapshots.",
+	            StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(4));
+
+	    // (Opcional) crear baseline inmediato:
+	    // try { SyncService.get().syncNow(io.github.guillermo_david.sync.SyncService.Mode.MANUAL); } catch (Exception ignore) {}
+	}
+
 }

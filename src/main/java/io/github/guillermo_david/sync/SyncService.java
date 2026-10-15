@@ -1,19 +1,23 @@
 package io.github.guillermo_david.sync;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import io.github.guillermo_david.db.AppPaths;
-import io.github.guillermo_david.db.DatabaseHelper;
-
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import io.github.guillermo_david.db.AppPaths;
+import io.github.guillermo_david.db.DatabaseHelper;
+import io.github.guillermo_david.javafx.StatusBus;
+import io.github.guillermo_david.settings.SettingsStore;
+import javafx.util.Duration;
 
 public final class SyncService {
 
@@ -26,9 +30,12 @@ public final class SyncService {
     private final DatabaseHelper db = DatabaseHelper.getInstance();
 
     // Config “v1”: carpeta fija en G:
-    private final Path driveRoot = Paths.get("G:/Mi unidad/Pildoras/backups").toAbsolutePath().normalize();
-    private final Path driveTmp  = driveRoot.resolve("_tmp");
-    private final Path driveHist = driveRoot.resolve("hist");
+    // Rutas (pueden ser null si los backups están desactivados)
+    private Path driveRoot; 
+    private Path driveTmp;  
+    private Path driveHist; 
+    private boolean backupsEnabled; // ← flag claro
+
 
     // Estado local
     private SyncState state;
@@ -36,9 +43,8 @@ public final class SyncService {
     private SyncService() {
         try {
             Files.createDirectories(AppPaths.logsDir());
-            Files.createDirectories(driveTmp);
-            Files.createDirectories(driveHist);
-            Files.createDirectories(driveRoot);
+
+            // Estado local (siempre lo tenemos aunque backups estén OFF)
             this.state = loadState();
             if (this.state == null) {
                 this.state = new SyncState();
@@ -48,24 +54,44 @@ public final class SyncService {
                 this.state.deviceId = defaultDeviceId();
                 saveState();
             }
+
+            // Ubicación de backups configurada por el usuario (puede ser null)
+            this.driveRoot = SettingsStore.getBackupsRoot();
+            this.backupsEnabled = (driveRoot != null);
+
+            if (backupsEnabled) {
+                this.driveTmp  = driveRoot.resolve("_tmp");
+                this.driveHist = driveRoot.resolve("hist");
+                Files.createDirectories(driveRoot);
+                Files.createDirectories(driveTmp);
+                Files.createDirectories(driveHist);
+                logInfo("[SYNC] Backups ACTIVOS en: " + driveRoot);
+            } else {
+                this.driveTmp  = null;
+                this.driveHist = null;
+                logInfo("[SYNC] Backups DESACTIVADOS (sin ubicación configurada).");
+            }
         } catch (IOException e) {
             throw new RuntimeException("SyncService init error", e);
         }
     }
 
-    public void onAppStart() {
-        // v1: solo aviso si cloud > local (ofrecer restaurar fuera de este stub)
-        try {
-        	var cloudLatest = DriveBackend.findMostRecentLatest(driveRoot);
-            if (cloudLatest.isEmpty()) return;
 
+    public void onAppStart() {
+    	if (!backupsEnabled) {
+    	    logInfo("[SYNC] Backups DESACTIVADOS.");
+    	    StatusBus.show("Copias de seguridad desactivadas en este equipo", StatusBus.Type.INFO, Duration.seconds(3));
+    	    return;
+    	} else {
+    	    StatusBus.show("Backups: ON → " + driveRoot, StatusBus.Type.INFO, javafx.util.Duration.seconds(3));
+    	}
+        try {
+            var cloudLatest = DriveBackend.findMostRecentLatest(driveRoot);
+            if (cloudLatest.isEmpty()) return;
             var localHash = state.lastLocalSnapshotHash;
             var cloudManifest = Manifest.readFromZip(cloudLatest.get());
-
-            // Si nunca hemos sincronizado localmente o cloud es más nuevo por timestamp → notificar
             if (cloudManifest != null && (localHash == null || isCloudAhead(cloudManifest))) {
                 logInfo("[SYNC] Cloud más reciente: " + cloudManifest.timestampUtc + " (device=" + cloudManifest.deviceId + ")");
-                // Aquí podrías abrir diálogo de restauración. En v1 vamos un paso seguro: no restauramos automáticamente.
             }
         } catch (Exception ex) {
             logError("[SYNC] Error en onAppStart: " + ex.getMessage());
@@ -73,17 +99,26 @@ public final class SyncService {
             ensureBaselineHistoryIfEmpty();
         }
     }
-    
- // SyncService
-    private void ensureBaselineHistoryIfEmpty() {
+
+    public void onAppShutdown() {
+    	if (!backupsEnabled) return;
         try {
-            // ¿ya hay algún hist para este device?
+            ensureBackupDirs();
+            syncNow(Mode.AUTO_ON_CLOSE);
+        } catch (Exception ex) {
+            logError("[SYNC] Error en onAppShutdown: " + ex.getMessage());
+        }
+    }
+
+ 
+    private void ensureBaselineHistoryIfEmpty() {
+        if (!backupsEnabled) return;
+        try {
             var hasHist = Files.list(driveHist)
                 .anyMatch(p -> p.getFileName().toString()
                     .matches("pildoras-\\d{8}-\\d{6}-" + state.deviceId + "-[a-fA-F0-9]{8}(?:_CONFLICT)?\\.zip"));
             if (hasHist) return;
 
-            // si no hay hist y existe latest, copiamos uno como baseline
             var latestZip = driveRoot.resolve("pildoras-latest-" + state.deviceId + ".zip");
             if (Files.exists(latestZip)) {
                 var mf = Manifest.readFromZip(latestZip);
@@ -99,23 +134,19 @@ public final class SyncService {
                 logInfo("[SYNC] No hay latest ni hist ⇒ creando baseline…");
                 syncNow(Mode.MANUAL);
             }
-            
         } catch (Exception e) {
             logWarn("[SYNC] No se pudo crear baseline en hist: " + e.getMessage());
         }
     }
 
-    public void onAppShutdown() {
-        try {
-            syncNow(Mode.AUTO_ON_CLOSE);
-        } catch (Exception ex) {
-            logError("[SYNC] Error en onAppShutdown: " + ex.getMessage());
-        }
-    }
-
     public SyncResult syncNow(Mode mode) {
-        Objects.requireNonNull(mode, "mode");
+    	Objects.requireNonNull(mode, "mode");
+        if (!backupsEnabled) {
+            logInfo("[SYNC] Backups desactivados: no se generará snapshot.");
+            return SyncResult.ok(null, null);
+        }
         try {
+            ensureBackupDirs();
             logInfo("[SYNC] Preparando snapshot (" + mode + ")…");
 
             // 0) Asegura estado mínimo
@@ -201,6 +232,11 @@ public final class SyncService {
             var latestZip = driveRoot.resolve("pildoras-latest-" + deviceId + ".zip");
             FileUtils.moveAtomic(tmpZip, latestZip);
 
+            // Verifica que exista antes de copiar a hist (por si el move falló)
+            if (!Files.exists(latestZip)) {
+                throw new IllegalStateException("No se pudo publicar latest en " + latestZip);
+            }
+
             // 9) Copia rotativa a hist
             var histName = DriveBackend.histName(manifest, false);
             var histZip  = driveHist.resolve(histName);
@@ -271,6 +307,36 @@ public final class SyncService {
     private static void logInfo(String s){ System.out.println(s); }
     private static void logWarn(String s){ System.out.println(s); }
     private static void logError(String s){ System.err.println(s); }
+
+    public synchronized void reloadBackupsLocation() {
+        try {
+            var newRoot = SettingsStore.getBackupsRoot();
+            this.backupsEnabled = (newRoot != null);
+            this.driveRoot = newRoot;
+
+            if (backupsEnabled) {
+                this.driveTmp  = driveRoot.resolve("_tmp");
+                this.driveHist = driveRoot.resolve("hist");
+                Files.createDirectories(driveRoot);
+                Files.createDirectories(driveTmp);
+                Files.createDirectories(driveHist);
+                logInfo("[SYNC] Backups ACTIVOS en: " + driveRoot);
+            } else {
+                this.driveTmp = null;
+                this.driveHist = null;
+                logInfo("[SYNC] Backups DESACTIVADOS (sin ubicación configurada).");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("No se pudo reconfigurar la ubicación de backups", e);
+        }
+    }
+    
+    private void ensureBackupDirs() throws IOException {
+        if (!backupsEnabled) return;
+        if (driveRoot != null) Files.createDirectories(driveRoot);
+        if (driveTmp  != null) Files.createDirectories(driveTmp);
+        if (driveHist != null) Files.createDirectories(driveHist);
+    }
 
     // --- Tipos resultado ---
 
