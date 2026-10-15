@@ -429,6 +429,72 @@
 	-fx-opacity: 0.9;
 }
 
+/* Panel lateral de tags */
+.tag-sidebar {
+    -fx-background-color: -c-bg;
+    -fx-border-color: -c-border;
+    -fx-border-width: 0 1 0 0;
+}
+
+.tag-sidebar-header {
+    -fx-background-color: linear-gradient(to bottom, -c-bg, -c-bg-subtle);
+    -fx-border-color: -c-border;
+    -fx-border-width: 0 0 1 0;
+}
+
+.tag-sidebar-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: -c-text;
+}
+
+.sidebar-toggle {
+    -fx-font-size: 10px;
+    -fx-padding: 2 6;
+    -fx-background-color: transparent;
+    -fx-text-fill: -c-text-muted;
+    -fx-cursor: hand;
+}
+.sidebar-toggle:hover {
+    -fx-background-color: derive(-c-bg-subtle, -10%);
+    -fx-background-radius: 4;
+}
+
+.tag-sidebar-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+.tag-sidebar-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.tag-sidebar-list {
+    -fx-background-color: transparent;
+    -fx-padding: 4 0;
+}
+
+.tag-sidebar-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: -c-text;
+    -fx-font-size: 12px;
+    -fx-padding: 6 12;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-radius: 0;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}
+.tag-sidebar-item:hover {
+    -fx-background-color: -c-row-hover;
+}
+
+.tag-sidebar-selected {
+    -fx-background-color: -c-row-selected;
+    -fx-font-weight: bold;
+}
+.tag-sidebar-selected:hover {
+    -fx-background-color: derive(-c-row-selected, -5%);
+}
+
 /* Iconos de exportación, heredan color del tema */
 .export-icon {
 	-fx-icon-size: 18px;

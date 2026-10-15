@@ -94,6 +94,25 @@ public class TagDao {
         return lista;
     }
     
+    public List<String[]> listAllWithCount() {
+        List<String[]> list = new ArrayList<>();
+        String sql = """
+            SELECT t.nombre, COUNT(pt.pildora_id) AS cnt
+            FROM tags t
+            LEFT JOIN pildora_tag pt ON t.id = pt.tag_id
+            GROUP BY t.id, t.nombre
+            HAVING cnt > 0
+            ORDER BY t.nombre
+            """;
+        try (Statement stmt = DatabaseHelper.getInstance().getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(new String[]{ rs.getString("nombre"), String.valueOf(rs.getInt("cnt")) });
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
     public List<String> listAllLike(String prefix, int limit) {
         String sql = """
             SELECT t.nombre

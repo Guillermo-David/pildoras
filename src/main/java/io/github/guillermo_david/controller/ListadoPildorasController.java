@@ -157,6 +157,10 @@ public class ListadoPildorasController {
 	@FXML private TableColumn<Pildora, Void> colFav, colAcciones, colPinned;
 	@FXML private CustomTextField txtFiltroTexto, txtFiltroTags;
 	@FXML private ImageView imgLogo;
+	@FXML private VBox tagSidebar, tagListBox;
+	@FXML private Button btnToggleSidebar;
+	private boolean sidebarCollapsed = false;
+	private String selectedSidebarTag = null;
 
 	@FXML
 	public void initialize() {
@@ -185,6 +189,9 @@ public class ListadoPildorasController {
 //	    initThemeToggle();
 //	    syncThemeToggleWithCurrent();
 //	    hookLogoToTheme();
+
+		// Panel lateral de tags
+		initTagSidebar();
 
 		// Barra de título custom
 		initCustomTitleBar();
@@ -1265,11 +1272,17 @@ public class ListadoPildorasController {
 		table.refresh();
 	}
 
+	private boolean refreshingSidebar = false;
+
 	private void refrescarTabla() {
 		String texto = txtFiltroTexto.getText().trim();
 		String tags = txtFiltroTags.getText().trim();
 
 		cargarTabla(texto.isEmpty() ? null : texto, tags.isEmpty() ? null : tags);
+		if (tagListBox != null && !refreshingSidebar) {
+			refreshingSidebar = true;
+			try { refreshTagSidebar(); } finally { refreshingSidebar = false; }
+		}
 	}
 	
 	private void instalarWheelPagination() {
@@ -2281,6 +2294,75 @@ public class ListadoPildorasController {
 	    });
 
 	    new Thread(task, "MigrateToTurso").start();
+	}
+
+	private void initTagSidebar() {
+	    btnToggleSidebar.setOnAction(e -> toggleSidebar());
+	    refreshTagSidebar();
+	}
+
+	private void toggleSidebar() {
+	    sidebarCollapsed = !sidebarCollapsed;
+	    if (sidebarCollapsed) {
+	        tagSidebar.setPrefWidth(32);
+	        tagSidebar.setMinWidth(32);
+	        tagSidebar.setMaxWidth(32);
+	        tagListBox.setVisible(false);
+	        tagListBox.setManaged(false);
+	        tagSidebar.getChildren().get(0).setVisible(false);
+	        tagSidebar.getChildren().get(0).setManaged(false);
+	        var expandBtn = new Button("▶");
+	        expandBtn.getStyleClass().addAll("icon-btn", "sidebar-toggle");
+	        expandBtn.setMaxWidth(Double.MAX_VALUE);
+	        expandBtn.setOnAction(ev -> toggleSidebar());
+	        expandBtn.setId("sidebarExpandBtn");
+	        tagSidebar.getChildren().add(0, expandBtn);
+	    } else {
+	        tagSidebar.getChildren().removeIf(n -> "sidebarExpandBtn".equals(n.getId()));
+	        tagSidebar.getChildren().get(0).setVisible(true);
+	        tagSidebar.getChildren().get(0).setManaged(true);
+	        tagListBox.setVisible(true);
+	        tagListBox.setManaged(true);
+	        tagSidebar.setPrefWidth(200);
+	        tagSidebar.setMinWidth(0);
+	        tagSidebar.setMaxWidth(200);
+	        btnToggleSidebar.setText("◀");
+	    }
+	}
+
+	void refreshTagSidebar() {
+	    tagListBox.getChildren().clear();
+
+	    var allBtn = new Button("Todas");
+	    allBtn.getStyleClass().add("tag-sidebar-item");
+	    allBtn.setMaxWidth(Double.MAX_VALUE);
+	    if (selectedSidebarTag == null) allBtn.getStyleClass().add("tag-sidebar-selected");
+	    allBtn.setOnAction(e -> {
+	        selectedSidebarTag = null;
+	        txtFiltroTags.clear();
+	        paginaActual = 1;
+	        refrescarTabla();
+	        refreshTagSidebar();
+	    });
+	    tagListBox.getChildren().add(allBtn);
+
+	    var tagsWithCount = new TagDao().listAllWithCount();
+	    for (String[] tc : tagsWithCount) {
+	        String nombre = tc[0];
+	        String count = tc[1];
+	        var btn = new Button(nombre + "  (" + count + ")");
+	        btn.getStyleClass().add("tag-sidebar-item");
+	        btn.setMaxWidth(Double.MAX_VALUE);
+	        if (nombre.equals(selectedSidebarTag)) btn.getStyleClass().add("tag-sidebar-selected");
+	        btn.setOnAction(e -> {
+	            selectedSidebarTag = nombre;
+	            txtFiltroTags.setText(nombre);
+	            paginaActual = 1;
+	            refrescarTabla();
+	            refreshTagSidebar();
+	        });
+	        tagListBox.getChildren().add(btn);
+	    }
 	}
 
 	private MenuItem createOpenLogMenuItem() {

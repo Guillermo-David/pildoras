@@ -60,17 +60,31 @@
 	</top>
 
     <center>
-	    <TableView fx:id="table" prefHeight="600" prefWidth="800">
-	        <columns>
-	        	<!--<TableColumn fx:id="colFav" text="★" prefWidth="60"/>-->
-	        	<TableColumn fx:id="colPinned" text=""/>
-	        	<TableColumn fx:id="colFav" text=""/>
-	            <TableColumn fx:id="colTitulo" text="Título" prefWidth="200"/>
-	            <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="400"/>
-	            <TableColumn fx:id="colTags" text="Tags" prefWidth="200"/>
-	            <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="105"/>
-	        </columns>
-	    </TableView>
+        <HBox>
+            <!-- Panel lateral de tags -->
+            <VBox fx:id="tagSidebar" styleClass="tag-sidebar" prefWidth="200" minWidth="0" maxWidth="200">
+                <HBox alignment="CENTER_LEFT" styleClass="tag-sidebar-header">
+                    <padding><Insets top="8" right="10" bottom="8" left="10"/></padding>
+                    <Label text="Tags" styleClass="tag-sidebar-title"/>
+                    <Pane HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="btnToggleSidebar" text="◀" styleClass="icon-btn sidebar-toggle"/>
+                </HBox>
+                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS" styleClass="tag-sidebar-scroll">
+                    <VBox fx:id="tagListBox" spacing="0" styleClass="tag-sidebar-list"/>
+                </ScrollPane>
+            </VBox>
+
+            <TableView fx:id="table" prefHeight="600" prefWidth="800" HBox.hgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colPinned" text=""/>
+                    <TableColumn fx:id="colFav" text=""/>
+                    <TableColumn fx:id="colTitulo" text="Título" prefWidth="200"/>
+                    <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="400"/>
+                    <TableColumn fx:id="colTags" text="Tags" prefWidth="200"/>
+                    <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="105"/>
+                </columns>
+            </TableView>
+        </HBox>
 	</center>
 
 	<bottom>
