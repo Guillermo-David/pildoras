@@ -94,6 +94,9 @@ hs_err_pid*.log
 replay_pid*.log
 *.tmp
 
+# --- SECRETOS / TOKENS ---
+turso_token.txt
+
 # --- OTROS (opcional, quita si quieres versionarlos) ---
 # Archivos de base de datos/backup locales
 *.db
