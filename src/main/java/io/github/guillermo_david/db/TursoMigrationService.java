@@ -8,7 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
+
 
 public final class TursoMigrationService {
 
@@ -184,7 +184,7 @@ public final class TursoMigrationService {
                     ps.setInt(2, rs.getInt("to_id"));
                     ps.setString(3, rs.getString("kind"));
                     int pos = rs.getInt("position");
-                    if (rs.wasNull()) ps.setNull(4, Types.INTEGER);
+                    if (rs.wasNull()) ps.setObject(4, null);
                     else ps.setInt(4, pos);
                     setStringOrNull(ps, 5, rs.getString("created_at"));
                     ps.executeUpdate();
@@ -204,12 +204,12 @@ public final class TursoMigrationService {
     }
 
     private static void setStringOrNull(PreparedStatement ps, int idx, String val) throws SQLException {
-        if (val == null) ps.setNull(idx, Types.VARCHAR);
+        if (val == null) ps.setObject(idx, null);
         else ps.setString(idx, val);
     }
 
     private static void setBytesOrNull(PreparedStatement ps, int idx, byte[] val) throws SQLException {
-        if (val == null) ps.setNull(idx, Types.BLOB);
-        else ps.setBytes(idx, val);
+        if (val == null) ps.setObject(idx, null);
+        else ps.setObject(idx, val);
     }
 }
