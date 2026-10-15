@@ -2225,7 +2225,7 @@ public class ListadoPildorasController {
 	        var alert = new Alert(AlertType.WARNING);
 	        alert.setTitle(“Turso no configurado”);
 	        alert.setHeaderText(null);
-	        alert.setContentText(“Configura la conexión a Turso antes de migrar.”);
+	        alert.setContentText(“Configura la conexion a Turso antes de migrar.”);
 	        Dialogs.decorate(alert, root);
 	        alert.showAndWait();
 	        return;
@@ -2233,10 +2233,10 @@ public class ListadoPildorasController {
 
 	    var confirm = new Alert(AlertType.CONFIRMATION);
 	    confirm.setTitle(“Migrar datos locales a Turso”);
-	    confirm.setHeaderText(“¿Importar todos los datos locales a Turso?”);
-	    confirm.setContentText(“Se copiarán píldoras, tags, borradores y enlaces “
+	    confirm.setHeaderText(“Importar todos los datos locales a Turso?”);
+	    confirm.setContentText(“Se copiaran pildoras, tags, borradores y enlaces “
 	        + “desde la base de datos local a Turso (INSERT OR REPLACE).\n\n”
-	        + “Los datos existentes en Turso con el mismo ID serán sobrescritos.”);
+	        + “Los datos existentes en Turso con el mismo ID seran sobrescritos.”);
 	    Dialogs.decorate(confirm, root);
 	    var choice = confirm.showAndWait();
 	    if (choice.isEmpty() || choice.get() != ButtonType.OK) return;
@@ -2254,8 +2254,8 @@ public class ListadoPildorasController {
 	        paginaActual = 1;
 	        refrescarTabla();
 	        StatusBus.show(
-	            “Migración completada: “ + r.total() + “ registros “
-	                + “(píldoras=” + r.pildoras + “, tags=” + r.tags
+	            “Migracion completada: “ + r.total() + “ registros “
+	                + “(pildoras=” + r.pildoras + “, tags=” + r.tags
 	                + “, relaciones=” + r.pildoraTag
 	                + “, borradores=” + r.drafts + “, enlaces=” + r.pildoraLink + “)”,
 	            StatusBus.Type.SUCCESS, Duration.seconds(8));
@@ -2264,7 +2264,7 @@ public class ListadoPildorasController {
 	        root.setDisable(false);
 	        Throwable ex = task.getException();
 	        StatusBus.show(
-	            “Error en migración: “ + (ex == null ? “desconocido” : ex.getMessage()),
+	            “Error en migracion: “ + (ex == null ? “desconocido” : ex.getMessage()),
 	            StatusBus.Type.ERROR, Duration.seconds(6));
 	    });
 
