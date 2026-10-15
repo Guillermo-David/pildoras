@@ -2296,7 +2296,7 @@ public class ListadoPildorasController {
 	            }
 	        } else {
 	            StatusBus.show("Log no encontrado: " + logPath,
-	                StatusBus.Type.WARNING, Duration.seconds(5));
+	                StatusBus.Type.WARN, Duration.seconds(5));
 	        }
 	    });
 	    return mi;
