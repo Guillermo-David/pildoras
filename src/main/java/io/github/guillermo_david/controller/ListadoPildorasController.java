@@ -190,7 +190,7 @@ public class ListadoPildorasController {
 		initCustomTitleBar();
 
 		if (centerBackup == null) {
-			centerBackup = root.getCenter(); // guarda el “centro del listado” inicial
+			centerBackup = root.getCenter(); // guarda el "centro del listado" inicial
 		}
 
 	}
@@ -490,7 +490,7 @@ public class ListadoPildorasController {
 		int attempts = 0;
 
 		while (attempts < MAX) {
-			// PIN temado + foco + “recordar 10 min”
+			// PIN temado + foco + "recordar 10 min"
 			char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
 			if (pin == null)
 				return false; // cancelado
@@ -871,7 +871,7 @@ public class ListadoPildorasController {
 				box.setFillHeight(false); // no fuerces a crecer en alto
 				box.setSpacing(14);
 //	            box.setTranslateY(-1.5);
-				// Alternativa (más “top”):
+				// Alternativa (más "top"):
 //	             setAlignment(Pos.TOP_CENTER);
 //	             setPadding(new Insets(0, 0, 6, 0)); // microajuste si quieres
 			}
@@ -1142,7 +1142,7 @@ public class ListadoPildorasController {
 			
 			controller.setOnOpenPildoraId((Integer id) -> {
 			    // Cierra actual, restaura y abre el nuevo detalle
-			    // (o navega directamente sin restaurar si prefieres comportamiento “pila”)
+			    // (o navega directamente sin restaurar si prefieres comportamiento "pila")
 			    Pildora destino = pildoraDao.buscarPorId(id);
 			    if (destino != null) {
 			        controller.dispose();
@@ -1383,7 +1383,7 @@ public class ListadoPildorasController {
 			e.consume();
 		});
 
-		// Evita que el botón “capture” el arrastre
+		// Evita que el botón "capture" el arrastre
 		btnClose.setOnMousePressed(e -> e.consume());
 		btnClose.setOnMouseDragged(e -> e.consume());
 	}
@@ -2223,20 +2223,20 @@ public class ListadoPildorasController {
 	private void handleMigrateToTurso() {
 	    if (!TursoConfig.isConfigured()) {
 	        var alert = new Alert(AlertType.WARNING);
-	        alert.setTitle(“Turso no configurado”);
+	        alert.setTitle("Turso no configurado");
 	        alert.setHeaderText(null);
-	        alert.setContentText(“Configura la conexion a Turso antes de migrar.”);
+	        alert.setContentText("Configura la conexion a Turso antes de migrar.");
 	        Dialogs.decorate(alert, root);
 	        alert.showAndWait();
 	        return;
 	    }
 
 	    var confirm = new Alert(AlertType.CONFIRMATION);
-	    confirm.setTitle(“Migrar datos locales a Turso”);
-	    confirm.setHeaderText(“Importar todos los datos locales a Turso?”);
-	    confirm.setContentText(“Se copiaran pildoras, tags, borradores y enlaces “
-	        + “desde la base de datos local a Turso (INSERT OR REPLACE).\n\n”
-	        + “Los datos existentes en Turso con el mismo ID seran sobrescritos.”);
+	    confirm.setTitle("Migrar datos locales a Turso");
+	    confirm.setHeaderText("Importar todos los datos locales a Turso?");
+	    confirm.setContentText("Se copiaran pildoras, tags, borradores y enlaces "
+	        + "desde la base de datos local a Turso (INSERT OR REPLACE).\n\n"
+	        + "Los datos existentes en Turso con el mismo ID seran sobrescritos.");
 	    Dialogs.decorate(confirm, root);
 	    var choice = confirm.showAndWait();
 	    if (choice.isEmpty() || choice.get() != ButtonType.OK) return;
@@ -2254,21 +2254,21 @@ public class ListadoPildorasController {
 	        paginaActual = 1;
 	        refrescarTabla();
 	        StatusBus.show(
-	            “Migracion completada: “ + r.total() + “ registros “
-	                + “(pildoras=” + r.pildoras + “, tags=” + r.tags
-	                + “, relaciones=” + r.pildoraTag
-	                + “, borradores=” + r.drafts + “, enlaces=” + r.pildoraLink + “)”,
+	            "Migracion completada: " + r.total() + " registros "
+	                + "(pildoras=" + r.pildoras + ", tags=" + r.tags
+	                + ", relaciones=" + r.pildoraTag
+	                + ", borradores=" + r.drafts + ", enlaces=" + r.pildoraLink + ")",
 	            StatusBus.Type.SUCCESS, Duration.seconds(8));
 	    });
 	    task.setOnFailed(e -> {
 	        root.setDisable(false);
 	        Throwable ex = task.getException();
 	        StatusBus.show(
-	            “Error en migracion: “ + (ex == null ? “desconocido” : ex.getMessage()),
+	            "Error en migracion: " + (ex == null ? "desconocido" : ex.getMessage()),
 	            StatusBus.Type.ERROR, Duration.seconds(6));
 	    });
 
-	    new Thread(task, “MigrateToTurso”).start();
+	    new Thread(task, "MigrateToTurso").start();
 	}
 
 }
