@@ -13,7 +13,7 @@ public class PildoraTagDao {
         try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
             pstmt.setInt(1, pildoraId);
             pstmt.setInt(2, tagId);
-            pstmt.executeUpdate();
+            pstmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -25,7 +25,7 @@ public class PildoraTagDao {
         try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
             pstmt.setInt(1, pildoraId);
             pstmt.setInt(2, tagId);
-            pstmt.executeUpdate();
+            pstmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -35,7 +35,7 @@ public class PildoraTagDao {
         String sql = "DELETE FROM pildora_tag WHERE pildora_id = ?";
         try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
             pstmt.setInt(1, pildoraId);
-            pstmt.executeUpdate();
+            pstmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
         }

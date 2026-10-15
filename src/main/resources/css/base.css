@@ -460,6 +460,23 @@
     -fx-background-radius: 4;
 }
 
+.sidebar-expand-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 8 4;
+    -fx-cursor: hand;
+}
+.sidebar-expand-btn .ikonli-font-icon {
+    -fx-icon-size: 12px;
+    -fx-icon-color: -c-text-muted;
+}
+.sidebar-expand-btn:hover {
+    -fx-background-color: derive(-c-bg-subtle, -10%);
+}
+.sidebar-expand-btn:hover .ikonli-font-icon {
+    -fx-icon-color: -c-accent;
+}
+
 .tag-sidebar-scroll {
     -fx-background-color: transparent;
     -fx-background: transparent;

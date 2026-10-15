@@ -42,6 +42,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -2303,24 +2304,33 @@ public class ListadoPildorasController {
 
 	private void toggleSidebar() {
 	    sidebarCollapsed = !sidebarCollapsed;
+	    Node header = tagSidebar.getChildren().get(0);
 	    if (sidebarCollapsed) {
-	        tagSidebar.setPrefWidth(32);
-	        tagSidebar.setMinWidth(32);
-	        tagSidebar.setMaxWidth(32);
+	        header.setVisible(false);
+	        header.setManaged(false);
 	        tagListBox.setVisible(false);
 	        tagListBox.setManaged(false);
-	        tagSidebar.getChildren().get(0).setVisible(false);
-	        tagSidebar.getChildren().get(0).setManaged(false);
-	        var expandBtn = new Button("▶");
-	        expandBtn.getStyleClass().addAll("icon-btn", "sidebar-toggle");
+	        for (Node n : tagSidebar.getChildren()) {
+	            if (n instanceof ScrollPane) { n.setVisible(false); n.setManaged(false); }
+	        }
+	        tagSidebar.setPrefWidth(28);
+	        tagSidebar.setMinWidth(28);
+	        tagSidebar.setMaxWidth(28);
+	        var expandBtn = new Button();
+	        expandBtn.setId("sidebarExpandBtn");
+	        expandBtn.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_RIGHT));
+	        expandBtn.getStyleClass().add("sidebar-expand-btn");
 	        expandBtn.setMaxWidth(Double.MAX_VALUE);
 	        expandBtn.setOnAction(ev -> toggleSidebar());
-	        expandBtn.setId("sidebarExpandBtn");
 	        tagSidebar.getChildren().add(0, expandBtn);
 	    } else {
 	        tagSidebar.getChildren().removeIf(n -> "sidebarExpandBtn".equals(n.getId()));
-	        tagSidebar.getChildren().get(0).setVisible(true);
-	        tagSidebar.getChildren().get(0).setManaged(true);
+	        header = tagSidebar.getChildren().get(0);
+	        header.setVisible(true);
+	        header.setManaged(true);
+	        for (Node n : tagSidebar.getChildren()) {
+	            if (n instanceof ScrollPane) { n.setVisible(true); n.setManaged(true); }
+	        }
 	        tagListBox.setVisible(true);
 	        tagListBox.setManaged(true);
 	        tagSidebar.setPrefWidth(200);

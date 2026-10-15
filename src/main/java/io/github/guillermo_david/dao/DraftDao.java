@@ -16,6 +16,10 @@ public class DraftDao {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public void insertar(Draft d) {
+        if (DatabaseHelper.getInstance().isUsingTurso()) {
+            insertarTurso(d);
+            return;
+        }
         String sql = """
             INSERT INTO drafts
               (titulo, contenido, contenido_cipher, contenido_iv, protegida,
@@ -36,7 +40,7 @@ public class DraftDao {
             }
             ps.setInt(5, d.isProtegida() ? 1 : 0);
 
-            ps.executeUpdate();
+            ps.execute();
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) d.setId(rs.getInt(1));
             }
@@ -45,7 +49,29 @@ public class DraftDao {
         }
     }
 
+    private void insertarTurso(Draft d) {
+        String contenido = d.isProtegida() ? "NULL" : esc(d.getContenido());
+        String cipher = d.isProtegida() ? escBlob(d.getContenidoCipher()) : "NULL";
+        String iv = d.isProtegida() ? escBlob(d.getContenidoIv()) : "NULL";
+        String sql = "INSERT INTO drafts (titulo, contenido, contenido_cipher, contenido_iv, protegida,"
+                + " fecha_creacion, fecha_actualizacion)"
+                + " VALUES (" + esc(d.getTitulo()) + ", " + contenido + ", " + cipher + ", " + iv
+                + ", " + (d.isProtegida() ? 1 : 0) + ", CURRENT_TIMESTAMP, NULL)";
+        try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement()) {
+            st.execute(sql);
+            try (ResultSet rs = st.executeQuery("SELECT last_insert_rowid()")) {
+                if (rs.next()) d.setId(rs.getInt(1));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error insertando borrador", e);
+        }
+    }
+
     public void actualizar(Draft d) {
+        if (DatabaseHelper.getInstance().isUsingTurso()) {
+            actualizarTurso(d);
+            return;
+        }
         String sql = """
             UPDATE drafts SET
               titulo = ?,
@@ -71,7 +97,26 @@ public class DraftDao {
             ps.setString(6, LocalDateTime.now().format(FMT));
             ps.setInt(7, d.getId());
 
-            ps.executeUpdate();
+            ps.execute();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error actualizando borrador", e);
+        }
+    }
+
+    private void actualizarTurso(Draft d) {
+        String contenido = d.isProtegida() ? "NULL" : esc(d.getContenido());
+        String cipher = d.isProtegida() ? escBlob(d.getContenidoCipher()) : "NULL";
+        String iv = d.isProtegida() ? escBlob(d.getContenidoIv()) : "NULL";
+        String ts = LocalDateTime.now().format(FMT);
+        String sql = "UPDATE drafts SET titulo=" + esc(d.getTitulo())
+                + ", contenido=" + contenido
+                + ", contenido_cipher=" + cipher
+                + ", contenido_iv=" + iv
+                + ", protegida=" + (d.isProtegida() ? 1 : 0)
+                + ", fecha_actualizacion=" + esc(ts)
+                + " WHERE id=" + d.getId();
+        try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement()) {
+            st.execute(sql);
         } catch (SQLException e) {
             throw new RuntimeException("Error actualizando borrador", e);
         }
@@ -81,7 +126,7 @@ public class DraftDao {
         try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection()
                 .prepareStatement("DELETE FROM drafts WHERE id=?")) {
             ps.setInt(1, id);
-            ps.executeUpdate();
+            ps.execute();
         } catch (SQLException e) {
             throw new RuntimeException("Error eliminando borrador", e);
         }
@@ -129,6 +174,19 @@ public class DraftDao {
         } catch (SQLException e) {
             return 0;
         }
+    }
+
+    private static String esc(String val) {
+        if (val == null) return "NULL";
+        return "'" + val.replace("'", "''") + "'";
+    }
+
+    private static String escBlob(byte[] val) {
+        if (val == null) return "NULL";
+        StringBuilder sb = new StringBuilder("X'");
+        for (byte b : val) sb.append(String.format("%02x", b));
+        sb.append('\'');
+        return sb.toString();
     }
 
     private static Draft map(ResultSet rs) throws SQLException {

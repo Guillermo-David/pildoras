@@ -14,16 +14,38 @@ import io.github.guillermo_david.model.Pildora;
 public class PildoraLinkDao {
 
 	public void replaceRefs(int fromId, Collection<Integer> toIds) {
+	    Connection cx = DatabaseHelper.getInstance().getConnection();
+
+	    if (DatabaseHelper.getInstance().isUsingTurso()) {
+	        replaceRefsTurso(cx, fromId, toIds);
+	    } else {
+	        replaceRefsLocal(cx, fromId, toIds);
+	    }
+	}
+
+	private void replaceRefsTurso(Connection cx, int fromId, Collection<Integer> toIds) {
+	    try (java.sql.Statement st = cx.createStatement()) {
+	        st.execute("DELETE FROM pildora_link WHERE from_id=" + fromId + " AND kind='ref'");
+	        if (toIds != null) {
+	            for (Integer to : toIds) {
+	                if (to == null || to == fromId) continue;
+	                st.execute("INSERT OR IGNORE INTO pildora_link(from_id, to_id, kind) VALUES("
+	                        + fromId + ", " + to + ", 'ref')");
+	            }
+	        }
+	    } catch (java.sql.SQLException e) {
+	        throw new RuntimeException("Error sincronizando enlaces", e);
+	    }
+	}
+
+	private void replaceRefsLocal(Connection cx, int fromId, Collection<Integer> toIds) {
 	    final String del = "DELETE FROM pildora_link WHERE from_id=? AND kind='ref'";
 	    final String ins = "INSERT OR IGNORE INTO pildora_link(from_id, to_id, kind) VALUES(?, ?, 'ref')";
-
-	    Connection cx = DatabaseHelper.getInstance().getConnection();
 
 	    boolean newTx = true;
 	    java.sql.Savepoint sp = null;
 
 	    try {
-	        // Si ya hay transacción activa (autoCommit=false), usa savepoint; si no, inicia transacción nueva
 	        newTx = cx.getAutoCommit();
 	        if (newTx) {
 	            cx.setAutoCommit(false);
@@ -35,11 +57,11 @@ public class PildoraLinkDao {
 	             java.sql.PreparedStatement psIns = cx.prepareStatement(ins)) {
 
 	            psDel.setInt(1, fromId);
-	            psDel.executeUpdate();
+	            psDel.execute();
 
 	            if (toIds != null) {
 	                for (Integer to : toIds) {
-	                    if (to == null || to == fromId) continue; // evita auto-link
+	                    if (to == null || to == fromId) continue;
 	                    psIns.setInt(1, fromId);
 	                    psIns.setInt(2, to);
 	                    psIns.addBatch();
@@ -48,7 +70,6 @@ public class PildoraLinkDao {
 	            }
 	        }
 
-	        // Commit / libera savepoint
 	        if (newTx) {
 	            cx.commit();
 	        } else if (sp != null) {
@@ -56,7 +77,6 @@ public class PildoraLinkDao {
 	        }
 
 	    } catch (java.sql.SQLException e) {
-	        // Rollback parcial o total según el caso
 	        try {
 	            if (newTx) {
 	                cx.rollback();
@@ -66,7 +86,6 @@ public class PildoraLinkDao {
 	        } catch (java.sql.SQLException ignored) {}
 	        throw new RuntimeException("Error sincronizando enlaces", e);
 	    } finally {
-	        // Restaura autoCommit si lo tocaste
 	        try {
 	            if (newTx) cx.setAutoCommit(true);
 	        } catch (java.sql.SQLException ignored) {}

@@ -31,7 +31,7 @@ public class TagDao {
 	    String insert = "INSERT INTO tags (nombre) VALUES (?)";
 	    try (PreparedStatement ps = conn.prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)) {
 	        ps.setString(1, nombre);
-	        ps.executeUpdate();
+	        ps.execute();
 	        try (ResultSet rs = ps.getGeneratedKeys()) {
 	            if (rs.next()) return new Tag(rs.getInt(1), nombre); // devuelve normalizado
 	        }

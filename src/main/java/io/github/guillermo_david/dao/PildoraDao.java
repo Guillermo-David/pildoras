@@ -19,6 +19,10 @@ public class PildoraDao {
 	private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 	public void insertar(Pildora p) {
+		if (DatabaseHelper.getInstance().isUsingTurso()) {
+			insertarTurso(p);
+			return;
+		}
 		String sql = """
 				    INSERT INTO pildoras
 				      (titulo, descripcion, fecha_creacion, fecha_actualizacion,
@@ -42,10 +46,28 @@ public class PildoraDao {
 				ps.setNull(4, java.sql.Types.BLOB);
 			ps.setInt(5, p.isProtegida() ? 1 : 0);
 
-			ps.executeUpdate();
+			ps.execute();
 			try (ResultSet rs = ps.getGeneratedKeys()) {
 				if (rs.next())
 					p.setId(rs.getInt(1));
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("Error insertando píldora", e);
+		}
+	}
+
+	private void insertarTurso(Pildora p) {
+		String desc = p.isProtegida() ? "NULL" : esc(p.getDescripcion());
+		String cipher = p.isProtegida() ? escBlob(p.getDescripcionCipher()) : "NULL";
+		String iv = p.isProtegida() ? escBlob(p.getDescripcionIv()) : "NULL";
+		String sql = "INSERT INTO pildoras (titulo, descripcion, fecha_creacion, fecha_actualizacion,"
+				+ " favorita, pinned, descripcion_cipher, descripcion_iv, protegida)"
+				+ " VALUES (" + esc(p.getTitulo()) + ", " + desc + ", CURRENT_TIMESTAMP, NULL, 0, 0, "
+				+ cipher + ", " + iv + ", " + (p.isProtegida() ? 1 : 0) + ")";
+		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement()) {
+			st.execute(sql);
+			try (ResultSet rs = st.executeQuery("SELECT last_insert_rowid()")) {
+				if (rs.next()) p.setId(rs.getInt(1));
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException("Error insertando píldora", e);
@@ -318,6 +340,10 @@ public class PildoraDao {
     }
 
 	public void actualizar(Pildora p) {
+		if (DatabaseHelper.getInstance().isUsingTurso()) {
+			actualizarTurso(p);
+			return;
+		}
 		String sql = """
 				    UPDATE pildoras
 				    SET titulo = ?,
@@ -351,7 +377,28 @@ public class PildoraDao {
 			ps.setInt(8, p.isProtegida() ? 1 : 0);
 			ps.setInt(9, p.getId());
 
-			ps.executeUpdate();
+			ps.execute();
+		} catch (SQLException e) {
+			throw new RuntimeException("Error actualizando píldora", e);
+		}
+	}
+
+	private void actualizarTurso(Pildora p) {
+		String desc = p.isProtegida() ? "NULL" : esc(p.getDescripcion());
+		String cipher = p.isProtegida() ? escBlob(p.getDescripcionCipher()) : "NULL";
+		String iv = p.isProtegida() ? escBlob(p.getDescripcionIv()) : "NULL";
+		String ts = LocalDateTime.now().format(FORMATTER);
+		String sql = "UPDATE pildoras SET titulo=" + esc(p.getTitulo())
+				+ ", descripcion=" + desc
+				+ ", fecha_actualizacion=" + esc(ts)
+				+ ", favorita=" + (p.isFavorita() ? 1 : 0)
+				+ ", pinned=" + (p.isPinned() ? 1 : 0)
+				+ ", descripcion_cipher=" + cipher
+				+ ", descripcion_iv=" + iv
+				+ ", protegida=" + (p.isProtegida() ? 1 : 0)
+				+ " WHERE id=" + p.getId();
+		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement()) {
+			st.execute(sql);
 		} catch (SQLException e) {
 			throw new RuntimeException("Error actualizando píldora", e);
 		}
@@ -361,7 +408,7 @@ public class PildoraDao {
 		String sql = "DELETE FROM pildoras WHERE id = ?";
 		try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			pstmt.setInt(1, id);
-			pstmt.executeUpdate();
+			pstmt.execute();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -372,7 +419,7 @@ public class PildoraDao {
 		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			ps.setInt(1, favorita ? 1 : 0);
 			ps.setLong(2, id);
-			ps.executeUpdate();
+			ps.execute();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -383,10 +430,23 @@ public class PildoraDao {
 		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			ps.setInt(1, pinned ? 1 : 0);
 			ps.setLong(2, id);
-			ps.executeUpdate();
+			ps.execute();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static String esc(String val) {
+		if (val == null) return "NULL";
+		return "'" + val.replace("'", "''") + "'";
+	}
+
+	private static String escBlob(byte[] val) {
+		if (val == null) return "NULL";
+		StringBuilder sb = new StringBuilder("X'");
+		for (byte b : val) sb.append(String.format("%02x", b));
+		sb.append('\'');
+		return sb.toString();
 	}
 
 }
