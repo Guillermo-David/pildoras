@@ -85,6 +85,7 @@ public class MainApp extends Application{
 	}
 
 	public static void main(String[] args) {
+		io.github.guillermo_david.util.AppLogger.init();
 		System.setProperty("prism.order", "sw");
 		launch();
 	}

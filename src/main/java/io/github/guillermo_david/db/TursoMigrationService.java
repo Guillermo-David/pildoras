@@ -122,37 +122,53 @@ public final class TursoMigrationService {
 
     private static int migrateTags(Connection local, Connection turso) throws SQLException {
         int count = 0;
+        int skipped = 0;
         try (Statement st = local.createStatement();
              ResultSet rs = st.executeQuery("SELECT id, nombre FROM tags")) {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
+                    int id = rs.getInt("id");
+                    String nombre = rs.getString("nombre");
                     String sql = "INSERT INTO tags (id, nombre) VALUES ("
-                        + rs.getInt("id") + ", "
-                        + esc(rs.getString("nombre")) + ")";
-                    ts.execute(sql);
-                    count++;
+                        + id + ", " + esc(nombre) + ")";
+                    try {
+                        ts.execute(sql);
+                        count++;
+                    } catch (SQLException ex) {
+                        System.err.println("[Migration] SKIP tag id=" + id + " nombre=" + nombre + ": " + ex.getMessage());
+                        skipped++;
+                    }
                 }
             }
         }
+        if (skipped > 0) System.out.println("[Migration] tags skipped: " + skipped);
         return count;
     }
 
     private static int migratePildoraTag(Connection local, Connection turso) throws SQLException {
         int count = 0;
+        int skipped = 0;
         try (Statement st = local.createStatement();
-             ResultSet rs = st.executeQuery("SELECT pildora_id, tag_id FROM pildora_tag")) {
+             ResultSet rs = st.executeQuery("SELECT pt.pildora_id, pt.tag_id FROM pildora_tag pt JOIN pildoras p ON pt.pildora_id = p.id JOIN tags t ON pt.tag_id = t.id")) {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
+                    int pid = rs.getInt("pildora_id");
+                    int tid = rs.getInt("tag_id");
                     String sql = "INSERT INTO pildora_tag (pildora_id, tag_id) VALUES ("
-                        + rs.getInt("pildora_id") + ", "
-                        + rs.getInt("tag_id") + ")";
-                    ts.execute(sql);
-                    count++;
+                        + pid + ", " + tid + ")";
+                    try {
+                        ts.execute(sql);
+                        count++;
+                    } catch (SQLException ex) {
+                        System.err.println("[Migration] SKIP pildora_tag pid=" + pid + " tid=" + tid + ": " + ex.getMessage());
+                        skipped++;
+                    }
                 }
             }
         }
+        if (skipped > 0) System.out.println("[Migration] pildora_tag skipped: " + skipped);
         return count;
     }
 
@@ -182,24 +198,33 @@ public final class TursoMigrationService {
 
     private static int migratePildoraLink(Connection local, Connection turso) throws SQLException {
         int count = 0;
+        int skipped = 0;
         try (Statement st = local.createStatement();
-             ResultSet rs = st.executeQuery("SELECT from_id, to_id, kind, position, created_at FROM pildora_link")) {
+             ResultSet rs = st.executeQuery("SELECT pl.from_id, pl.to_id, pl.kind, pl.position, pl.created_at FROM pildora_link pl JOIN pildoras p1 ON pl.from_id = p1.id JOIN pildoras p2 ON pl.to_id = p2.id")) {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
+                    int fromId = rs.getInt("from_id");
+                    int toId = rs.getInt("to_id");
                     int pos = rs.getInt("position");
                     String posVal = rs.wasNull() ? "NULL" : String.valueOf(pos);
                     String sql = "INSERT INTO pildora_link (from_id, to_id, kind, position, created_at) VALUES ("
-                        + rs.getInt("from_id") + ", "
-                        + rs.getInt("to_id") + ", "
+                        + fromId + ", "
+                        + toId + ", "
                         + esc(rs.getString("kind")) + ", "
                         + posVal + ", "
                         + esc(rs.getString("created_at")) + ")";
-                    ts.execute(sql);
-                    count++;
+                    try {
+                        ts.execute(sql);
+                        count++;
+                    } catch (SQLException ex) {
+                        System.err.println("[Migration] SKIP pildora_link from=" + fromId + " to=" + toId + ": " + ex.getMessage());
+                        skipped++;
+                    }
                 }
             }
         }
+        if (skipped > 0) System.out.println("[Migration] pildora_link skipped: " + skipped);
         return count;
     }
 

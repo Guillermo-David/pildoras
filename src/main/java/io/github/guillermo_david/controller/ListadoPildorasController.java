@@ -1689,7 +1689,9 @@ public class ListadoPildorasController {
 				new SeparatorMenuItem(),
 				miSecurity,
 				new SeparatorMenuItem(),
-				miShortcuts);
+				miShortcuts,
+				new SeparatorMenuItem(),
+				createOpenLogMenuItem());
 	}
 
 	// Modal de lockout igual que en editor, pero desde listado
@@ -2279,6 +2281,25 @@ public class ListadoPildorasController {
 	    });
 
 	    new Thread(task, "MigrateToTurso").start();
+	}
+
+	private MenuItem createOpenLogMenuItem() {
+	    var mi = new MenuItem("Abrir log...");
+	    mi.setOnAction(e -> {
+	        var logPath = io.github.guillermo_david.util.AppLogger.getLogPath();
+	        if (java.nio.file.Files.exists(logPath)) {
+	            try {
+	                java.awt.Desktop.getDesktop().open(logPath.toFile());
+	            } catch (Exception ex) {
+	                StatusBus.show("No se pudo abrir: " + logPath,
+	                    StatusBus.Type.ERROR, Duration.seconds(5));
+	            }
+	        } else {
+	            StatusBus.show("Log no encontrado: " + logPath,
+	                StatusBus.Type.WARNING, Duration.seconds(5));
+	        }
+	    });
+	    return mi;
 	}
 
 }
