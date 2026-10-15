@@ -33,12 +33,26 @@ public class MainApp extends Application{
 	}
 
 	@Override
-	public void start(Stage stage) throws Exception {
+	public void start(Stage stage) {
+	    try {
+	        doStart(stage);
+	    } catch (Throwable t) {
+	        t.printStackTrace();
+	        var alert = new javafx.scene.control.Alert(
+	            javafx.scene.control.Alert.AlertType.ERROR);
+	        alert.setTitle("Error al iniciar");
+	        alert.setHeaderText(t.getClass().getName());
+	        var sw = new java.io.StringWriter();
+	        t.printStackTrace(new java.io.PrintWriter(sw));
+	        alert.setContentText(sw.toString());
+	        alert.showAndWait();
+	        javafx.application.Platform.exit();
+	    }
+	}
 
-		// 1) Fuerza inicialización + migraciones de la BD primero
+	private void doStart(Stage stage) throws Exception {
 	    DatabaseHelper.getInstance();
 
-	    // 2) Ya puedes cargar los FXML/Controllers con la BD migrada
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
 	    Scene scene = new Scene(fxmlLoader.load(), 1280, 837);
 
@@ -53,7 +67,7 @@ public class MainApp extends Application{
 	    var icons = loadIcons();
 	    if (!icons.isEmpty()) stage.getIcons().setAll(icons);
 
-	    stage.setTitle("Píldoras");
+	    stage.setTitle("Pildoras");
 	    stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
 	    stage.setResizable(false);
 	    stage.setScene(scene);
