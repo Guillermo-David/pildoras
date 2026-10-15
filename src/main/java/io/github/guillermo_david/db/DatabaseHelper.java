@@ -82,10 +82,6 @@ public class DatabaseHelper {
         connection = DriverManager.getConnection(jdbcUrl, null, token);
         usingTurso = true;
 
-        try (Statement s = connection.createStatement()) {
-            s.execute("PRAGMA foreign_keys=ON");
-        }
-
         System.out.println("[DB] Connected to Turso: " + TursoConfig.getUrl());
     }
 
@@ -252,7 +248,13 @@ public class DatabaseHelper {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildora_link_from ON pildora_link(from_id, kind)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildora_link_to ON pildora_link(to_id, kind)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_titulo_lower ON pildoras(lower(titulo))");
+        }
 
+        if (usingTurso) {
+            return;
+        }
+
+        try (Statement stmt = connection.createStatement()) {
             try {
                 stmt.execute("ALTER TABLE pildoras ADD COLUMN favorita INTEGER NOT NULL DEFAULT 0");
             } catch (SQLException ignore) {}
