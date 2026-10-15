@@ -58,6 +58,16 @@ public final class TursoMigrationService {
                     s.execute("PRAGMA foreign_keys=OFF");
                 }
 
+                System.out.println("[Migration] Clearing existing Turso data...");
+                try (Statement cs = turso.createStatement()) {
+                    cs.execute("DELETE FROM pildora_link");
+                    cs.execute("DELETE FROM pildora_tag");
+                    cs.execute("DELETE FROM drafts");
+                    cs.execute("DELETE FROM tags");
+                    cs.execute("DELETE FROM pildoras");
+                }
+                System.out.println("[Migration] Turso tables cleared");
+
                 System.out.println("[Migration] Migrating pildoras...");
                 int nPildoras = migratePildoras(local, turso);
                 System.out.println("[Migration] pildoras: " + nPildoras);
@@ -91,7 +101,7 @@ public final class TursoMigrationService {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
-                    String sql = "INSERT OR REPLACE INTO pildoras (id, titulo, descripcion, fecha_creacion, fecha_actualizacion, favorita, pinned, descripcion_cipher, descripcion_iv, protegida) VALUES ("
+                    String sql = "INSERT INTO pildoras (id, titulo, descripcion, fecha_creacion, fecha_actualizacion, favorita, pinned, descripcion_cipher, descripcion_iv, protegida) VALUES ("
                         + rs.getInt("id") + ", "
                         + esc(rs.getString("titulo")) + ", "
                         + esc(rs.getString("descripcion")) + ", "
@@ -117,7 +127,7 @@ public final class TursoMigrationService {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
-                    String sql = "INSERT OR REPLACE INTO tags (id, nombre) VALUES ("
+                    String sql = "INSERT INTO tags (id, nombre) VALUES ("
                         + rs.getInt("id") + ", "
                         + esc(rs.getString("nombre")) + ")";
                     ts.execute(sql);
@@ -135,7 +145,7 @@ public final class TursoMigrationService {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
-                    String sql = "INSERT OR REPLACE INTO pildora_tag (pildora_id, tag_id) VALUES ("
+                    String sql = "INSERT INTO pildora_tag (pildora_id, tag_id) VALUES ("
                         + rs.getInt("pildora_id") + ", "
                         + rs.getInt("tag_id") + ")";
                     ts.execute(sql);
@@ -153,7 +163,7 @@ public final class TursoMigrationService {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
-                    String sql = "INSERT OR REPLACE INTO drafts (id, titulo, contenido, contenido_cipher, contenido_iv, protegida, fecha_creacion, fecha_actualizacion) VALUES ("
+                    String sql = "INSERT INTO drafts (id, titulo, contenido, contenido_cipher, contenido_iv, protegida, fecha_creacion, fecha_actualizacion) VALUES ("
                         + rs.getInt("id") + ", "
                         + esc(rs.getString("titulo")) + ", "
                         + esc(rs.getString("contenido")) + ", "
@@ -179,7 +189,7 @@ public final class TursoMigrationService {
                 while (rs.next()) {
                     int pos = rs.getInt("position");
                     String posVal = rs.wasNull() ? "NULL" : String.valueOf(pos);
-                    String sql = "INSERT OR REPLACE INTO pildora_link (from_id, to_id, kind, position, created_at) VALUES ("
+                    String sql = "INSERT INTO pildora_link (from_id, to_id, kind, position, created_at) VALUES ("
                         + rs.getInt("from_id") + ", "
                         + rs.getInt("to_id") + ", "
                         + esc(rs.getString("kind")) + ", "
