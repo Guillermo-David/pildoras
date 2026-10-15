@@ -20,6 +20,8 @@ import io.github.guillermo_david.dao.DraftDao;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.importer.MarkdownImportService;
+import io.github.guillermo_david.db.DatabaseHelper;
+import io.github.guillermo_david.db.TursoConfig;
 import io.github.guillermo_david.javafx.Dialogs;
 import io.github.guillermo_david.javafx.DraftDialogs;
 import io.github.guillermo_david.javafx.PinDialogs;
@@ -1837,6 +1839,24 @@ public class ListadoPildorasController {
 
 		dlg.getDialogPane().getButtonTypes().setAll(new ButtonType("Entendido", ButtonBar.ButtonData.OK_DONE));
 		dlg.showAndWait();
+	    // --- Turso (sincronización) ---
+	    var miTurso = new MenuItem(TursoConfig.isConfigured() ? "Turso: conectado" : "Configurar Turso…");
+	    miTurso.setOnAction(e -> showTursoDialog(miTurso));
+
+	    // --- Atajos de teclado ---
+	    var miShortcuts = new MenuItem("Atajos de teclado…");
+	    miShortcuts.setOnAction(e -> showShortcutsDialog());
+
+	    btnSettings.getItems().setAll(
+	        miFamily,
+	        miSize,
+	        new javafx.scene.control.SeparatorMenuItem(),
+	        miTemaOscuro,
+	        new SeparatorMenuItem(),
+	        miTurso,
+	        new SeparatorMenuItem(),
+	        miShortcuts
+	    );
 	}
 
 	/** Aplica familia + tamaño guardados a toda la escena */
@@ -1865,6 +1885,85 @@ public class ListadoPildorasController {
 					""".formatted(family.replace("'", "\\'"), px));
 		};
 		apply.run();
+	}
+
+	private void showTursoDialog(MenuItem miTurso) {
+	    if (TursoConfig.isConfigured()) {
+	        // Ya conectado: mostrar estado y opción de desconectar
+	        Alert info = new Alert(Alert.AlertType.CONFIRMATION);
+	        info.setTitle("Turso");
+	        info.setHeaderText("Conexión activa");
+	        info.setContentText("URL: " + TursoConfig.getUrl()
+	            + "\n\nPulsa Aceptar para desconectar y volver a SQLite local.");
+	        Dialogs.decorate(info, root);
+	        info.showAndWait().ifPresent(res -> {
+	            if (res.getButtonData().isDefaultButton()) {
+	                TursoConfig.clear();
+	                DatabaseHelper.reconnect();
+	                miTurso.setText("Configurar Turso…");
+	                refrescarTabla();
+	                StatusBus.show("Desconectado de Turso. Usando BD local.",
+	                    StatusBus.Type.INFO, Duration.seconds(3));
+	            }
+	        });
+	        return;
+	    }
+
+	    // Formulario de conexión
+	    var dlg = new Alert(Alert.AlertType.NONE);
+	    dlg.setTitle("Configurar Turso");
+
+	    var lblUrl = new Label("URL de la base de datos:");
+	    var txtUrl = new javafx.scene.control.TextField();
+	    txtUrl.setPromptText("libsql://mi-db.turso.io");
+	    txtUrl.setPrefWidth(420);
+
+	    var lblToken = new Label("Token de autenticación:");
+	    var txtToken = new javafx.scene.control.TextField();
+	    txtToken.setPromptText("eyJhbGciOi...");
+	    txtToken.setPrefWidth(420);
+
+	    var content = new javafx.scene.layout.VBox(8, lblUrl, txtUrl, lblToken, txtToken);
+	    content.setPadding(new Insets(10));
+	    dlg.getDialogPane().setContent(content);
+	    dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+	    dlg.getDialogPane().setPrefWidth(480);
+
+	    Dialogs.decorate(dlg, root);
+
+	    dlg.showAndWait().ifPresent(res -> {
+	        if (res == ButtonType.OK) {
+	            String url = txtUrl.getText().trim();
+	            String token = txtToken.getText().trim();
+	            if (url.isEmpty() || token.isEmpty()) {
+	                StatusBus.show("URL y token son obligatorios.",
+	                    StatusBus.Type.WARN, Duration.seconds(3));
+	                return;
+	            }
+
+	            // Probar conexión antes de guardar
+	            try {
+	                String jdbcUrl = TursoConfig.toJdbcUrl(url);
+	                try (var conn = java.sql.DriverManager.getConnection(jdbcUrl, null, token);
+	                     var stmt = conn.createStatement();
+	                     var rs = stmt.executeQuery("SELECT 1")) {
+	                    // conexión OK
+	                }
+	            } catch (Exception ex) {
+	                StatusBus.show("Error de conexión: " + ex.getMessage(),
+	                    StatusBus.Type.ERROR, Duration.seconds(5));
+	                ex.printStackTrace();
+	                return;
+	            }
+
+	            TursoConfig.save(url, token);
+	            DatabaseHelper.reconnect();
+	            miTurso.setText("Turso: conectado");
+	            refrescarTabla();
+	            StatusBus.show("Conectado a Turso correctamente.",
+	                StatusBus.Type.SUCCESS, Duration.seconds(3));
+	        }
+	    });
 	}
 
 	/** Diálogo con los atajos principales */

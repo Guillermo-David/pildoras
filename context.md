@@ -28,6 +28,20 @@ App-image:
 --add-modules java.sql,java.xml,java.logging,java.desktop,jdk.crypto.ec,jdk.localedata,javafx.controls,javafx.fxml,javafx.web,javafx.graphics
 --java-options "-Dprism.order=sw --add-exports=javafx.base/com.sun.javafx.event=ALL-UNNAMED"
 
+## Sincronización (Turso)
+- **Opcional**: la app puede conectarse a una BD remota en Turso (LibSQL) para sincronizar datos entre dispositivos.
+- **Configuración**: desde Ajustes → "Configurar Turso…", el usuario introduce la URL (`libsql://...`) y el token de autenticación.
+- **Driver JDBC**: `com.dbeaver.jdbc:com.dbeaver.jdbc.driver.libsql` (URL: `jdbc:dbeaver:libsql:https://...`, token como password).
+- **Fallback**: si no hay configuración de Turso, la app usa SQLite local como siempre.
+- **`TursoConfig`**: guarda URL y token en `Preferences` de Java. Método `toJdbcUrl()` convierte `libsql://` a formato JDBC.
+- **`DatabaseHelper.reconnect()`**: cierra la conexión actual y reconecta (a Turso o local según configuración).
+- **Desconexión**: desde el mismo menú de ajustes, el usuario puede desconectar y volver a SQLite local.
+
+## Exportación
+- **Detalle → Exportar**:
+- **Markdown (.md)**: título, fecha, tags y contenido (en Markdown).
+- **HTML (.html)**: plantilla cuidada; chips con colores consistentes (vía `extraCss`).
+- **Próximo**: **Export/Import ZIP portable** (toda la BD + assets) desde Ajustes/menú. Import con confirmación y copia de seguridad.
 
 MSI: sin --win-console, con UUID fijo en --win-upgrade-uuid.
 
