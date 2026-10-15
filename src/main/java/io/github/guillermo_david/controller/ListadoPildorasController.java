@@ -2,8 +2,6 @@ package io.github.guillermo_david.controller;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -30,10 +28,8 @@ import io.github.guillermo_david.javafx.ThemeManager;
 import io.github.guillermo_david.javafx.ThemeManager.Theme;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
-import io.github.guillermo_david.restore.DriveRestoreService;
+import io.github.guillermo_david.db.TursoMigrationService;
 import io.github.guillermo_david.security.SecurityService;
-import io.github.guillermo_david.settings.SettingsStore;
-import io.github.guillermo_david.sync.SyncService;
 import io.github.guillermo_david.util.AppVersion;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -90,7 +86,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -1436,11 +1431,6 @@ public class ListadoPildorasController {
 		update.run();
 	}
 	
-	private void updateToggleBackupsText(MenuItem mi) {
-	    boolean on = (io.github.guillermo_david.settings.SettingsStore.getBackupsBaseDir() != null);
-	    mi.setText(on ? "Desactivar backups" : "Activar backups…");
-	}
-
 	private void initSettingsMenu() {
 		// Limpia y configura el botón (icono engranaje)
 		btnSettings.getItems().clear();
@@ -1455,9 +1445,6 @@ public class ListadoPildorasController {
 		var miImport = new MenuItem("Importar (.md)…");
 		miImport.setOnAction(e -> handleImportMarkdown());
 		
-		var miRestore = new MenuItem("Restaurar desde ZIP…");
-		miRestore.setOnAction(e -> handleRestoreFromZip());
-
 		// --- Tipografías ---
 		record Family(String label, String css) {
 		}
@@ -1677,54 +1664,31 @@ public class ListadoPildorasController {
 		miSecurity.getItems().addAll(miChangePin, new SeparatorMenuItem(), miSetQuestion, miResetByAnswer,
 				new SeparatorMenuItem(), miGenRecovery, miResetByCode, new SeparatorMenuItem(), miLock);
 
+		// --- Turso (sincronización) ---
+		var miTurso = new MenuItem(TursoConfig.isConfigured() ? "Turso: conectado" : "Configurar Turso…");
+		miTurso.setOnAction(e -> showTursoDialog(miTurso));
+
+		var miMigrate = new MenuItem("Migrar datos locales a Turso…");
+		miMigrate.setOnAction(e -> handleMigrateToTurso());
+
 		// --- Atajos ---
 		var miShortcuts = new MenuItem("Atajos de teclado…");
 		miShortcuts.setOnAction(e -> showShortcutsDialog());
-		
-		var miSetBackupDir = new MenuItem("Ubicación de backups…");
-		miSetBackupDir.setOnAction(e -> chooseBackupBase());
 
-		var miToggleBackups = new MenuItem();
-		updateToggleBackupsText(miToggleBackups);
-
-		// refresca el texto cada vez que se abre el menú
-		btnSettings.setOnShowing(e -> updateToggleBackupsText(miToggleBackups));
-
-		miToggleBackups.setOnAction(e -> {
-		    boolean on = (io.github.guillermo_david.settings.SettingsStore.getBackupsBaseDir() != null);
-		    if (on) {
-		        // Apagar
-		        var s = io.github.guillermo_david.settings.SettingsStore.load();
-		        s.backupsBaseDir = null;
-		        io.github.guillermo_david.settings.SettingsStore.save(s);
-		        io.github.guillermo_david.sync.SyncService.get().reloadBackupsLocation();
-		        io.github.guillermo_david.javafx.StatusBus.show(
-		            "Copias de seguridad desactivadas en este equipo.",
-		            io.github.guillermo_david.javafx.StatusBus.Type.INFO,
-		            javafx.util.Duration.seconds(4)
-		        );
-		    } else {
-		        // Encender: reutiliza tu selector
-		        chooseBackupBase(); // esto ya guarda, crea carpetas y llama a reloadBackupsLocation()
-		    }
-		    updateToggleBackupsText(miToggleBackups);
-		});
-
-		// Menú final (un único setAll)
+		// Menú final
 		btnSettings.getItems().setAll(
-				miSetBackupDir,
-				miToggleBackups,
-			    new SeparatorMenuItem(),
-				miRestore,
 				miImport,
 				new SeparatorMenuItem(),
-				miFamily, 
-				miSize, 
-				new SeparatorMenuItem(), 
-				miTemaOscuro, 
+				miFamily,
+				miSize,
 				new SeparatorMenuItem(),
-				miSecurity, 
-				new SeparatorMenuItem(), 
+				miTemaOscuro,
+				new SeparatorMenuItem(),
+				miTurso,
+				miMigrate,
+				new SeparatorMenuItem(),
+				miSecurity,
+				new SeparatorMenuItem(),
 				miShortcuts);
 	}
 
@@ -1839,24 +1803,6 @@ public class ListadoPildorasController {
 
 		dlg.getDialogPane().getButtonTypes().setAll(new ButtonType("Entendido", ButtonBar.ButtonData.OK_DONE));
 		dlg.showAndWait();
-	    // --- Turso (sincronización) ---
-	    var miTurso = new MenuItem(TursoConfig.isConfigured() ? "Turso: conectado" : "Configurar Turso…");
-	    miTurso.setOnAction(e -> showTursoDialog(miTurso));
-
-	    // --- Atajos de teclado ---
-	    var miShortcuts = new MenuItem("Atajos de teclado…");
-	    miShortcuts.setOnAction(e -> showShortcutsDialog());
-
-	    btnSettings.getItems().setAll(
-	        miFamily,
-	        miSize,
-	        new javafx.scene.control.SeparatorMenuItem(),
-	        miTemaOscuro,
-	        new SeparatorMenuItem(),
-	        miTurso,
-	        new SeparatorMenuItem(),
-	        miShortcuts
-	    );
 	}
 
 	/** Aplica familia + tamaño guardados a toda la escena */
@@ -2274,137 +2220,55 @@ public class ListadoPildorasController {
 	    new Thread(task, "ImportMarkdown").start();
 	}
 	
-	private void handleRestoreFromZip() {
-	    if (DatabaseHelper.getInstance().isUsingTurso()) {
-	        var alert = new Alert(Alert.AlertType.WARNING);
-	        alert.setTitle("Restauración no disponible");
-	        alert.setHeaderText("Turso activo");
-	        alert.setContentText("La restauración desde ZIP solo funciona con la base de datos local.\n"
-	            + "Desconecta Turso desde Ajustes antes de restaurar.");
+	private void handleMigrateToTurso() {
+	    if (!TursoConfig.isConfigured()) {
+	        var alert = new Alert(AlertType.WARNING);
+	        alert.setTitle(“Turso no configurado”);
+	        alert.setHeaderText(null);
+	        alert.setContentText(“Configura la conexión a Turso antes de migrar.”);
 	        Dialogs.decorate(alert, root);
 	        alert.showAndWait();
 	        return;
 	    }
 
-	    var scene = root.getScene();
-	    if (scene == null) return;
+	    var confirm = new Alert(AlertType.CONFIRMATION);
+	    confirm.setTitle(“Migrar datos locales a Turso”);
+	    confirm.setHeaderText(“¿Importar todos los datos locales a Turso?”);
+	    confirm.setContentText(“Se copiarán píldoras, tags, borradores y enlaces “
+	        + “desde la base de datos local a Turso (INSERT OR REPLACE).\n\n”
+	        + “Los datos existentes en Turso con el mismo ID serán sobrescritos.”);
+	    Dialogs.decorate(confirm, root);
+	    var choice = confirm.showAndWait();
+	    if (choice.isEmpty() || choice.get() != ButtonType.OK) return;
 
-	    FileChooser fc = new FileChooser();
-	    fc.setTitle("Restaurar desde ZIP (Drive)");
-	    fc.getExtensionFilters().addAll(
-	        new FileChooser.ExtensionFilter("Backups de Píldoras (*.zip)", "*.zip"),
-	        new FileChooser.ExtensionFilter("Todos los archivos", "*.*")
-	    );
-
-	    // Inicializa en la carpeta de backups si existe
-	    Path init = guessBackupsFolder();
-	    if (init != null && Files.isDirectory(init)) {
-	        try { fc.setInitialDirectory(init.toFile()); } catch (Exception ignore) {}
-	    }
-
-	    File f = fc.showOpenDialog(scene.getWindow());
-	    if (f == null) return;
-
-	    Task<io.github.guillermo_david.restore.DriveRestoreService.Result> task = new Task<>() {
-	        @Override protected io.github.guillermo_david.restore.DriveRestoreService.Result call() throws Exception {
-	            var svc = new DriveRestoreService();
-	            return svc.restoreFromZip(f, /*backupExisting*/ true);
+	    Task<TursoMigrationService.Result> task = new Task<>() {
+	        @Override protected TursoMigrationService.Result call() throws Exception {
+	            return TursoMigrationService.migrateLocalToTurso();
 	        }
 	    };
 
 	    task.setOnRunning(e -> root.setDisable(true));
 	    task.setOnSucceeded(e -> {
 	        root.setDisable(false);
-	        io.github.guillermo_david.restore.DriveRestoreService.Result r = task.getValue();
-	        // fuerza reapertura/recarga de datos
+	        TursoMigrationService.Result r = task.getValue();
 	        paginaActual = 1;
 	        refrescarTabla();
-
-	        String ver = r.verified ? "verificado" : "sin verificación";
-	        String extra = (r.deviceId != null ? (" — origen: " + r.deviceId) : "");
-	        io.github.guillermo_david.javafx.StatusBus.show(
-	            "Restauración completada (" + ver + ")" + extra,
-	            io.github.guillermo_david.javafx.StatusBus.Type.SUCCESS,
-	            javafx.util.Duration.seconds(5)
-	        );
+	        StatusBus.show(
+	            “Migración completada: “ + r.total() + “ registros “
+	                + “(píldoras=” + r.pildoras + “, tags=” + r.tags
+	                + “, relaciones=” + r.pildoraTag
+	                + “, borradores=” + r.drafts + “, enlaces=” + r.pildoraLink + “)”,
+	            StatusBus.Type.SUCCESS, Duration.seconds(8));
 	    });
 	    task.setOnFailed(e -> {
 	        root.setDisable(false);
 	        Throwable ex = task.getException();
-	        io.github.guillermo_david.javafx.StatusBus.show(
-	            "Error al restaurar: " + (ex == null ? "desconocido" : ex.getMessage()),
-	            io.github.guillermo_david.javafx.StatusBus.Type.ERROR,
-	            javafx.util.Duration.seconds(6)
-	        );
+	        StatusBus.show(
+	            “Error en migración: “ + (ex == null ? “desconocido” : ex.getMessage()),
+	            StatusBus.Type.ERROR, Duration.seconds(6));
 	    });
 
-	    new Thread(task, "RestoreFromZip").start();
-	}
-
-	// Intenta deducir la carpeta de backups según PILDORAS_DRIVE_BASE o defaults
-	private Path guessBackupsFolder() {
-	    String base = System.getenv("PILDORAS_DRIVE_BASE");
-	    if (base != null && !base.isBlank()) {
-	        return Path.of(base).resolve("backups");
-	    }
-	    // Defaults comunes: "Mi unidad" (ES) y "My Drive" (EN)
-	    Path es = Path.of("G:/Mi unidad/Pildoras/backups");
-	    if (Files.isDirectory(es)) return es;
-	    Path en = Path.of("G:/My Drive/Pildoras/backups");
-	    if (Files.isDirectory(en)) return en;
-	    return null;
-	}
-
-	private void chooseBackupBase() {
-	    var scene = root.getScene();
-	    if (scene == null) return;
-
-	    DirectoryChooser dc = new DirectoryChooser();
-	    dc.setTitle("Elegir carpeta base para backups de Píldoras");
-
-	    // Sugerir actual si existe
-	    var cur = SettingsStore.getBackupsBaseDir();
-	    if (cur != null && Files.isDirectory(cur)) {
-	        try { dc.setInitialDirectory(cur.toFile()); } catch (Exception ignore) {}
-	    }
-
-	    var dir = dc.showDialog(scene.getWindow());
-	    if (dir == null) return;
-
-	    // Normaliza selección y corrige si el usuario ha elegido directamente "backups"
-	    Path chosen = Path.of(dir.getAbsolutePath()).toAbsolutePath().normalize();
-	    if (chosen.getFileName() != null
-	            && chosen.getFileName().toString().equalsIgnoreCase("backups")
-	            && chosen.getParent() != null) {
-	        chosen = chosen.getParent(); // la base debe ser el padre de "backups"
-	    }
-
-	    // Guardar
-	    var s = SettingsStore.load();
-	    s.backupsBaseDir = chosen.toString();
-	    SettingsStore.save(s);
-
-	    // Reconfigurar SyncService en caliente
-	    SyncService.get().reloadBackupsLocation();
-
-	    // Crear subcarpetas estándar bajo “…/backups”
-	    try {
-	        var backupsRoot = SettingsStore.getBackupsRoot(); // “…/Pildoras/backups”
-	        if (backupsRoot != null) {
-	            Files.createDirectories(backupsRoot);
-	            Files.createDirectories(backupsRoot.resolve("_tmp"));
-	            Files.createDirectories(backupsRoot.resolve("hist"));
-	        }
-	    } catch (Exception ex) {
-	        StatusBus.show("No se pudieron preparar las carpetas de backup.", StatusBus.Type.WARN,
-	                javafx.util.Duration.seconds(4));
-	    }
-
-	    StatusBus.show("Ubicación de backups guardada. Se usará en próximos snapshots.",
-	            StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(4));
-
-	    // (Opcional) crear baseline inmediato:
-	    // try { SyncService.get().syncNow(io.github.guillermo_david.sync.SyncService.Mode.MANUAL); } catch (Exception ignore) {}
+	    new Thread(task, “MigrateToTurso”).start();
 	}
 
 }

@@ -437,33 +437,4 @@ public class DatabaseHelper {
         }
     }
 
-    // --- Helpers para sync/snapshot ---
-
-    public synchronized void checkpointNow() {
-        if (usingTurso) return;
-        try {
-            reopenIfNeeded();
-            try (Statement s = connection.createStatement()) {
-                s.execute("PRAGMA wal_checkpoint(FULL)");
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("No se pudo ejecutar wal_checkpoint(FULL)", e);
-        }
-    }
-
-    public Path getDbFile() {
-        return getDbPath();
-    }
-
-    public Path getWalFile() {
-        return getDbPath().resolveSibling(getDbPath().getFileName().toString() + "-wal");
-    }
-
-    public Path getShmFile() {
-        return getDbPath().resolveSibling(getDbPath().getFileName().toString() + "-shm");
-    }
-
-    public Path getDbDir() {
-        return getDbPath().getParent();
-    }
 }

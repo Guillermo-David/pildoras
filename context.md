@@ -41,7 +41,6 @@ App-image:
 - **Detalle → Exportar**:
 - **Markdown (.md)**: título, fecha, tags y contenido (en Markdown).
 - **HTML (.html)**: plantilla cuidada; chips con colores consistentes (vía `extraCss`).
-- **Próximo**: **Export/Import ZIP portable** (toda la BD + assets) desde Ajustes/menú. Import con confirmación y copia de seguridad.
 
 MSI: sin --win-console, con UUID fijo en --win-upgrade-uuid.
 
@@ -241,6 +240,8 @@ Tema: claro/oscuro (con ThemeManager).
 
 Atajos de teclado…: diálogo monoespaciado con secciones (incluye bloque Borradores).
 
+Turso: "Configurar Turso…" (conectar/desconectar BD remota), "Migrar datos locales a Turso…" (importación única).
+
 Seguridad (submenú): bloquear, configurar pregunta, generar código, etc.
 
 CSS / Estilo
@@ -292,9 +293,7 @@ Pendientes / Ideas (parking)
 
 Overlay numérico en botón de borradores (badge visual).
 
-Export/Import ZIP (BD + assets) con backup y confirmación.
-
-SMTP/“Compartir por email” (diseñar estrategia credenciales).
+SMTP/”Compartir por email” (diseñar estrategia credenciales).
 
 Más tipos de “píldora” (tarea, receta, etc.) y vistas específicas (en pausa).
 

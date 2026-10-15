@@ -5,7 +5,6 @@ import java.util.List;
 
 import io.github.guillermo_david.db.DatabaseHelper;
 import io.github.guillermo_david.javafx.ThemeManager;
-import io.github.guillermo_david.sync.SyncService;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -32,15 +31,13 @@ public class MainApp extends Application{
 	    }
 	    return list;
 	}
-	
+
 	@Override
 	public void start(Stage stage) throws Exception {
-		
+
 		// 1) Fuerza inicialización + migraciones de la BD primero
-	    DatabaseHelper.getInstance();  // 👈 esto dispara initializeDatabase()
-	    
-	    SyncService.get().onAppStart();
-	    
+	    DatabaseHelper.getInstance();
+
 	    // 2) Ya puedes cargar los FXML/Controllers con la BD migrada
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
 	    Scene scene = new Scene(fxmlLoader.load(), 1280, 837);
@@ -52,7 +49,7 @@ public class MainApp extends Application{
 	    ThemeManager.initStyles(base, light, dark);
 	    var current = ThemeManager.load();
 	    ThemeManager.apply(scene, current);
-	    
+
 	    var icons = loadIcons();
 	    if (!icons.isEmpty()) stage.getIcons().setAll(icons);
 
@@ -60,32 +57,18 @@ public class MainApp extends Application{
 	    stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
 	    stage.setResizable(false);
 	    stage.setScene(scene);
-	    
-	    //auto-sync al cerrar (silencioso con gestión de conflicto básica)
+
 	    stage.setOnCloseRequest(e -> {
-	        try {
-	            SyncService.get().onAppShutdown();
-	        } catch (Exception ex) {
-	            ex.printStackTrace();
-	        } finally {
-	            DatabaseHelper.getInstance().close();
-	        }
+	        DatabaseHelper.getInstance().close();
 	    });
-	    
+
 	    stage.show();
 	}
-	
+
 	@Override
 	public void stop() {
-	    try {
-	        SyncService.get().onAppShutdown();
-	    } catch (Exception ex) {
-	        ex.printStackTrace();
-	    } finally {
-	        DatabaseHelper.getInstance().close();
-	    }
+	    DatabaseHelper.getInstance().close();
 	}
-
 
 	public static void main(String[] args) {
 		System.setProperty("prism.order", "sw");
