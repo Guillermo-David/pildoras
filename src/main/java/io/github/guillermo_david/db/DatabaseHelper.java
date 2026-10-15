@@ -440,6 +440,7 @@ public class DatabaseHelper {
     // --- Helpers para sync/snapshot ---
 
     public synchronized void checkpointNow() {
+        if (usingTurso) return;
         try {
             reopenIfNeeded();
             try (Statement s = connection.createStatement()) {

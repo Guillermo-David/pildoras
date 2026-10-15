@@ -78,6 +78,11 @@ public final class SyncService {
 
 
     public void onAppStart() {
+    	if (db.isUsingTurso()) {
+    	    logInfo("[SYNC] Usando Turso — backups locales omitidos.");
+    	    StatusBus.show("Sincronización vía Turso activa", StatusBus.Type.INFO, Duration.seconds(3));
+    	    return;
+    	}
     	if (!backupsEnabled) {
     	    logInfo("[SYNC] Backups DESACTIVADOS.");
     	    StatusBus.show("Copias de seguridad desactivadas en este equipo", StatusBus.Type.INFO, Duration.seconds(3));
@@ -101,7 +106,7 @@ public final class SyncService {
     }
 
     public void onAppShutdown() {
-    	if (!backupsEnabled) return;
+    	if (db.isUsingTurso() || !backupsEnabled) return;
         try {
             ensureBackupDirs();
             syncNow(Mode.AUTO_ON_CLOSE);
@@ -112,7 +117,7 @@ public final class SyncService {
 
  
     private void ensureBaselineHistoryIfEmpty() {
-        if (!backupsEnabled) return;
+        if (db.isUsingTurso() || !backupsEnabled) return;
         try {
             var hasHist = Files.list(driveHist)
                 .anyMatch(p -> p.getFileName().toString()
@@ -141,6 +146,10 @@ public final class SyncService {
 
     public SyncResult syncNow(Mode mode) {
     	Objects.requireNonNull(mode, "mode");
+        if (db.isUsingTurso()) {
+            logInfo("[SYNC] Usando Turso — snapshot local omitido.");
+            return SyncResult.ok(null, null);
+        }
         if (!backupsEnabled) {
             logInfo("[SYNC] Backups desactivados: no se generará snapshot.");
             return SyncResult.ok(null, null);

@@ -2275,6 +2275,17 @@ public class ListadoPildorasController {
 	}
 	
 	private void handleRestoreFromZip() {
+	    if (DatabaseHelper.getInstance().isUsingTurso()) {
+	        var alert = new Alert(Alert.AlertType.WARNING);
+	        alert.setTitle("Restauración no disponible");
+	        alert.setHeaderText("Turso activo");
+	        alert.setContentText("La restauración desde ZIP solo funciona con la base de datos local.\n"
+	            + "Desconecta Turso desde Ajustes antes de restaurar.");
+	        Dialogs.decorate(alert, root);
+	        alert.showAndWait();
+	        return;
+	    }
+
 	    var scene = root.getScene();
 	    if (scene == null) return;
 
