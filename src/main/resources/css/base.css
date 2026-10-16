@@ -863,6 +863,28 @@
     -fx-text-fill: -c-text-muted;
     -fx-padding: 0 2;
 }
+.pagination-separator {
+    -fx-text-fill: -c-border;
+    -fx-padding: 0 6;
+    -fx-font-size: 12px;
+}
+.page-size-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4;
+    -fx-padding: 3 8;
+    -fx-font-size: 11px;
+    -fx-text-fill: -c-text-muted;
+    -fx-cursor: hand;
+}
+.page-size-btn:hover {
+    -fx-background-color: -c-accent-soft;
+    -fx-text-fill: -c-accent;
+}
+.page-size-active {
+    -fx-background-color: -c-accent-soft;
+    -fx-text-fill: -c-accent;
+    -fx-font-weight: bold;
+}
 
 /* ---------- Fila seleccionada con acento ---------- */
 .table-row-cell:filled:selected,

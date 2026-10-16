@@ -1,6 +1,7 @@
 package io.github.guillermo_david.controller;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -88,7 +89,9 @@ public class ListadoPildorasController {
 	private final TagDao tagDao = new TagDao();
 
 	private int paginaActual = 1;
-	private final int TAMANIO_PAGINA = 20;
+	private static final String PREF_PAGE_SIZE = "pageSize";
+	private static final int[] PAGE_SIZES = {20, 50, 100, Integer.MAX_VALUE};
+	private int tamanioPagina = 20;
 	private int totalPaginas = 1;
 
 	private boolean uiOculta = false;
@@ -167,6 +170,7 @@ public class ListadoPildorasController {
 		setColAcciones();
 		// Restore saved toggle states before setBotones() wires them up
 		mostrarOcultas = PREFS.getBoolean(PREF_SHOW_HIDDEN, false);
+		tamanioPagina = PREFS.getInt(PREF_PAGE_SIZE, 20);
 		setBotones();
 		btnSoloFav.setSelected(PREFS.getBoolean(PREF_SOLO_FAV, false));
 
@@ -312,7 +316,7 @@ public class ListadoPildorasController {
 				var headerHeight = headerBg != null ? headerBg.heightProperty() : new SimpleDoubleProperty(28);
 
 				double row = table.getFixedCellSize(); // 30
-				int rows = TAMANIO_PAGINA; // 20
+				int rows = tamanioPagina == Integer.MAX_VALUE ? 30 : tamanioPagina;
 
 				table.prefHeightProperty().unbind();
 				table.prefHeightProperty().bind(headerHeight.add(rows * row + 2));
@@ -826,6 +830,53 @@ public class ListadoPildorasController {
 				refrescarTabla();
 			}
 		});
+
+		buildPageSizeSelector();
+	}
+
+	private final List<Button> pageSizeButtons = new ArrayList<>();
+
+	private void buildPageSizeSelector() {
+		var separator = new Label("|");
+		separator.getStyleClass().add("pagination-separator");
+
+		var sizeBox = new HBox(2);
+		sizeBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+		pageSizeButtons.clear();
+		for (int size : PAGE_SIZES) {
+			String label = size == Integer.MAX_VALUE ? "Todo" : String.valueOf(size);
+			var btn = new Button(label);
+			btn.getStyleClass().add("page-size-btn");
+			if (size == tamanioPagina) btn.getStyleClass().add("page-size-active");
+			final int s = size;
+			btn.setOnAction(e -> applyPageSize(s));
+			pageSizeButtons.add(btn);
+			sizeBox.getChildren().add(btn);
+		}
+
+		paginationBox.getChildren().addAll(separator, sizeBox);
+	}
+
+	private void applyPageSize(int size) {
+		tamanioPagina = size;
+		PREFS.putInt(PREF_PAGE_SIZE, size);
+		paginaActual = 1;
+		pageSizeButtons.forEach(b -> b.getStyleClass().remove("page-size-active"));
+		for (int i = 0; i < PAGE_SIZES.length; i++) {
+			if (PAGE_SIZES[i] == size) pageSizeButtons.get(i).getStyleClass().add("page-size-active");
+		}
+		updateTableHeight();
+		refrescarTabla();
+	}
+
+	private void updateTableHeight() {
+		double row = table.getFixedCellSize();
+		Region headerBg = (Region) table.lookup(".column-header-background");
+		double headerH = headerBg != null ? headerBg.getHeight() : 28;
+		int rows = tamanioPagina == Integer.MAX_VALUE ? 30 : tamanioPagina;
+		table.prefHeightProperty().unbind();
+		table.setPrefHeight(headerH + rows * row + 2);
 	}
 
 	private void setColTitulo() {
@@ -1065,7 +1116,7 @@ public class ListadoPildorasController {
 								txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
 								delTags,
 								true, btnSoloFav.isSelected(), mostrarOcultas);
-						totalPaginas = Math.max(1, (int) Math.ceil((double) total / TAMANIO_PAGINA));
+						totalPaginas = Math.max(1, (int) Math.ceil((double) total / tamanioPagina));
 						paginaActual = Math.min(paginaActual, totalPaginas);
 						refrescarTabla();
 					}
@@ -1273,7 +1324,7 @@ public class ListadoPildorasController {
 
 		boolean soloFavoritas = btnSoloFav.isSelected();
 		int total = pildoraDao.contarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, mostrarOcultas);
-		totalPaginas = Math.max(1, (int) Math.ceil((double) total / TAMANIO_PAGINA));
+		totalPaginas = Math.max(1, (int) Math.ceil((double) total / tamanioPagina));
 
 		// Ajusta paginaActual si se ha quedado fuera de rango
 		if (paginaActual > totalPaginas) {
@@ -1283,31 +1334,25 @@ public class ListadoPildorasController {
 		}
 
 		List<Pildora> todas = pildoraDao.listarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, paginaActual,
-				TAMANIO_PAGINA, columnaOrden, direccionOrden, mostrarOcultas);
+				tamanioPagina, columnaOrden, direccionOrden, mostrarOcultas);
 
 		tagDao.preloadForPildoras(todas.stream().map(Pildora::getId).collect(Collectors.toList()));
 		table.setItems(FXCollections.observableArrayList(todas));
-		
-		//Pagina 1 de 2
-//		lblPagina.setText("Página " + paginaActual + " de " + totalPaginas);
-		
-		//Pagina 1 de 2 - 23 elementos
-//		String totalTxt = (total == 1) ? "1 elemento" : (total + " elementos");
-//	    lblPagina.setText("Página " + paginaActual + " de " + totalPaginas + " — " + totalTxt);
-	    
-		//Página 1 de 2 - mostrandos 1-20 de 23
-//		int desde = (total == 0) ? 0 : (paginaActual - 1) * TAMANIO_PAGINA + 1;
-//		int hasta = (total == 0) ? 0 : Math.min(paginaActual * TAMANIO_PAGINA, total);
-//		lblPagina.setText(String.format(
-//		    "Página %d de %d — mostrando %d–%d de %d",
-//		    paginaActual, totalPaginas, desde, hasta, total));
-		
-		int desde = (total == 0) ? 0 : (paginaActual - 1) * TAMANIO_PAGINA + 1;
-		int hasta = (total == 0) ? 0 : Math.min(paginaActual * TAMANIO_PAGINA, total);
-		lblPagina.setText(String.format(
-				"%d - %d de %d",
-				desde, hasta, total));
-		
+
+		boolean singlePage = (tamanioPagina == Integer.MAX_VALUE || totalPaginas <= 1);
+		if (total == 0) {
+			lblPagina.setText("0 de 0");
+		} else if (singlePage) {
+			lblPagina.setText(total + (total == 1 ? " píldora" : " píldoras"));
+		} else {
+			int desde = (paginaActual - 1) * tamanioPagina + 1;
+			int hasta = Math.min(paginaActual * tamanioPagina, total);
+			lblPagina.setText(String.format("%d - %d de %d", desde, hasta, total));
+		}
+		btnAnterior.setVisible(!singlePage);
+		btnAnterior.setManaged(!singlePage);
+		btnSiguiente.setVisible(!singlePage);
+		btnSiguiente.setManaged(!singlePage);
 
 		// Restaura el indicador visual del orden elegido por el usuario
 		suppressSort = true;
