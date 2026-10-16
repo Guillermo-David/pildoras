@@ -65,7 +65,12 @@
 	    	<scope>provided</scope>
 		</dependency>
 
-		<!-- Logger -->
+		<!-- Logger: api + impl must match to avoid StaticLoggerBinder warning -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.16</version>
+		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>

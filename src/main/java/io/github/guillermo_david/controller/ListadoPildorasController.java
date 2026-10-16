@@ -166,12 +166,11 @@ public class ListadoPildorasController {
 		setColDescripcion();
 		setColTags();
 		setColAcciones();
+		// Restore saved toggle states before setBotones() wires them up
+		mostrarOcultas = PREFS.getBoolean(PREF_SHOW_HIDDEN, false);
 		setBotones();
-
-		// Restore saved toggle states
 		btnSoloFav.setSelected(PREFS.getBoolean(PREF_SOLO_FAV, false));
 		btnAndOr.setSelected(PREFS.getBoolean(PREF_AND_OR, false));
-		mostrarOcultas = PREFS.getBoolean(PREF_SHOW_HIDDEN, false);
 
 		settingsHelper = new SettingsMenuHelper(root, security, btnSettings, PREFS,
 				PREF_FONT_FAMILY, PREF_FONT_SIZE, DEF_FONT_FAMILY, DEF_FONT_SIZE,
@@ -1273,6 +1272,7 @@ public class ListadoPildorasController {
 		List<Pildora> todas = pildoraDao.listarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, paginaActual,
 				TAMANIO_PAGINA, columnaOrden, direccionOrden, mostrarOcultas);
 
+		tagDao.preloadForPildoras(todas.stream().map(Pildora::getId).collect(Collectors.toList()));
 		table.setItems(FXCollections.observableArrayList(todas));
 		
 		//Pagina 1 de 2

@@ -102,6 +102,29 @@ public class TagDao {
 	    return SqlHelper.esc(val);
 	}
 
+    public void preloadForPildoras(List<Integer> pildoraIds) {
+        if (pildoraIds == null || pildoraIds.isEmpty()) return;
+        cachedByPildora.clear();
+        StringBuilder sb = new StringBuilder(
+            "SELECT pt.pildora_id, t.id, t.nombre FROM tags t " +
+            "JOIN pildora_tag pt ON t.id = pt.tag_id WHERE pt.pildora_id IN (");
+        for (int i = 0; i < pildoraIds.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append(pildoraIds.get(i));
+        }
+        sb.append(") ORDER BY t.nombre");
+        try (Statement stmt = DatabaseHelper.getInstance().getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sb.toString())) {
+            while (rs.next()) {
+                int pid = rs.getInt("pildora_id");
+                cachedByPildora.computeIfAbsent(pid, k -> new ArrayList<>())
+                    .add(new Tag(rs.getInt("id"), rs.getString("nombre")));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        for (int id : pildoraIds) cachedByPildora.putIfAbsent(id, List.of());
+        cacheTimestamp = System.currentTimeMillis();
+    }
+
     public List<Tag> findByPildoraId(int pildoraId) {
         List<Tag> cached = cachedByPildora.get(pildoraId);
         if (cached != null && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS) return cached;
