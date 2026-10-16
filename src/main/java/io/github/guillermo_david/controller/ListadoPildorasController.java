@@ -64,6 +64,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -180,7 +181,8 @@ public class ListadoPildorasController {
 
 		// Panel lateral de tags
 		tagSidebarHelper = new TagSidebarHelper(tagSidebar, tagListBox, btnToggleSidebar,
-				txtFiltroTags, () -> { paginaActual = 1; refrescarTabla(); });
+				txtFiltroTags, () -> { paginaActual = 1; refrescarTabla(); },
+				() -> mostrarOcultas);
 		tagSidebarHelper.init();
 
 		// Barra de título custom
@@ -403,7 +405,7 @@ public class ListadoPildorasController {
 		table.setRowFactory(tv -> {
 			TableRow<Pildora> row = new TableRow<>();
 			row.setOnMouseClicked(event -> {
-				if (!row.isEmpty() && event.getClickCount() == 2) {
+				if (!row.isEmpty() && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
 					Pildora p = row.getItem();
 					if (p.isProtegida() && !security.isUnlocked()) {
 						if (!ensureUnlockedWithRetries()) {
@@ -415,7 +417,6 @@ public class ListadoPildorasController {
 			});
 
 			ContextMenu ctx = new ContextMenu();
-			row.setContextMenu(ctx);
 
 			ctx.setOnShowing(e -> {
 				ctx.getItems().clear();
@@ -497,8 +498,8 @@ public class ListadoPildorasController {
 						miEliminar);
 			});
 
-			row.emptyProperty().addListener((obs, wasEmpty, isEmpty) -> {
-				row.setContextMenu(isEmpty ? null : ctx);
+			row.itemProperty().addListener((obs, oldItem, newItem) -> {
+				row.setContextMenu(newItem != null ? ctx : null);
 			});
 
 			return row;

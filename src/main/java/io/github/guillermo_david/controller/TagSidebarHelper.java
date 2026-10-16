@@ -1,5 +1,7 @@
 package io.github.guillermo_david.controller;
 
+import java.util.function.BooleanSupplier;
+
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -17,17 +19,20 @@ class TagSidebarHelper {
     private final Button btnToggleSidebar;
     private final TextInputControl txtFiltroTags;
     private final Runnable resetPageAndRefresh;
+    private final BooleanSupplier includeHidden;
 
     private boolean sidebarCollapsed = false;
     private String selectedSidebarTag = null;
 
     TagSidebarHelper(VBox tagSidebar, VBox tagListBox, Button btnToggleSidebar,
-                     TextInputControl txtFiltroTags, Runnable resetPageAndRefresh) {
+                     TextInputControl txtFiltroTags, Runnable resetPageAndRefresh,
+                     BooleanSupplier includeHidden) {
         this.tagSidebar = tagSidebar;
         this.tagListBox = tagListBox;
         this.btnToggleSidebar = btnToggleSidebar;
         this.txtFiltroTags = txtFiltroTags;
         this.resetPageAndRefresh = resetPageAndRefresh;
+        this.includeHidden = includeHidden;
     }
 
     String getSelectedTag() {
@@ -54,7 +59,7 @@ class TagSidebarHelper {
         });
         tagListBox.getChildren().add(allBtn);
 
-        var tagsWithCount = new TagDao().listAllWithCount();
+        var tagsWithCount = new TagDao().listAllWithCount(includeHidden.getAsBoolean());
         for (String[] tc : tagsWithCount) {
             String nombre = tc[0];
             String count = tc[1];

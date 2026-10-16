@@ -130,15 +130,33 @@ public class TagDao {
     }
 
     public List<String[]> listAllWithCount() {
+        return listAllWithCount(true);
+    }
+
+    public List<String[]> listAllWithCount(boolean includeHidden) {
         List<String[]> list = new ArrayList<>();
-        String sql = """
-            SELECT t.nombre, COUNT(pt.pildora_id) AS cnt
-            FROM tags t
-            LEFT JOIN pildora_tag pt ON t.id = pt.tag_id
-            GROUP BY t.id, t.nombre
-            HAVING cnt > 0
-            ORDER BY t.nombre
-            """;
+        String sql;
+        if (includeHidden) {
+            sql = """
+                SELECT t.nombre, COUNT(pt.pildora_id) AS cnt
+                FROM tags t
+                LEFT JOIN pildora_tag pt ON t.id = pt.tag_id
+                GROUP BY t.id, t.nombre
+                HAVING cnt > 0
+                ORDER BY t.nombre
+                """;
+        } else {
+            sql = """
+                SELECT t.nombre, COUNT(pt.pildora_id) AS cnt
+                FROM tags t
+                JOIN pildora_tag pt ON t.id = pt.tag_id
+                JOIN pildoras p ON p.id = pt.pildora_id
+                WHERE p.oculta = 0
+                GROUP BY t.id, t.nombre
+                HAVING cnt > 0
+                ORDER BY t.nombre
+                """;
+        }
         try (Statement stmt = DatabaseHelper.getInstance().getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
