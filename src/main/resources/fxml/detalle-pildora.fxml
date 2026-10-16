@@ -29,15 +29,15 @@
 	              popupSide="BOTTOM"/>
 	</HBox>
 	  
-	<Label text="Enlaces" styleClass="section-title"/>
+	<Label fx:id="lblLinks" text="Enlaces" styleClass="section-title"/>
 
 	<HBox spacing="20">
 	    <VBox spacing="6">
-	        <Label text="Enlaza a:"/>
+	        <Label fx:id="lblLinksOut" text="Enlaza a:"/>
 	        <FlowPane fx:id="linksOutBox" hgap="6" vgap="6"/>
 	    </VBox>
 	    <VBox spacing="6">
-	        <Label text="Referenciada por:"/>
+	        <Label fx:id="lblLinksIn" text="Referenciada por:"/>
 	        <FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
 	    </VBox>
 	</HBox>

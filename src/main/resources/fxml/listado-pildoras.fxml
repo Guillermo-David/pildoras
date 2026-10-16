@@ -35,7 +35,7 @@
 		    <ImageView fx:id="imgLogo" fitHeight="64" preserveRatio="true" pickOnBounds="true"/>
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
-		    <Label text="Buscar:"/>
+		    <Label fx:id="lblSearch" text="Buscar:"/>
 		    <CustomTextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
@@ -72,7 +72,7 @@
                 <HBox alignment="CENTER_LEFT" styleClass="tag-sidebar-header">
                     <padding><Insets top="4" right="10" bottom="4" left="10"/></padding>
                     <Pane HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="btnToggleSidebar" text="▶" styleClass="icon-btn sidebar-toggle"/>
+                    <Button fx:id="btnToggleSidebar" styleClass="icon-btn sidebar-toggle"/>
                 </HBox>
                 <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS" styleClass="tag-sidebar-scroll">
                     <VBox fx:id="tagListBox" spacing="0" styleClass="tag-sidebar-list"/>

@@ -52,6 +52,7 @@ public class DetallePildoraController {
 	@FXML private MenuButton btnExportMenu;
 	@FXML private FlowPane linksOutBox;
 	@FXML private FlowPane linksInBox;
+	@FXML private Label lblLinks, lblLinksOut, lblLinksIn;
 
 	private Consumer<Integer> onOpenPildoraId;
 
@@ -89,6 +90,9 @@ public class DetallePildoraController {
 		// I18n overrides for labels with hardcoded FXML text
 		lblRefs.setText(I18n.get("label.references"));
 		lblBacklinks.setText(I18n.get("label.mentioned.in"));
+		lblLinks.setText(I18n.get("label.links"));
+		lblLinksOut.setText(I18n.get("label.links.outgoing"));
+		lblLinksIn.setText(I18n.get("label.links.incoming"));
 
 		// Fondo transparente del WebView (JavaFX)
 		webContenido.setStyle("-fx-background-color: transparent;");

@@ -59,6 +59,8 @@ class TagSidebarHelper {
     }
 
     void init() {
+        btnToggleSidebar.setText("");
+        btnToggleSidebar.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_RIGHT));
         btnToggleSidebar.setOnAction(e -> toggleSidebar());
 
         allBtn = new Button(I18n.get("sidebar.all.tags"));
@@ -117,6 +119,8 @@ class TagSidebarHelper {
         prefs.putBoolean(PREF_SIDEBAR_COLLAPSED, sidebarCollapsed);
         Node header = tagSidebar.getChildren().get(0);
         if (sidebarCollapsed) {
+            javafx.scene.layout.HBox headerBox = (javafx.scene.layout.HBox) header;
+            headerBox.getChildren().remove(btnToggleSidebar);
             header.setVisible(false);
             header.setManaged(false);
             if (allBtn != null) { allBtn.setVisible(false); allBtn.setManaged(false); }
@@ -128,18 +132,15 @@ class TagSidebarHelper {
             tagSidebar.setPrefWidth(28);
             tagSidebar.setMinWidth(28);
             tagSidebar.setMaxWidth(28);
-            var expandBtn = new Button();
-            expandBtn.setId("sidebarExpandBtn");
-            expandBtn.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_LEFT));
-            expandBtn.getStyleClass().add("sidebar-expand-btn");
-            expandBtn.setMaxWidth(Double.MAX_VALUE);
-            expandBtn.setOnAction(ev -> toggleSidebar());
-            tagSidebar.getChildren().add(0, expandBtn);
+            btnToggleSidebar.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_LEFT));
+            tagSidebar.getChildren().add(0, btnToggleSidebar);
         } else {
-            tagSidebar.getChildren().removeIf(n -> "sidebarExpandBtn".equals(n.getId()));
+            tagSidebar.getChildren().remove(btnToggleSidebar);
             header = tagSidebar.getChildren().get(0);
             header.setVisible(true);
             header.setManaged(true);
+            javafx.scene.layout.HBox headerBox = (javafx.scene.layout.HBox) header;
+            headerBox.getChildren().add(btnToggleSidebar);
             if (allBtn != null) { allBtn.setVisible(true); allBtn.setManaged(true); }
             for (Node n : tagSidebar.getChildren()) {
                 if (n instanceof ScrollPane) { n.setVisible(true); n.setManaged(true); }
@@ -149,7 +150,7 @@ class TagSidebarHelper {
             tagSidebar.setPrefWidth(200);
             tagSidebar.setMinWidth(0);
             tagSidebar.setMaxWidth(200);
-            btnToggleSidebar.setText("▶");
+            btnToggleSidebar.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_RIGHT));
         }
     }
 }

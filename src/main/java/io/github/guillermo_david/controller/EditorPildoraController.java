@@ -62,8 +62,9 @@ public class EditorPildoraController {
 	@FXML private VBox root;
 	@FXML private SplitPane splitEditor;
 	@FXML private WebView webPreview;
-	@FXML private MenuButton mbMath;
-	@FXML private javafx.scene.control.Label lblTags;
+	@FXML private MenuButton mbMath, mbHeadings, mbLists, mbBlocks, mbInsert, mbAdvanced;
+	@FXML private javafx.scene.control.SplitMenuButton smbLinks;
+	@FXML private javafx.scene.control.Label lblTags, lblTitle, lblContent;
 
 	private TextFormatController textFormatController;
 
@@ -107,6 +108,37 @@ public class EditorPildoraController {
 		mbMath.setText(I18n.get("menu.math"));
 		switchPreview.setText(I18n.get("switch.preview"));
 		lblTags.setText(I18n.get("label.tags"));
+		lblTitle.setText(I18n.get("label.title"));
+		lblContent.setText(I18n.get("label.content.markdown"));
+
+		smbLinks.getItems().get(0).setText(I18n.get("menu.link.external"));
+		smbLinks.getItems().get(1).setText(I18n.get("menu.link.internal"));
+
+		mbHeadings.getItems().stream()
+			.filter(mi -> !(mi instanceof javafx.scene.control.SeparatorMenuItem))
+			.filter(mi -> mi.getText() != null && mi.getText().startsWith("Quitar"))
+			.findFirst().ifPresent(mi -> mi.setText(I18n.get("menu.remove.heading")));
+
+		mbLists.setText(I18n.get("menu.lists"));
+		mbLists.getItems().get(0).setText(I18n.get("menu.list.bullets"));
+		mbLists.getItems().get(1).setText(I18n.get("menu.list.numbered"));
+		mbLists.getItems().get(2).setText(I18n.get("menu.list.tasks"));
+
+		mbBlocks.setText(I18n.get("menu.blocks"));
+		mbBlocks.getItems().get(0).setText(I18n.get("menu.block.quote"));
+		mbBlocks.getItems().get(1).setText(I18n.get("menu.block.code"));
+		mbBlocks.getItems().get(2).setText(I18n.get("menu.block.rule"));
+		mbBlocks.getItems().get(3).setText(I18n.get("menu.block.table"));
+
+		mbInsert.setText(I18n.get("menu.insert"));
+		mbInsert.getItems().get(0).setText(I18n.get("menu.insert.link"));
+		mbInsert.getItems().get(1).setText(I18n.get("menu.insert.image"));
+
+		mbAdvanced.setText(I18n.get("menu.advanced"));
+		mbAdvanced.getItems().get(0).setText(I18n.get("menu.advanced.footnote"));
+		mbAdvanced.getItems().get(1).setText(I18n.get("menu.advanced.toc"));
+		mbAdvanced.getItems().get(2).setText(I18n.get("menu.advanced.math.inline"));
+		mbAdvanced.getItems().get(3).setText(I18n.get("menu.advanced.math.block"));
 
 		btnCancelar.setOnAction(e -> {
 			clearRecoveryDraft();

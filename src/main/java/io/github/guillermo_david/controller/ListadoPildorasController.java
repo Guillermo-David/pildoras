@@ -146,6 +146,7 @@ public class ListadoPildorasController {
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
 	@FXML private TableColumn<Pildora, Void> colFav, colAcciones;
 	@FXML private CustomTextField txtFiltroTexto;
+	@FXML private Label lblSearch;
 	@FXML private ImageView imgLogo;
 	@FXML private VBox tagSidebar, tagListBox;
 	@FXML private Button btnToggleSidebar;
@@ -171,6 +172,7 @@ public class ListadoPildorasController {
 		colTags.setText(I18n.get("col.tags"));
 		colAcciones.setText(I18n.get("col.actions"));
 		txtFiltroTexto.setPromptText(I18n.get("prompt.search"));
+		lblSearch.setText(I18n.get("label.search"));
 		// Restore saved toggle states before setBotones() wires them up
 		mostrarOcultas = PREFS.getBoolean(PREF_SHOW_HIDDEN, false);
 		tamanioPagina = PREFS.getInt(PREF_PAGE_SIZE, 20);
