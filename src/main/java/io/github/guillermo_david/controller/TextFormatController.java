@@ -556,19 +556,19 @@ public class TextFormatController {
 	    // --- Fracciones / raíces / super-sub / formatos ---
 	    var mFrac = new javafx.scene.control.Menu(I18n.get("math.menu.fractions"));
 	    mFrac.getItems().addAll(
-	        item("Fracción  \\frac{…}{…}", () -> mdMathFrac()),
-	        item("Raíz √     \\sqrt{…}",   () -> mdMathSqrt()),
-	        item("Raíz n     \\sqrt[n]{…}",() -> mdMathNSqrt()),
-	        item("Superíndice  ^{}",       () -> mdMathSup()),
-	        item("Subíndice   _{}",        () -> mdMathSub())
+	        item(I18n.get("math.item.fraction"), () -> mdMathFrac()),
+	        item(I18n.get("math.item.sqrt"),     () -> mdMathSqrt()),
+	        item(I18n.get("math.item.nsqrt"),    () -> mdMathNSqrt()),
+	        item(I18n.get("math.item.superscript"), () -> mdMathSup()),
+	        item(I18n.get("math.item.subscript"),   () -> mdMathSub())
 	    );
 
 	    var mCal = new javafx.scene.control.Menu(I18n.get("math.menu.calculus"));
 	    mCal.getItems().addAll(
-	        item("Límite      \\lim_{x\\to 0}", () -> mdMathLim()),
-	        item("Sumatorio   \\sum_\\{i=1}^{n\\}{}$", () -> mdMathSum()), //$\sum_\{i=1}^{n\}{}$
-	        item("Producto    \\prod_\\{i=1}^{n\\}",() -> mdMathProd()),
-	        item("Integral    \\int_{a\\}^{b\\}",   () -> mdMathInt())
+	        item(I18n.get("math.item.limit"),    () -> mdMathLim()),
+	        item(I18n.get("math.item.sum"),      () -> mdMathSum()),
+	        item(I18n.get("math.item.product"),   () -> mdMathProd()),
+	        item(I18n.get("math.item.integral"), () -> mdMathInt())
 	    );
 
 	    var mGreek = new javafx.scene.control.Menu(I18n.get("math.menu.greek"));
@@ -650,9 +650,9 @@ public class TextFormatController {
 
 	    var mFmt = new javafx.scene.control.Menu(I18n.get("math.menu.vector.accent"));
 	    mFmt.getItems().addAll(
-	        item("Vector  \\vec{}", () -> mdMathVec()),
-	        item("Barra   \\bar{}", () -> mdMathBar()),
-	        item("Sombrero\\hat{}", () -> mdMathHat())
+	        item(I18n.get("math.item.vector"), () -> mdMathVec()),
+	        item(I18n.get("math.item.bar"),    () -> mdMathBar()),
+	        item(I18n.get("math.item.hat"),    () -> mdMathHat())
 	    );
 
 	    var mDelim = new javafx.scene.control.Menu(I18n.get("math.menu.delimiters"));
@@ -665,8 +665,8 @@ public class TextFormatController {
 	    // Acciones rápidas de bloque
 	    var mBlock = new javafx.scene.control.Menu(I18n.get("math.menu.blocks"));
 	    mBlock.getItems().addAll(
-	        insertBlock("E=mc^2", "Insertar $$…$$ con E=mc^2"),
-	        insertBlock("\\int_0^{\\pi} \\sin x\\,dx", "Insertar $$…$$ con integral")
+	        insertBlock("E=mc^2", I18n.get("math.item.block.emc2")),
+	        insertBlock("\\int_0^{\\pi} \\sin x\\,dx", I18n.get("math.item.block.integral"))
 	    );
 
 	    mb.getItems().addAll(mFrac, mCal, mGreek, mOps, mRel, mSet, mArr, mFmt, mDelim, new javafx.scene.control.SeparatorMenuItem(), mBlock);

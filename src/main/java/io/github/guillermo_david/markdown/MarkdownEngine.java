@@ -2,6 +2,7 @@ package io.github.guillermo_david.markdown;
 
 import java.util.Arrays;
 
+import io.github.guillermo_david.util.I18n;
 import com.vladsch.flexmark.ext.anchorlink.AnchorLinkExtension;
 import com.vladsch.flexmark.ext.attributes.AttributesExtension;
 import com.vladsch.flexmark.ext.autolink.AutolinkExtension;
@@ -38,7 +39,7 @@ public final class MarkdownEngine {
             ))
             // TOC config
             .set(TocExtension.LEVELS, 255)
-            .set(TocExtension.TITLE, "Contenido")
+            .set(TocExtension.TITLE, I18n.get("md.toc.title"))
             .set(TocExtension.DIV_CLASS, "toc")
             // Rendering tweaks
             .set(HtmlRenderer.SOFT_BREAK, "<br/>");
