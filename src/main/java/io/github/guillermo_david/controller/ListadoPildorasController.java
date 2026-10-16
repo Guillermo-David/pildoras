@@ -1323,9 +1323,8 @@ public class ListadoPildorasController {
 			var insets = table.getInsets();
 			double insetsV = (insets != null) ? insets.getTop() + insets.getBottom() : 0;
 			double exact = headerH + rowCount * cellHeight + insetsV;
+			table.setMaxHeight(exact);
 			table.setPrefHeight(exact);
-			table.setMinHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
-			table.setMaxHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
 		});
 
 		boolean singlePage = (tamanioPagina == Integer.MAX_VALUE || totalPaginas <= 1);
