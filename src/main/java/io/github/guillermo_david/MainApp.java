@@ -88,8 +88,10 @@ public class MainApp extends Application{
 
 	    stage.show();
 
+	    scene.getRoot().applyCss();
+	    scene.getRoot().layout();
 	    var controller = fxmlLoader.<io.github.guillermo_david.controller.ListadoPildorasController>getController();
-	    javafx.application.Platform.runLater(controller::adjustStageHeight);
+	    controller.adjustStageHeight();
 	}
 
 	@Override
