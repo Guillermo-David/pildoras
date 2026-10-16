@@ -85,6 +85,10 @@ public class EditorPildoraController {
 
 	private static final Pattern P_PILDORA_ID = Pattern.compile("\\b[pP]ildora:(\\d+)");
 
+	private static final java.util.prefs.Preferences RECOVERY_PREFS =
+			java.util.prefs.Preferences.userNodeForPackage(EditorPildoraController.class).node("autosave");
+	private javafx.animation.Timeline autosaveTimer;
+	private boolean dirty = false;
 
 	// Debounce para no renderizar en cada tecla
 	private final PauseTransition previewDebounce = new PauseTransition(Duration.millis(250));
@@ -93,6 +97,7 @@ public class EditorPildoraController {
 	public void initialize() {
 
 		btnCancelar.setOnAction(e -> {
+			clearRecoveryDraft();
 			if (onClose != null)
 				onClose.run();
 		});
@@ -204,8 +209,77 @@ public class EditorPildoraController {
 		    sc.getAccelerators().put(kc, this::mdInsertInternalLink);
 		});
 
+		txtTitulo.textProperty().addListener((obs, o, n) -> dirty = true);
+		txtDescripcion.textProperty().addListener((obs, o, n) -> dirty = true);
+
+		autosaveTimer = new javafx.animation.Timeline(
+			new javafx.animation.KeyFrame(Duration.seconds(30), ev -> saveRecoveryDraft())
+		);
+		autosaveTimer.setCycleCount(javafx.animation.Animation.INDEFINITE);
+		autosaveTimer.play();
+
+		offerRecoveryDraft();
 
 		initPreview();
+	}
+
+	private void saveRecoveryDraft() {
+		if (!dirty) return;
+		String titulo = txtTitulo.getText();
+		String contenido = txtDescripcion.getText();
+		if ((titulo == null || titulo.isBlank()) && (contenido == null || contenido.isBlank())) return;
+		RECOVERY_PREFS.put("titulo", titulo == null ? "" : titulo);
+		RECOVERY_PREFS.put("contenido", contenido == null ? "" : contenido);
+		RECOVERY_PREFS.putLong("timestamp", System.currentTimeMillis());
+		if (pildoraEnEdicion != null) {
+			RECOVERY_PREFS.putInt("pildoraId", pildoraEnEdicion.getId());
+		} else {
+			RECOVERY_PREFS.remove("pildoraId");
+		}
+		dirty = false;
+	}
+
+	private void clearRecoveryDraft() {
+		if (autosaveTimer != null) autosaveTimer.stop();
+		RECOVERY_PREFS.remove("titulo");
+		RECOVERY_PREFS.remove("contenido");
+		RECOVERY_PREFS.remove("timestamp");
+		RECOVERY_PREFS.remove("pildoraId");
+	}
+
+	private void offerRecoveryDraft() {
+		String titulo = RECOVERY_PREFS.get("titulo", null);
+		String contenido = RECOVERY_PREFS.get("contenido", null);
+		long ts = RECOVERY_PREFS.getLong("timestamp", 0);
+		if (ts == 0 || (titulo == null && contenido == null)) return;
+
+		long ageMinutes = (System.currentTimeMillis() - ts) / 60_000;
+		if (ageMinutes > 24 * 60) {
+			clearRecoveryDraft();
+			return;
+		}
+
+		Platform.runLater(() -> {
+			String when = ageMinutes < 1 ? "hace menos de 1 minuto"
+					: ageMinutes < 60 ? "hace " + ageMinutes + " minutos"
+					: "hace " + (ageMinutes / 60) + " horas";
+			Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+			alert.setTitle("Recuperar borrador");
+			alert.setHeaderText("Se encontró un borrador sin guardar (" + when + ")");
+			alert.setContentText("¿Deseas recuperar el contenido?");
+			Dialogs.decorate(alert, root);
+			var res = alert.showAndWait();
+			if (res.isPresent() && res.get() == javafx.scene.control.ButtonType.OK) {
+				if (titulo != null && !titulo.isBlank() && txtTitulo.getText().isBlank()) {
+					txtTitulo.setText(titulo);
+				}
+				if (contenido != null && !contenido.isBlank() && txtDescripcion.getText().isBlank()) {
+					txtDescripcion.setText(contenido);
+				}
+				StatusBus.show("Borrador recuperado.", StatusBus.Type.INFO, Duration.seconds(3));
+			}
+			clearRecoveryDraft();
+		});
 	}
 
 	private String tryDecrypt(Pildora p) {
@@ -385,6 +459,7 @@ public class EditorPildoraController {
 
 			StatusBus.show(msg, StatusBus.Type.SUCCESS, Duration.seconds(3));
 
+			clearRecoveryDraft();
 			if (onClose != null)
 				onClose.run();
 
