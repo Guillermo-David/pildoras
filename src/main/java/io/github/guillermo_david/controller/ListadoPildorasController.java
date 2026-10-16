@@ -1,7 +1,6 @@
 package io.github.guillermo_david.controller;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -308,27 +307,6 @@ public class ListadoPildorasController {
 		emptyBox.setAlignment(Pos.CENTER);
 		emptyBox.getStyleClass().add("empty-state-box");
 		table.setPlaceholder(emptyBox);
-		table.skinProperty().addListener((obs, oldSkin, newSkin) -> {
-			if (newSkin == null)
-				return;
-			Platform.runLater(() -> {
-				Region headerBg = (Region) table.lookup(".column-header-background");
-				var headerHeight = headerBg != null ? headerBg.heightProperty() : new SimpleDoubleProperty(28);
-
-				double row = table.getFixedCellSize(); // 30
-				int rows = tamanioPagina == Integer.MAX_VALUE ? 30 : tamanioPagina;
-
-				table.prefHeightProperty().unbind();
-				table.prefHeightProperty().bind(headerHeight.add(rows * row + 2));
-
-				table.setMinHeight(Region.USE_COMPUTED_SIZE);
-				table.setMaxHeight(Region.USE_COMPUTED_SIZE);
-
-				var wnd = table.getScene() != null ? table.getScene().getWindow() : null;
-				if (wnd instanceof Stage st)
-					Platform.runLater(st::sizeToScene);
-			});
-		});
 
 		colTitulo.setSortable(true);
 		colDescripcion.setSortable(true);
@@ -834,49 +812,31 @@ public class ListadoPildorasController {
 		buildPageSizeSelector();
 	}
 
-	private final List<Button> pageSizeButtons = new ArrayList<>();
+	private javafx.scene.control.MenuButton pageSizeMenu;
 
 	private void buildPageSizeSelector() {
-		var separator = new Label("|");
-		separator.getStyleClass().add("pagination-separator");
+		String currentLabel = tamanioPagina == Integer.MAX_VALUE ? "Todo" : String.valueOf(tamanioPagina);
+		pageSizeMenu = new javafx.scene.control.MenuButton(currentLabel);
+		pageSizeMenu.getStyleClass().add("page-size-menu");
+		pageSizeMenu.setTooltip(new Tooltip("Píldoras por página"));
 
-		var sizeBox = new HBox(2);
-		sizeBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-		pageSizeButtons.clear();
 		for (int size : PAGE_SIZES) {
 			String label = size == Integer.MAX_VALUE ? "Todo" : String.valueOf(size);
-			var btn = new Button(label);
-			btn.getStyleClass().add("page-size-btn");
-			if (size == tamanioPagina) btn.getStyleClass().add("page-size-active");
+			var mi = new javafx.scene.control.MenuItem(label);
 			final int s = size;
-			btn.setOnAction(e -> applyPageSize(s));
-			pageSizeButtons.add(btn);
-			sizeBox.getChildren().add(btn);
+			mi.setOnAction(e -> applyPageSize(s));
+			pageSizeMenu.getItems().add(mi);
 		}
 
-		paginationBox.getChildren().addAll(separator, sizeBox);
+		paginationBox.getChildren().add(pageSizeMenu);
 	}
 
 	private void applyPageSize(int size) {
 		tamanioPagina = size;
 		PREFS.putInt(PREF_PAGE_SIZE, size);
 		paginaActual = 1;
-		pageSizeButtons.forEach(b -> b.getStyleClass().remove("page-size-active"));
-		for (int i = 0; i < PAGE_SIZES.length; i++) {
-			if (PAGE_SIZES[i] == size) pageSizeButtons.get(i).getStyleClass().add("page-size-active");
-		}
-		updateTableHeight();
+		pageSizeMenu.setText(size == Integer.MAX_VALUE ? "Todo" : String.valueOf(size));
 		refrescarTabla();
-	}
-
-	private void updateTableHeight() {
-		double row = table.getFixedCellSize();
-		Region headerBg = (Region) table.lookup(".column-header-background");
-		double headerH = headerBg != null ? headerBg.getHeight() : 28;
-		int rows = tamanioPagina == Integer.MAX_VALUE ? 30 : tamanioPagina;
-		table.prefHeightProperty().unbind();
-		table.setPrefHeight(headerH + rows * row + 2);
 	}
 
 	private void setColTitulo() {
