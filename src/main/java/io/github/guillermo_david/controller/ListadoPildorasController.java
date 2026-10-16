@@ -87,6 +87,8 @@ public class ListadoPildorasController {
 	private final PildoraDao pildoraDao = new PildoraDao();
 	private final TagDao tagDao = new TagDao();
 	private java.util.Map<Integer, String> tagTextCache = java.util.Map.of();
+	private final javafx.event.EventHandler<javafx.scene.input.ScrollEvent> scrollBlocker =
+		javafx.scene.input.ScrollEvent::consume;
 
 	private int paginaActual = 1;
 	private static final String PREF_PAGE_SIZE = "pageSize";
@@ -1311,13 +1313,14 @@ public class ListadoPildorasController {
 		tagTextCache = map;
 		table.setItems(FXCollections.observableArrayList(todas));
 
+		table.removeEventFilter(javafx.scene.input.ScrollEvent.SCROLL, scrollBlocker);
 		javafx.application.Platform.runLater(() -> {
 			var vbar = table.lookup(".scroll-bar:vertical");
 			if (vbar instanceof javafx.scene.control.ScrollBar sb) {
-				boolean needsScroll = sb.getMax() > 0 && sb.getVisibleAmount() < sb.getMax();
-				sb.setDisable(!needsScroll);
-				if (!needsScroll) {
+				double overflow = sb.getMax() - sb.getVisibleAmount();
+				if (overflow < 1.0) {
 					sb.setValue(0);
+					table.addEventFilter(javafx.scene.input.ScrollEvent.SCROLL, scrollBlocker);
 				}
 			}
 		});
