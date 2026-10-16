@@ -45,16 +45,15 @@ import netscape.javascript.JSObject;
 public class DetallePildoraController {
 
 	@FXML private VBox root;
-	@FXML private Label lblTitulo, lblFecha, lblRefs, lblBacklinks;
-	@FXML private FlowPane tagsBox, boxRefs, boxBacklinks;
+	@FXML private VBox linksSection;
+	@FXML private Label lblTitulo, lblFecha;
+	@FXML private FlowPane tagsBox;
 	@FXML private WebView webContenido;
 	@FXML private Button btnVolver, btnEditar, btnBorrar;
 	@FXML private MenuButton btnExportMenu;
 	@FXML private FlowPane linksOutBox;
 	@FXML private FlowPane linksInBox;
 	@FXML private Label lblLinks, lblLinksOut, lblLinksIn;
-
-	private Consumer<Integer> onOpenPildoraId;
 
 	private final SecurityService security = SecurityService.getInstance();
 
@@ -77,8 +76,6 @@ public class DetallePildoraController {
 	private String cssDark;
 	private String lastHtml;
 	
-	private Consumer<Integer> onOpenPildora; // callback (lo engancha Listado para abrir por id)
-	public void setOnOpenPildora(Consumer<Integer> c) { this.onOpenPildora = c; }
 	
 
 	@FXML
@@ -88,14 +85,27 @@ public class DetallePildoraController {
 		cssDark = loadResourceAsString("/css/webview-dark.css");
 
 		// I18n overrides for labels with hardcoded FXML text
-		lblRefs.setText(I18n.get("label.references"));
-		lblBacklinks.setText(I18n.get("label.mentioned.in"));
 		lblLinks.setText(I18n.get("label.links"));
 		lblLinksOut.setText(I18n.get("label.links.outgoing"));
 		lblLinksIn.setText(I18n.get("label.links.incoming"));
 
 		// Fondo transparente del WebView (JavaFX)
 		webContenido.setStyle("-fx-background-color: transparent;");
+
+		// JS bridge: install once, re-injects on every page load
+		webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
+			if (st == Worker.State.SUCCEEDED) {
+				try {
+					JSObject win = (JSObject) webContenido.getEngine().executeScript("window");
+					win.setMember("app", new Object() {
+						@SuppressWarnings("unused")
+						public void openPildora(int id) {
+							Platform.runLater(() -> openPildoraFromJs(id));
+						}
+					});
+				} catch (Throwable ignore) {}
+			}
+		});
 
 		// Si cambian los stylesheets del Scene (tema), re-renderiza con el CSS adecuado
 		webContenido.sceneProperty().addListener((obs, old, scene) -> {
@@ -197,9 +207,6 @@ public class DetallePildoraController {
 		setupExportMenu();
 	}
 	
-	public void setOnOpenPildoraId(Consumer<Integer> c) {
-		this.onOpenPildoraId = c;
-	}
 
 	private void setupExportMenu() {
 		// Icono principal del botón (sin texto)
@@ -454,10 +461,8 @@ public class DetallePildoraController {
 	
 	private Button chipForLink(io.github.guillermo_david.model.Pildora p) {
 	    var b = new Button(p.getTitulo() == null ? ("#" + p.getId()) : p.getTitulo());
-	    b.getStyleClass().addAll("tag-chip"); // reutiliza estilos de chip
-	    b.setOnAction(e -> {
-	        if (onOpenPildora != null) onOpenPildora.accept(p.getId());
-	    });
+	    b.getStyleClass().addAll("tag-chip");
+	    b.setOnAction(e -> openPildoraFromJs(p.getId()));
 	    return b;
 	}
 
@@ -466,47 +471,14 @@ public class DetallePildoraController {
 	    var out = dao.listOutgoingRefs(currentId);
 	    var inb = dao.listIncomingRefs(currentId);
 
-	    boxRefs.getChildren().setAll(out.stream().map(this::chipForLink).toList());
-	    boxBacklinks.getChildren().setAll(inb.stream().map(this::chipForLink).toList());
+	    linksOutBox.getChildren().setAll(out.stream().map(this::chipForLink).toList());
+	    linksInBox.getChildren().setAll(inb.stream().map(this::chipForLink).toList());
 
-	    boolean showOut = !out.isEmpty();
-	    boolean showIn  = !inb.isEmpty();
-
-	    lblRefs.setVisible(showOut);      lblRefs.setManaged(showOut);
-	    boxRefs.setVisible(showOut);      boxRefs.setManaged(showOut);
-	    lblBacklinks.setVisible(showIn);  lblBacklinks.setManaged(showIn);
-	    boxBacklinks.setVisible(showIn);  boxBacklinks.setManaged(showIn);
+	    boolean hasLinks = !out.isEmpty() || !inb.isEmpty();
+	    linksSection.setVisible(hasLinks);
+	    linksSection.setManaged(hasLinks);
 	}
 	
-	public void openPildora(int id) { // llamado desde JS
-	    if (onOpenPildoraId != null) {
-	        javafx.application.Platform.runLater(() -> onOpenPildoraId.accept(id));
-	    }
-	}
-	
-	public final class JsBridge {
-	    public void openPildora(Object num) {
-	        int id;
-	        if (num instanceof Number n) id = n.intValue();
-	        else {
-	            try { id = Integer.parseInt(String.valueOf(num)); } catch (Exception ex) { return; }
-	        }
-	        if (onOpenPildora != null) {
-	            javafx.application.Platform.runLater(() -> onOpenPildora.accept(id));
-	        }
-	    }
-	}
-
-	// Llama a esto cada vez que recargas el HTML:
-	private void installJsBridgeAfterLoad() {
-	    webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
-	        if (st == Worker.State.SUCCEEDED) {
-	            JSObject win = (JSObject) webContenido.getEngine().executeScript("window");
-	            win.setMember("app", new JsBridge());
-	        }
-	    });
-	}
-
 	private void renderContenido(Pildora p) {
 		try {
 			String bodyMd;
@@ -523,7 +495,6 @@ public class DetallePildoraController {
 
 			lastHtml = MD.toHtml(bodyMd);
 			renderWithTheme(ThemeManager.load(), lastHtml);
-			renderWithTheme(ThemeManager.load(), lastHtml);
 
 		} catch (Exception ex) {
 			lastHtml = "<p><em>" + I18n.get("detail.content.load.error") + "</em></p>";
@@ -536,30 +507,6 @@ public class DetallePildoraController {
 
 	    String html = wrapHtmlWithCss(lastHtml, css, /*mathjax*/true, /*interceptLinks*/true);
 	    webContenido.getEngine().loadContent(html);
-	    installJsBridgeAfterLoad();
-	    
-	    // Detalle: queremos MathJax y también interceptar enlaces pildora:
-//	    boolean mathjax = true;
-//	    boolean interceptLinks = true;
-	    
-//	    webContenido.getEngine().loadContent(
-//	        wrapHtmlWithCss(bodyHtml, css, mathjax, interceptLinks)
-//	    );
-
-	    // Instala el “bridge” para que el JS pueda llamar a Java (window.app.openPildora)
-	    webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
-	        if (st == Worker.State.SUCCEEDED) {
-	            try {
-	                JSObject win = (JSObject) webContenido.getEngine().executeScript("window");
-	                win.setMember("app", new Object() {
-	                    @SuppressWarnings("unused")
-						public void openPildora(int id) {
-	                        javafx.application.Platform.runLater(() -> openPildoraFromJs(id));
-	                    }
-	                });
-	            } catch (Throwable ignore) {}
-	        }
-	    });
 	}
 	
 	private void openPildoraFromJs(int id) {

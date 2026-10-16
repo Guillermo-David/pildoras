@@ -29,37 +29,23 @@
 	              popupSide="BOTTOM"/>
 	</HBox>
 	  
-	<Label fx:id="lblLinks" text="Enlaces" styleClass="section-title"/>
-
-	<HBox spacing="20">
-	    <VBox spacing="6">
-	        <Label fx:id="lblLinksOut" text="Enlaza a:"/>
-	        <FlowPane fx:id="linksOutBox" hgap="6" vgap="6"/>
-	    </VBox>
-	    <VBox spacing="6">
-	        <Label fx:id="lblLinksIn" text="Referenciada por:"/>
-	        <FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
-	    </VBox>
-	</HBox>
-
-	<!--<TitledPane text="Referencias" expanded="true">
-		<content>
+	<VBox fx:id="linksSection" spacing="6" visible="false" managed="false">
+		<Label fx:id="lblLinks" text="Enlaces" styleClass="section-title"/>
+		<HBox spacing="20">
 		    <VBox spacing="6">
-		    	<Label text="Enlaza a:" styleClass="detail-meta"/>
-		    	<FlowPane fx:id="linksOutBox" hgap="6" vgap="6"/>
-		    	<Label text="Enlazada desde:" styleClass="detail-meta"/>
-		    	<FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
+		        <Label fx:id="lblLinksOut" text="Enlaza a:"/>
+		        <FlowPane fx:id="linksOutBox" hgap="6" vgap="6"/>
 		    </VBox>
-		</content>
-	</TitledPane>-->
+		    <VBox spacing="6">
+		        <Label fx:id="lblLinksIn" text="Referenciada por:"/>
+		        <FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
+		    </VBox>
+		</HBox>
+	</VBox>
 
 	<Separator/>
 
 	<WebView fx:id="webContenido" VBox.vgrow="ALWAYS"/>
-	<Label fx:id="lblRefs" text="Referencias" visible="false" managed="false"/>
-	<FlowPane fx:id="boxRefs" hgap="6" vgap="6" visible="false" managed="false"/>
-	<Label fx:id="lblBacklinks" text="Mencionada en" visible="false" managed="false"/>
-	<FlowPane fx:id="boxBacklinks" hgap="6" vgap="6" visible="false" managed="false"/>
 	
 	<HBox spacing="10" alignment="CENTER_RIGHT">
 		<Button fx:id="btnBorrar" text="🗑 Borrar" style="-fx-text-fill: red;"/>
