@@ -328,10 +328,8 @@ public class PildoraDao {
                     p.setFavorita(rs.getInt("favorita") == 1);
                     p.setPinned(rs.getInt("pinned") == 1);
                     p.setProtegida(rs.getInt("protegida") == 1);
-                    var fc = rs.getTimestamp("fecha_creacion");
-                    var fa = rs.getTimestamp("fecha_actualizacion");
-                    if (fc != null) p.setFechaCreacion(fc.toLocalDateTime());
-                    if (fa != null) p.setFechaActualizacion(fa.toLocalDateTime());
+                    p.setFechaCreacion(parseDateTime(rs.getString("fecha_creacion")));
+                    p.setFechaActualizacion(parseDateTime(rs.getString("fecha_actualizacion")));
                     out.add(p);
                 }
             }

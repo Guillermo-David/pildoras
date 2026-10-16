@@ -134,8 +134,10 @@ public class DraftDao {
 
     public Draft buscarPorId(int id) {
         String sql = """
-            SELECT id,titulo,contenido,contenido_cipher,contenido_iv,protegida,
-                   fecha_creacion,fecha_actualizacion
+            SELECT id,titulo,contenido,
+                   hex(contenido_cipher) AS cipher_hex,
+                   hex(contenido_iv)     AS iv_hex,
+                   protegida,fecha_creacion,fecha_actualizacion
             FROM drafts WHERE id=?
         """;
         try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
@@ -151,8 +153,10 @@ public class DraftDao {
 
     public List<Draft> listarTodos() {
         String sql = """
-            SELECT id,titulo,contenido,contenido_cipher,contenido_iv,protegida,
-                   fecha_creacion,fecha_actualizacion
+            SELECT id,titulo,contenido,
+                   hex(contenido_cipher) AS cipher_hex,
+                   hex(contenido_iv)     AS iv_hex,
+                   protegida,fecha_creacion,fecha_actualizacion
             FROM drafts
             ORDER BY fecha_creacion DESC
         """;
@@ -190,20 +194,35 @@ public class DraftDao {
     }
 
     private static Draft map(ResultSet rs) throws SQLException {
-        LocalDateTime fc = rs.getString("fecha_creacion") != null
-                ? LocalDateTime.parse(rs.getString("fecha_creacion").replace('T', ' '), FMT)
-                : null;
-        LocalDateTime fa = rs.getString("fecha_actualizacion") != null
-                ? LocalDateTime.parse(rs.getString("fecha_actualizacion").replace('T', ' '), FMT)
-                : null;
         return new Draft(
             rs.getInt("id"),
             rs.getString("titulo"),
             rs.getString("contenido"),
-            rs.getBytes("contenido_cipher"),
-            rs.getBytes("contenido_iv"),
+            hexToBytes(rs.getString("cipher_hex")),
+            hexToBytes(rs.getString("iv_hex")),
             rs.getInt("protegida") == 1,
-            fc, fa
+            parseDateTime(rs.getString("fecha_creacion")),
+            parseDateTime(rs.getString("fecha_actualizacion"))
         );
+    }
+
+    private static LocalDateTime parseDateTime(String s) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            return LocalDateTime.parse(s.replace('T', ' '), FMT);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static byte[] hexToBytes(String hex) {
+        if (hex == null || hex.isBlank()) return null;
+        int len = hex.length();
+        byte[] out = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            out[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+                    + Character.digit(hex.charAt(i + 1), 16));
+        }
+        return out;
     }
 }
