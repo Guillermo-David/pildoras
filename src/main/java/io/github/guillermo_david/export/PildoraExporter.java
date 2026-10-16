@@ -124,11 +124,15 @@ public final class PildoraExporter {
         }
     }
 
+    private static final java.util.regex.Pattern P_BARE_ATTR =
+            java.util.regex.Pattern.compile("(<[a-zA-Z][^>]*?)\\b(disabled|checked|readonly|selected|autofocus|required)(?=\\s*>|\\s*/>|\\s+[a-zA-Z])");
+
     private static String toXhtml(String html) {
         html = html.replace("<!doctype html>",
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">");
         html = html.replace("<html lang=\"es\">",
                 "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\">");
+        html = P_BARE_ATTR.matcher(html).replaceAll("$1$2=\"$2\"");
         html = html.replaceAll("<(meta|br|hr|img|input|link)(\\s[^>]*?)?>",
                 "<$1$2 />");
         return html;
