@@ -261,14 +261,28 @@ public class ListadoPildorasController {
 	}
 	
 	private void addVersionBadge() {
-	    // Empuja lblStatus para que la versión quede a la derecha
+	    // Coffee button (left side)
+	    var coffeeIcon = new FontIcon(FontAwesomeSolid.MUG_HOT);
+	    coffeeIcon.setIconSize(14);
+	    coffeeIcon.getStyleClass().add("coffee-icon");
+	    var coffeeBtn = new Button();
+	    coffeeBtn.setGraphic(coffeeIcon);
+	    coffeeBtn.getStyleClass().addAll("icon-btn", "coffee-btn");
+	    coffeeBtn.setTooltip(new Tooltip("Invite me a coffee!"));
+	    coffeeBtn.setOnAction(e -> {
+	        try {
+	            java.awt.Desktop.getDesktop().browse(new java.net.URI("https://ko-fi.com/guillermo_david"));
+	        } catch (Exception ignored) {}
+	    });
+	    statusBar.getChildren().add(0, coffeeBtn);
+
 	    HBox.setHgrow(lblStatus, Priority.ALWAYS);
 	    lblStatus.setMaxWidth(Double.MAX_VALUE);
 
 	    String v = AppVersion.get();
 	    Label lblVer = new Label("v" + v);
 	    lblVer.getStyleClass().add("version-badge");
-	    lblVer.setOpacity(0.8);     // por si no quieres tocar CSS
+	    lblVer.setOpacity(0.8);
 	    statusBar.getChildren().add(lblVer);
 	}
 

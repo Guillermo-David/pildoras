@@ -809,6 +809,24 @@
   -fx-opacity: 0.8;
 }
 
+/* ---- Coffee / Ko-fi button ---- */
+.coffee-btn {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-padding: 2 6;
+  -fx-cursor: hand;
+}
+.coffee-btn:hover {
+  -fx-background-color: -c-accent-soft;
+  -fx-background-radius: 6;
+}
+.coffee-icon {
+  -fx-icon-color: #ff5e5b;
+}
+.coffee-btn:hover .coffee-icon {
+  -fx-icon-color: #ff3b38;
+}
+
 .context-menu .menu-item.danger .label {
   -fx-text-fill: #e53935;
 }

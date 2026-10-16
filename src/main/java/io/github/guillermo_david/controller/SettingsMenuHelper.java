@@ -102,8 +102,17 @@ class SettingsMenuHelper {
 
         // --- Tipografías ---
         record Family(String label, String css) {}
-        var families = List.of(new Family("System", "System"), new Family("Sans (Arial)", "Arial"),
-                new Family("Serif", "Serif"), new Family("Monospace", "Consolas"));
+        var families = List.of(
+                new Family("System", "System"),
+                new Family("Sans (Arial)", "Arial"),
+                new Family("Segoe UI", "Segoe UI"),
+                new Family("Helvetica", "Helvetica"),
+                new Family("Verdana", "Verdana"),
+                new Family("Tahoma", "Tahoma"),
+                new Family("Serif (Georgia)", "Georgia"),
+                new Family("Serif (Times)", "Times New Roman"),
+                new Family("Monospace (Consolas)", "Consolas"),
+                new Family("Monospace (Courier)", "Courier New"));
         var miFamily = new Menu("Tipografía");
         var tgFamily = new ToggleGroup();
         String currentFamily = prefs.get(prefFontFamily, defFontFamily);
@@ -111,6 +120,7 @@ class SettingsMenuHelper {
             var r = new RadioMenuItem(f.label());
             r.setToggleGroup(tgFamily);
             r.setSelected(f.css().equalsIgnoreCase(currentFamily));
+            r.setStyle("-fx-font-family: '" + f.css().replace("'", "\\'") + "';");
             r.setOnAction(e -> {
                 prefs.put(prefFontFamily, f.css());
                 applyTypographyNow();
@@ -121,8 +131,13 @@ class SettingsMenuHelper {
         // --- Tamaño letra ---
         var miSize = new Menu("Tamaño");
         var tgSize = new ToggleGroup();
-        var sizes = List.of(new Family("Muy grande", "vlarge"), new Family("Grande", "large"),
-                new Family("Normal", "normal"), new Family("Pequeño", "small"));
+        var sizes = List.of(
+                new Family("Muy pequeño (10px)", "xsmall"),
+                new Family("Pequeño (11px)", "small"),
+                new Family("Normal (13px)", "normal"),
+                new Family("Mediano (15px)", "medium"),
+                new Family("Grande (17px)", "large"),
+                new Family("Muy grande (20px)", "vlarge"));
         String currentSize = prefs.get(prefFontSize, defFontSize);
         for (var item : sizes) {
             var r = new RadioMenuItem(item.label);
@@ -358,10 +373,12 @@ class SettingsMenuHelper {
             String sizeKey = prefs.get(prefFontSize, defFontSize);
 
             double px = switch (sizeKey) {
-                case "small" -> 10.0;
-                case "large" -> 18.0;
-                case "vlarge" -> 22.0;
-                default -> 14.0;
+                case "xsmall" -> 10.0;
+                case "small" -> 11.0;
+                case "medium" -> 15.0;
+                case "large" -> 17.0;
+                case "vlarge" -> 20.0;
+                default -> 13.0;
             };
 
             scene.getRoot().setStyle("""
