@@ -242,17 +242,29 @@ public class DatabaseHelper {
                 )
             """);
 
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_oculta ON pildoras(oculta)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_drafts_fecha ON drafts(fecha_creacion DESC)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildora_link_from ON pildora_link(from_id, kind)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildora_link_to ON pildora_link(to_id, kind)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_titulo_lower ON pildoras(lower(titulo))");
         }
 
+        // Column migrations must run BEFORE index creation on those columns
         if (usingTurso) {
+            // Turso: PRAGMA not available, so try ALTER and ignore "duplicate column" errors
+            try (Statement s = connection.createStatement()) {
+                tryAddColumn(s, "ALTER TABLE pildoras ADD COLUMN favorita INTEGER NOT NULL DEFAULT 0");
+                tryAddColumn(s, "ALTER TABLE pildoras ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0");
+                tryAddColumn(s, "ALTER TABLE pildoras ADD COLUMN protegida INTEGER NOT NULL DEFAULT 0");
+                tryAddColumn(s, "ALTER TABLE pildoras ADD COLUMN descripcion_cipher BLOB");
+                tryAddColumn(s, "ALTER TABLE pildoras ADD COLUMN descripcion_iv BLOB");
+                tryAddColumn(s, "ALTER TABLE pildoras ADD COLUMN oculta INTEGER NOT NULL DEFAULT 0");
+            }
+            try (Statement s = connection.createStatement()) {
+                s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
+                s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
+                s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
+                s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_oculta ON pildoras(oculta)");
+                s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_titulo_lower ON pildoras(lower(titulo))");
+            }
             return;
         }
 
@@ -336,12 +348,28 @@ public class DatabaseHelper {
             }
         }
 
+        try (Statement s = connection.createStatement()) {
+            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_oculta ON pildoras(oculta)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_titulo_lower ON pildoras(lower(titulo))");
+        }
+
         dedupeTagsCaseInsensitive();
         try (Statement s = connection.createStatement()) {
             s.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS u_tags_nombre_lower
                 ON tags(lower(nombre))
             """);
+        }
+    }
+
+    private void tryAddColumn(Statement s, String alterSql) {
+        try {
+            s.execute(alterSql);
+        } catch (SQLException ignore) {
+            // Column already exists — safe to ignore
         }
     }
 
