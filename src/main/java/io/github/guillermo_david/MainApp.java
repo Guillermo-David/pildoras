@@ -53,9 +53,6 @@ public class MainApp extends Application{
 	private void doStart(Stage stage) throws Exception {
 	    DatabaseHelper.getInstance();
 
-	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
-	    Scene scene = new Scene(fxmlLoader.load(), 1280, 837);
-
 	    var base = MainApp.class.getResource("/css/base.css").toExternalForm();
 	    var themes = java.util.Map.of(
 	        "light",           MainApp.class.getResource("/css/theme-light.css").toExternalForm(),
@@ -67,6 +64,10 @@ public class MainApp extends Application{
 	        "solarized-dark",  MainApp.class.getResource("/css/theme-solarized-dark.css").toExternalForm()
 	    );
 	    ThemeManager.initStyles(base, themes);
+
+	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
+	    Scene scene = new Scene(fxmlLoader.load(), 1280, 837);
+
 	    ThemeManager.apply(scene, ThemeManager.loadId());
 
 	    var icons = loadIcons();
