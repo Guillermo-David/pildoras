@@ -320,7 +320,8 @@ class SettingsMenuHelper {
         var miRestore = new MenuItem("Importar backup…");
         miRestore.setOnAction(e -> handleImportBackup());
 
-        miDatabase.getItems().addAll(miTurso, miMigrate, new SeparatorMenuItem(),
+        miDatabase.getItems().addAll(miImport, new SeparatorMenuItem(),
+                miTurso, miMigrate, new SeparatorMenuItem(),
                 miBackup, miRestore, new SeparatorMenuItem(), miTursoGuide);
 
         // =============== Submenú Debug ===============
@@ -331,8 +332,6 @@ class SettingsMenuHelper {
         miShortcuts.setOnAction(e -> showShortcutsDialog());
 
         btnSettings.getItems().setAll(
-                miImport,
-                new SeparatorMenuItem(),
                 miFamily,
                 miSize,
                 new SeparatorMenuItem(),

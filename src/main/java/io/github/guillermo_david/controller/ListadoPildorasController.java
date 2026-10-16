@@ -793,7 +793,7 @@ public class ListadoPildorasController {
 		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.PLUS);
 		nuevaIcon.setIconSize(14);
 		btnNueva.setGraphic(nuevaIcon);
-		btnNueva.setText("Nueva");
+		btnNueva.setText(null);
 		btnNueva.setTooltip(new Tooltip("Nueva píldora (Ctrl+N)"));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
 		btnNueva.getStyleClass().add("btn-accent");
