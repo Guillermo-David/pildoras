@@ -78,6 +78,7 @@ public class EditorPildoraController {
 
 	private final SecurityService security = SecurityService.getInstance();
 	private boolean originalProtegida = false;
+	private String decryptedContentCache = null;
 
 	private MarkdownEngine md = new MarkdownEngine();
 	private String cssLight, cssDark, cssBaseWeb;
@@ -168,7 +169,6 @@ public class EditorPildoraController {
 
 				// No permitir DESPROTEGER si la píldora venía protegida y seguimos bloqueados
 				if (originalProtegida && !security.isUnlocked() && !nowSelected) {
-					// Revertimos el toggle sin tocar el TextArea
 					Platform.runLater(() -> switchProteger.setSelected(true));
 					StatusBus.show("Desbloquea con PIN para desproteger.", StatusBus.Type.WARN, Duration.seconds(3));
 					return;
@@ -176,9 +176,15 @@ public class EditorPildoraController {
 
 				if (!wasSelected && nowSelected && !originalProtegida) {
 					StatusBus.show("Se protegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
-				} else if (wasSelected && !nowSelected && originalProtegida && security.isUnlocked()) {
-					// Al desproteger, recuperar el contenido descifrado en el editor
-					recoverDecryptedContent();
+				} else if (wasSelected && !nowSelected && originalProtegida) {
+					txtDescripcion.setDisable(false);
+					// Restaurar contenido descifrado si el campo está vacío
+					String existing = txtDescripcion.getText();
+					if ((existing == null || existing.isBlank()) && decryptedContentCache != null) {
+						txtDescripcion.setText(decryptedContentCache);
+					} else if (existing == null || existing.isBlank()) {
+						recoverDecryptedContent();
+					}
 					StatusBus.show("Se desprotegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
 				}
 			});
@@ -202,36 +208,71 @@ public class EditorPildoraController {
 		initPreview();
 	}
 
+	private String tryDecrypt(Pildora p) {
+		// 1) Intentar con datos del objeto pasado
+		byte[] cipher = p.getDescripcionCipher();
+		byte[] iv = p.getDescripcionIv();
+
+		if (cipher != null && iv != null) {
+			try {
+				return security.decrypt(cipher, iv);
+			} catch (Exception e) {
+				System.err.println("[Editor] Descifrado falló con objeto (cipher.len="
+						+ cipher.length + ", iv.len=" + iv.length + "): " + e.getMessage());
+			}
+		} else {
+			System.err.println("[Editor] Objeto sin cipher/iv (cipher="
+					+ (cipher == null ? "null" : cipher.length) + ", iv="
+					+ (iv == null ? "null" : iv.length) + ")");
+		}
+
+		// 2) Recargar de BD
+		try {
+			Pildora fresh = pildoraDao.buscarPorId(p.getId());
+			if (fresh != null) {
+				byte[] fc = fresh.getDescripcionCipher();
+				byte[] fiv = fresh.getDescripcionIv();
+				if (fc != null && fiv != null) {
+					try {
+						String result = security.decrypt(fc, fiv);
+						pildoraEnEdicion.setDescripcionCipher(fc);
+						pildoraEnEdicion.setDescripcionIv(fiv);
+						return result;
+					} catch (Exception e) {
+						System.err.println("[Editor] Descifrado falló con BD (cipher.len="
+								+ fc.length + ", iv.len=" + fiv.length + "): " + e.getMessage());
+						StatusBus.show("Error descifrando: " + e.getMessage(),
+								StatusBus.Type.ERROR, Duration.seconds(6));
+					}
+				} else {
+					System.err.println("[Editor] BD devolvió cipher/iv nulos para id=" + p.getId());
+					StatusBus.show("La BD no tiene datos cifrados para esta píldora.",
+							StatusBus.Type.ERROR, Duration.seconds(6));
+				}
+			} else {
+				System.err.println("[Editor] buscarPorId devolvió null para id=" + p.getId());
+				StatusBus.show("No se encontró la píldora en la BD (id=" + p.getId() + ").",
+						StatusBus.Type.ERROR, Duration.seconds(6));
+			}
+		} catch (Exception e) {
+			System.err.println("[Editor] Error consultando BD: " + e.getMessage());
+			e.printStackTrace();
+			StatusBus.show("Error leyendo BD: " + e.getMessage(), StatusBus.Type.ERROR, Duration.seconds(6));
+		}
+		return null;
+	}
+
 	private void recoverDecryptedContent() {
 		txtDescripcion.setDisable(false);
-		try {
-			// Recargar de BD para asegurar cipher/iv correctos
-			Pildora fresh = pildoraDao.buscarPorId(pildoraEnEdicion.getId());
-			if (fresh != null && fresh.getDescripcionCipher() != null && fresh.getDescripcionIv() != null) {
-				String plain = security.decrypt(fresh.getDescripcionCipher(), fresh.getDescripcionIv());
-				txtDescripcion.setText(plain);
-				// Actualizar referencias en memoria
-				pildoraEnEdicion.setDescripcionCipher(fresh.getDescripcionCipher());
-				pildoraEnEdicion.setDescripcionIv(fresh.getDescripcionIv());
-				return;
-			}
-		} catch (Exception e) {
-			System.err.println("[Editor] Error descifrando desde BD: " + e.getMessage());
-			e.printStackTrace();
+		if (decryptedContentCache != null) {
+			txtDescripcion.setText(decryptedContentCache);
+			return;
 		}
-		// Fallback: intentar con datos en memoria
-		try {
-			if (pildoraEnEdicion.getDescripcionCipher() != null && pildoraEnEdicion.getDescripcionIv() != null) {
-				String plain = security.decrypt(pildoraEnEdicion.getDescripcionCipher(),
-						pildoraEnEdicion.getDescripcionIv());
-				txtDescripcion.setText(plain);
-				return;
-			}
-		} catch (Exception e) {
-			System.err.println("[Editor] Error descifrando desde memoria: " + e.getMessage());
-			e.printStackTrace();
+		String plain = tryDecrypt(pildoraEnEdicion);
+		if (plain != null) {
+			txtDescripcion.setText(plain);
+			decryptedContentCache = plain;
 		}
-		StatusBus.show("No se pudo recuperar el contenido descifrado.", StatusBus.Type.ERROR, Duration.seconds(4));
 	}
 
 	private void onGuardar() {
@@ -256,9 +297,14 @@ public class EditorPildoraController {
 					return;
 				}
 			}
-			// Si el editor está vacío (o deshabilitado), recuperar contenido descifrado
+			// Si el editor está vacío, restaurar contenido descifrado
 			if (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()) {
-				recoverDecryptedContent();
+				if (decryptedContentCache != null && !decryptedContentCache.isBlank()) {
+					txtDescripcion.setDisable(false);
+					txtDescripcion.setText(decryptedContentCache);
+				} else {
+					recoverDecryptedContent();
+				}
 			}
 		}
 
@@ -401,38 +447,22 @@ public class EditorPildoraController {
 	public void cargarPildora(Pildora p) {
 		this.pildoraEnEdicion = p;
 		this.originalProtegida = p.isProtegida();
+		this.decryptedContentCache = null;
 		txtTitulo.setText(p.getTitulo());
-		if (switchProteger != null)
-			switchProteger.setSelected(p.isProtegida());
 		if (switchOcultar != null)
 			switchOcultar.setSelected(p.isOculta());
 
 		if (p.isProtegida()) {
 			if (security.isUnlocked()) {
-				try {
-					String plano = security.decrypt(p.getDescripcionCipher(), p.getDescripcionIv());
+				String plano = tryDecrypt(p);
+				if (plano != null) {
 					txtDescripcion.setDisable(false);
 					txtDescripcion.setText(plano);
-				} catch (Exception e) {
-					System.err.println("[Editor] Descifrado con objeto en memoria falló: " + e.getMessage());
-					// Reintentar recargando de BD (los bytes podrían no coincidir)
-					try {
-						Pildora fresh = pildoraDao.buscarPorId(p.getId());
-						if (fresh != null && fresh.getDescripcionCipher() != null) {
-							String plano = security.decrypt(fresh.getDescripcionCipher(), fresh.getDescripcionIv());
-							txtDescripcion.setDisable(false);
-							txtDescripcion.setText(plano);
-							p.setDescripcionCipher(fresh.getDescripcionCipher());
-							p.setDescripcionIv(fresh.getDescripcionIv());
-						} else {
-							throw new IllegalStateException("No hay cipher en BD");
-						}
-					} catch (Exception e2) {
-						System.err.println("[Editor] Descifrado con recarga de BD también falló: " + e2.getMessage());
-						txtDescripcion.clear();
-						txtDescripcion.setDisable(true);
-						txtDescripcion.setPromptText("Contenido protegido (error de descifrado)");
-					}
+					decryptedContentCache = plano;
+				} else {
+					txtDescripcion.clear();
+					txtDescripcion.setDisable(true);
+					txtDescripcion.setPromptText("Error de descifrado — revisa el log");
 				}
 			} else {
 				txtDescripcion.clear();
@@ -443,6 +473,10 @@ public class EditorPildoraController {
 			txtDescripcion.setDisable(false);
 			txtDescripcion.setText(p.getDescripcion() == null ? "" : p.getDescripcion());
 		}
+
+		// Poner el toggle DESPUÉS de cargar el contenido para evitar que el listener interfiera
+		if (switchProteger != null)
+			switchProteger.setSelected(p.isProtegida());
 
 		currentTags.clear();
 		tagsBox.getChildren().clear();
