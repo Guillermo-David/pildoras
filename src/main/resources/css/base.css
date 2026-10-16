@@ -837,25 +837,31 @@
   -fx-icon-size: 14;
 }
 
-/* ---------- Botones de paginación ---------- */
-.btn-pagination {
-    -fx-background-color: -c-bg;
-    -fx-border-color: -c-border;
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
+/* ---------- Paginación ---------- */
+.pagination-arrow {
+    -fx-background-color: transparent;
     -fx-background-radius: 6;
-    -fx-padding: 4 12;
-    -fx-font-size: 12px;
+    -fx-padding: 5 8;
     -fx-cursor: hand;
-    -fx-text-fill: -c-text;
 }
-.btn-pagination:hover {
+.pagination-arrow .ikonli-font-icon {
+    -fx-icon-color: -c-text-muted;
+    -fx-icon-size: 12;
+}
+.pagination-arrow:hover {
     -fx-background-color: -c-accent-soft;
-    -fx-border-color: -c-accent;
-    -fx-text-fill: -c-accent;
 }
-.btn-pagination:disabled {
-    -fx-opacity: 0.4;
+.pagination-arrow:hover .ikonli-font-icon {
+    -fx-icon-color: -c-accent;
+}
+.pagination-arrow:disabled {
+    -fx-opacity: 0.3;
+    -fx-cursor: default;
+}
+.pagination-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -c-text-muted;
+    -fx-padding: 0 2;
 }
 
 /* ---------- Fila seleccionada con acento ---------- */

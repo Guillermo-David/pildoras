@@ -85,13 +85,13 @@
 	<bottom>
 	    <VBox spacing="6">
 	        <!-- Paginación -->
-	        <HBox fx:id="paginationBox" alignment="CENTER" spacing="10">
+	        <HBox fx:id="paginationBox" alignment="CENTER" spacing="6">
 	            <padding>
-	                <Insets top="10" right="10" bottom="0" left="10"/>
+	                <Insets top="8" right="10" bottom="0" left="10"/>
 	            </padding>
-	            <Button fx:id="btnAnterior" text="◀ Anterior"/>
-	            <Label fx:id="lblPagina" text="Página 1 de 1"/>
-	            <Button fx:id="btnSiguiente" text="Siguiente ▶"/>
+	            <Button fx:id="btnAnterior"/>
+	            <Label fx:id="lblPagina" styleClass="pagination-label"/>
+	            <Button fx:id="btnSiguiente"/>
 	        </HBox>
 	
 	        <!-- Barra de estado -->

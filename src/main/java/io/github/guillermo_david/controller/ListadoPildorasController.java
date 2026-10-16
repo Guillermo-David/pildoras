@@ -801,7 +801,11 @@ public class ListadoPildorasController {
 				this::refrescarTabla, () -> table, this::abrirFormularioNueva);
 		draftsHelper.init();
 
-		btnAnterior.getStyleClass().add("btn-pagination");
+		var prevIcon = new FontIcon(FontAwesomeSolid.CHEVRON_LEFT);
+		prevIcon.setIconSize(12);
+		btnAnterior.setGraphic(prevIcon);
+		btnAnterior.setText(null);
+		btnAnterior.getStyleClass().addAll("icon-btn", "pagination-arrow");
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
 		btnAnterior.setOnAction(e -> {
 			if (paginaActual > 1) {
@@ -810,7 +814,11 @@ public class ListadoPildorasController {
 			}
 		});
 
-		btnSiguiente.getStyleClass().add("btn-pagination");
+		var nextIcon = new FontIcon(FontAwesomeSolid.CHEVRON_RIGHT);
+		nextIcon.setIconSize(12);
+		btnSiguiente.setGraphic(nextIcon);
+		btnSiguiente.setText(null);
+		btnSiguiente.getStyleClass().addAll("icon-btn", "pagination-arrow");
 		btnSiguiente.setTooltip(new Tooltip("Página siguiente (Ctrl+→ / PageDown)"));
 		btnSiguiente.setOnAction(e -> {
 			if (paginaActual < totalPaginas) {
@@ -1297,7 +1305,7 @@ public class ListadoPildorasController {
 		int desde = (total == 0) ? 0 : (paginaActual - 1) * TAMANIO_PAGINA + 1;
 		int hasta = (total == 0) ? 0 : Math.min(paginaActual * TAMANIO_PAGINA, total);
 		lblPagina.setText(String.format(
-				"%d–%d de %d",
+				"%d - %d de %d",
 				desde, hasta, total));
 		
 
