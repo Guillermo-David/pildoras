@@ -234,6 +234,8 @@ BorderPane (root)
 - **Sincronización bidireccional Turso mejorada**: Actualmente las variantes Turso son métodos separados; unificar la capa de datos para que el cambio local↔remoto sea transparente.
 - **Soporte LaTeX completo**: La extensión MathJax está comentada en `MarkdownEngine`. Activar y asegurar renderizado en preview y exports.
 - **Modo presentación**: Convertir una píldora (con headings) en slides simples navegables.
+- **Tabla de contenidos automática**: Generar TOC a partir de los headings de una píldora larga.
+- **Duplicar píldora**: Botón para crear una copia de una píldora existente como punto de partida.
 
 ### PERFORMANCE
 
