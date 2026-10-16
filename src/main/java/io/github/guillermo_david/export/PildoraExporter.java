@@ -104,6 +104,22 @@ public final class PildoraExporter {
     }
 
     public static void exportHtml(Pildora p, TagDao tagDao, Path file, String extraCss) throws Exception {
+        String fullHtml = buildFullHtml(p, tagDao, extraCss, true);
+        Files.writeString(file, fullHtml, StandardCharsets.UTF_8);
+    }
+
+    public static void exportPdf(Pildora p, TagDao tagDao, Path file, String extraCss) throws Exception {
+        String html = buildFullHtml(p, tagDao, extraCss, false);
+        try (var os = Files.newOutputStream(file)) {
+            var builder = new com.openhtmltopdf.pdfboxout.PdfRendererBuilder();
+            builder.useFastMode();
+            builder.withHtmlContent(html, null);
+            builder.toStream(os);
+            builder.run();
+        }
+    }
+
+    private static String buildFullHtml(Pildora p, TagDao tagDao, String extraCss, boolean includeMathjax) {
         String tags = tagDao.findByPildoraId(p.getId()).stream()
                 .map(t -> t.getNombre())
                 .collect(Collectors.joining(", "));
@@ -113,7 +129,6 @@ public final class PildoraExporter {
         String bodyHtml = HTML_REND.render(doc);
         bodyHtml = bodyHtml.replaceAll("href\\s*=\\s*\"pill://(\\d+)\"", "href=\"#pill-$1\"");
 
-        // CSS de “página” (layout/tipografía/chips). Lo de markdown vive en base-webview.css
         String pageCss = """
             body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;
                  line-height:1.6;padding:24px;max-width:900px;margin:auto;}
@@ -127,7 +142,7 @@ public final class PildoraExporter {
             pre{padding:12px;background:#0f172a0f;border-radius:6px;overflow:auto}
         """;
 
-        String mathjax = """
+        String mathjaxBlock = !includeMathjax ? "" : """
           <script>
             window.MathJax = {
               tex: {
@@ -141,43 +156,30 @@ public final class PildoraExporter {
           <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
         """;
 
-        String page = """
-          <!doctype html>
-          <html lang="es">
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width,initial-scale=1">
-              <title>%s</title>
-              <style>
-                %s   /* base-webview.css: reglas markdown (.md-body, tablas, toc, task list, etc.) */
-                %s   /* CSS de página (tipografía/layout/chips) */
-                %s   /* extraCss para colorear chips por tag (opcional) */
-              </style>
-              %s    
-            </head>
-            <body class="md-body">
-              <h1>%s</h1>
-              <div class="meta">
-                <div><strong>""" + escape(I18n.get("export.created")) + """
-                </strong> %s</div>
-                <div class="tags">%s</div>
-              </div>
-              %s
-            </body>
-          </html>
-        """.formatted(
-            escape(p.getTitulo()),
-            BASE_WEBVIEW_CSS,
-            pageCss,
-            (extraCss == null ? "" : extraCss),
-            mathjax,
-            escape(p.getTitulo()),
-            p.getFechaCreacion() != null ? p.getFechaCreacion().format(DF) : I18n.get("export.no.date"),
-            (tags == null || tags.isBlank()) ? "" : tagsToChips(tags),
-            bodyHtml
-        );
+        String dateStr = p.getFechaCreacion() != null
+                ? p.getFechaCreacion().format(DF)
+                : I18n.get("export.no.date");
+        String chipsHtml = (tags == null || tags.isBlank()) ? "" : tagsToChips(tags);
 
-        Files.writeString(file, page, StandardCharsets.UTF_8);
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!doctype html>\n<html lang=\"es\">\n<head>\n");
+        sb.append("  <meta charset=\"UTF-8\">\n");
+        sb.append("  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n");
+        sb.append("  <title>").append(escape(p.getTitulo())).append("</title>\n");
+        sb.append("  <style>\n").append(BASE_WEBVIEW_CSS).append('\n');
+        sb.append(pageCss).append('\n');
+        if (extraCss != null && !extraCss.isEmpty()) sb.append(extraCss).append('\n');
+        sb.append("  </style>\n");
+        sb.append(mathjaxBlock);
+        sb.append("</head>\n<body class=\"md-body\">\n");
+        sb.append("  <h1>").append(escape(p.getTitulo())).append("</h1>\n");
+        sb.append("  <div class=\"meta\">\n");
+        sb.append("    <div><strong>").append(escape(I18n.get("export.created"))).append(" </strong>").append(escape(dateStr)).append("</div>\n");
+        sb.append("    <div class=\"tags\">").append(chipsHtml).append("</div>\n");
+        sb.append("  </div>\n");
+        sb.append(bodyHtml).append('\n');
+        sb.append("</body>\n</html>");
+        return sb.toString();
     }
 
 

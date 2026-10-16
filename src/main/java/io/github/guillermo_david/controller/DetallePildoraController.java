@@ -241,7 +241,14 @@ public class DetallePildoraController {
 		miHtml.setGraphic(htmlIcon);
 		miHtml.setOnAction(e -> exportHtml()); // llama a tu método existente
 
-		btnExportMenu.getItems().setAll(miMd, miHtml);
+		// Opción PDF
+		var miPdf = new MenuItem(I18n.get("menu.export.pdf"));
+		var pdfIcon = new FontIcon(FontAwesomeSolid.FILE_PDF);
+		pdfIcon.setIconSize(16);
+		miPdf.setGraphic(pdfIcon);
+		miPdf.setOnAction(e -> exportPdf());
+
+		btnExportMenu.getItems().setAll(miMd, miHtml, miPdf);
 	}
 
 	private void exportMarkdown() {
@@ -251,9 +258,11 @@ public class DetallePildoraController {
 		chooser.setTitle(I18n.get("filechooser.export.markdown"));
 		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.markdown"), "*.md"));
 		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".md");
+		applyLastExportDir(chooser);
 		var file = chooser.showSaveDialog(root.getScene().getWindow());
 		if (file == null)
 			return;
+		saveLastExportDir(file);
 		try {
 			PildoraExporter.exportMarkdown(currentPildora, new TagDao(), file.toPath());
 			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
@@ -275,13 +284,13 @@ public class DetallePildoraController {
 		chooser.setTitle(I18n.get("filechooser.export.html"));
 		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.html"), "*.html"));
 		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".html");
+		applyLastExportDir(chooser);
 		var file = chooser.showSaveDialog(root.getScene().getWindow());
 		if (file == null)
 			return;
+		saveLastExportDir(file);
 		try {
-			// Si quieres colores de chips idénticos a la app, puedes pasar un CSS generado
-			// aquí (opcional)
-			var extraCss = buildChipsCssForHtml(currentPildora.getId()); // 👈 mismo color que en la app
+			var extraCss = buildChipsCssForHtml(currentPildora.getId());
 			PildoraExporter.exportHtml(currentPildora, new TagDao(), file.toPath(), extraCss);
 			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
 		} catch (Exception ex) {
@@ -294,7 +303,51 @@ public class DetallePildoraController {
 		}
 
 	}
+
+	private void exportPdf() {
+		if (currentPildora == null)
+			return;
+		var chooser = new javafx.stage.FileChooser();
+		chooser.setTitle(I18n.get("filechooser.export.pdf"));
+		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.pdf"), "*.pdf"));
+		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".pdf");
+		applyLastExportDir(chooser);
+		var file = chooser.showSaveDialog(root.getScene().getWindow());
+		if (file == null)
+			return;
+		saveLastExportDir(file);
+		try {
+			var extraCss = buildChipsCssForHtml(currentPildora.getId());
+			PildoraExporter.exportPdf(currentPildora, new TagDao(), file.toPath(), extraCss);
+			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
+		} catch (Exception ex) {
+		    String msg = ex.getMessage();
+		    if (msg != null && msg.contains("Contenido protegido")) {
+		        StatusBus.show(I18n.get("status.unlock.before.export"), StatusBus.Type.ERROR, Duration.seconds(4));
+		    } else {
+		        StatusBus.show(I18n.get("status.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(4));
+		    }
+		}
+	}
 	
+	private static final java.util.prefs.Preferences EXPORT_PREFS =
+			java.util.prefs.Preferences.userNodeForPackage(DetallePildoraController.class);
+	private static final String PREF_LAST_EXPORT_DIR = "lastExportDir";
+
+	private void applyLastExportDir(javafx.stage.FileChooser chooser) {
+		String dir = EXPORT_PREFS.get(PREF_LAST_EXPORT_DIR, null);
+		if (dir != null) {
+			var d = new java.io.File(dir);
+			if (d.isDirectory()) chooser.setInitialDirectory(d);
+		}
+	}
+
+	private void saveLastExportDir(java.io.File file) {
+		if (file != null && file.getParentFile() != null) {
+			EXPORT_PREFS.put(PREF_LAST_EXPORT_DIR, file.getParentFile().getAbsolutePath());
+		}
+	}
+
 	private HBox buildTagChipButton(String name) {
 		name = name == null ? "" : name.trim().toLowerCase();
 

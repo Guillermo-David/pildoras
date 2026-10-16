@@ -133,6 +133,9 @@
 		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-attributes</artifactId><version>0.64.8</version></dependency>
 		<dependency><groupId>com.vladsch.flexmark</groupId><artifactId>flexmark-ext-typographic</artifactId><version>0.64.8</version></dependency>
 		<!--<dependency><groupId>tech.catheu</groupId><artifactId>flexmark-ext-math</artifactId><version>0.8.0</version></dependency>-->
+
+		<!-- PDF export via openhtmltopdf -->
+		<dependency><groupId>com.openhtmltopdf</groupId><artifactId>openhtmltopdf-pdfbox</artifactId><version>1.0.10</version></dependency>
 	</dependencies>
 
 	<build>
