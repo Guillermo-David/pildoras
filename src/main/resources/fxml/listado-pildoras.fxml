@@ -57,7 +57,7 @@
 
     <center>
         <HBox>
-            <TableView fx:id="table" prefHeight="600" prefWidth="800" HBox.hgrow="ALWAYS">
+            <TableView fx:id="table" prefWidth="800" HBox.hgrow="ALWAYS">
                 <columns>
                     <TableColumn fx:id="colFav" text=""/>
                     <TableColumn fx:id="colTitulo" text="Título" prefWidth="200"/>

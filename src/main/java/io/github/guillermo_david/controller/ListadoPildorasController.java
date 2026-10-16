@@ -1352,15 +1352,19 @@ public class ListadoPildorasController {
 	
 	private void instalarWheelPagination() {
 	    table.addEventFilter(javafx.scene.input.ScrollEvent.SCROLL, e -> {
-	        // Ignora gestos táctiles o modificadores (Ctrl = zoom del SO, etc.)
 	        if (e.getTouchCount() > 0) return;
 	        if (e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown()) return;
 
-	        // En trackpads puede haber scroll horizontal: prioriza el vertical
 	        double dy = e.getDeltaY();
 	        if (Math.abs(dy) < Math.abs(e.getDeltaX())) return;
 
-	        // Throttle
+	        var scrollBar = table.lookup(".scroll-bar:vertical");
+	        if (scrollBar instanceof javafx.scene.control.ScrollBar vbar && vbar.isVisible()) {
+	            boolean atBottom = (dy < 0) && vbar.getValue() >= vbar.getMax() - 0.01;
+	            boolean atTop = (dy > 0) && vbar.getValue() <= vbar.getMin() + 0.01;
+	            if (!atBottom && !atTop) return;
+	        }
+
 	        long now = System.nanoTime();
 	        if (now - lastWheelNanos < WHEEL_THROTTLE_NS) {
 	            e.consume();
@@ -1368,11 +1372,10 @@ public class ListadoPildorasController {
 	        }
 	        lastWheelNanos = now;
 
-	        // Rueda abajo -> siguiente página, rueda arriba -> anterior
 	        if (dy < 0) {
-	            if (btnSiguiente != null) btnSiguiente.fire();
+	            if (btnSiguiente != null && !btnSiguiente.isDisabled()) btnSiguiente.fire();
 	        } else if (dy > 0) {
-	            if (btnAnterior != null) btnAnterior.fire();
+	            if (btnAnterior != null && !btnAnterior.isDisabled()) btnAnterior.fire();
 	        }
 	        e.consume();
 	    });
