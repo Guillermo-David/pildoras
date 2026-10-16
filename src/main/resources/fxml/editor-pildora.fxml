@@ -104,7 +104,7 @@
 	    </items>
 	</SplitPane> 
 
-    <Label text="Tags"/>
+    <Label fx:id="lblTags" text="Tags"/>
 	<HBox spacing="8">
 	    <TextField fx:id="txtTagInput" promptText="Añade un tag y pulsa Enter…" HBox.hgrow="ALWAYS"/>
 	    <FlowPane fx:id="tagsBox" hgap="6" vgap="6" />

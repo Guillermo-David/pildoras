@@ -63,6 +63,7 @@ public class EditorPildoraController {
 	@FXML private SplitPane splitEditor;
 	@FXML private WebView webPreview;
 	@FXML private MenuButton mbMath;
+	@FXML private javafx.scene.control.Label lblTags;
 
 	private TextFormatController textFormatController;
 
@@ -105,6 +106,7 @@ public class EditorPildoraController {
 		btnCancelar.setText(I18n.get("button.cancel.icon"));
 		mbMath.setText(I18n.get("menu.math"));
 		switchPreview.setText(I18n.get("switch.preview"));
+		lblTags.setText(I18n.get("label.tags"));
 
 		btnCancelar.setOnAction(e -> {
 			clearRecoveryDraft();

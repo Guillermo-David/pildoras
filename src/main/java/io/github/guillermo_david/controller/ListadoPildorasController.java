@@ -1110,9 +1110,9 @@ public class ListadoPildorasController {
 				e.consume(); // no dejar que baje
 			});
 
-			// Esc: limpiar filtros
+			// Esc: limpiar filtros (solo cuando la vista de listado está visible)
 			scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-				if (e.getCode() == KeyCode.ESCAPE) {
+				if (e.getCode() == KeyCode.ESCAPE && !uiOculta) {
 					if (txtFiltroTexto.isFocused() || root.isFocused()) {
 						txtFiltroTexto.clear();
 						if (tagSidebarHelper != null) tagSidebarHelper.clearSelection();
