@@ -289,7 +289,26 @@ public class ListadoPildorasController {
 	@SuppressWarnings("unchecked")
 	private void setTableProperties() {
 		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-		table.setFixedCellSize(30); // alto por fila
+		table.setFixedCellSize(30);
+		table.heightProperty().addListener((obs, oldH, newH) -> {
+			double h = newH.doubleValue();
+			if (h <= 0) return;
+			double headerH = 0;
+			var headerNode = table.lookup(".column-header-background");
+			if (headerNode != null) headerH = headerNode.getBoundsInLocal().getHeight();
+			if (headerH <= 0) headerH = 28;
+			double cellH = table.getFixedCellSize();
+			int fullRows = (int) ((h - headerH) / cellH);
+			if (fullRows < 1) fullRows = 1;
+			double clippedH = headerH + fullRows * cellH;
+			table.setClip(new javafx.scene.shape.Rectangle(table.getWidth(), clippedH));
+		});
+		table.widthProperty().addListener((obs, oldW, newW) -> {
+			var clip = table.getClip();
+			if (clip instanceof javafx.scene.shape.Rectangle r) {
+				r.setWidth(newW.doubleValue());
+			}
+		});
 		var emptyIcon = new FontIcon(FontAwesomeSolid.BOX_OPEN);
 		emptyIcon.setIconSize(32);
 		emptyIcon.getStyleClass().add("muted-icon");
