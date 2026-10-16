@@ -1311,6 +1311,13 @@ public class ListadoPildorasController {
 		tagTextCache = map;
 		table.setItems(FXCollections.observableArrayList(todas));
 
+		int rowCount = todas.size();
+		double cellHeight = table.getFixedCellSize();
+		double exactHeight = 28 + rowCount * cellHeight + 2;
+		table.setPrefHeight(exactHeight);
+		table.setMinHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+		table.setMaxHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+
 		boolean singlePage = (tamanioPagina == Integer.MAX_VALUE || totalPaginas <= 1);
 		if (total == 0) {
 			lblPagina.setText("0 de 0");
