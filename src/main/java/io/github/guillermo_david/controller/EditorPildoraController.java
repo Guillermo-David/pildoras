@@ -177,20 +177,8 @@ public class EditorPildoraController {
 				if (!wasSelected && nowSelected && !originalProtegida) {
 					StatusBus.show("Se protegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
 				} else if (wasSelected && !nowSelected && originalProtegida && security.isUnlocked()) {
-					// Al desproteger, asegurar que el editor tenga el contenido descifrado
-					if (txtDescripcion.isDisabled() || txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()) {
-						try {
-							if (pildoraEnEdicion.getDescripcionCipher() != null
-									&& pildoraEnEdicion.getDescripcionIv() != null) {
-								String plain = security.decrypt(
-										pildoraEnEdicion.getDescripcionCipher(),
-										pildoraEnEdicion.getDescripcionIv());
-								txtDescripcion.setDisable(false);
-								txtDescripcion.setText(plain);
-							}
-						} catch (Exception ignored) {
-						}
-					}
+					// Al desproteger, recuperar el contenido descifrado en el editor
+					recoverDecryptedContent();
 					StatusBus.show("Se desprotegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
 				}
 			});
@@ -212,6 +200,38 @@ public class EditorPildoraController {
 
 
 		initPreview();
+	}
+
+	private void recoverDecryptedContent() {
+		txtDescripcion.setDisable(false);
+		try {
+			// Recargar de BD para asegurar cipher/iv correctos
+			Pildora fresh = pildoraDao.buscarPorId(pildoraEnEdicion.getId());
+			if (fresh != null && fresh.getDescripcionCipher() != null && fresh.getDescripcionIv() != null) {
+				String plain = security.decrypt(fresh.getDescripcionCipher(), fresh.getDescripcionIv());
+				txtDescripcion.setText(plain);
+				// Actualizar referencias en memoria
+				pildoraEnEdicion.setDescripcionCipher(fresh.getDescripcionCipher());
+				pildoraEnEdicion.setDescripcionIv(fresh.getDescripcionIv());
+				return;
+			}
+		} catch (Exception e) {
+			System.err.println("[Editor] Error descifrando desde BD: " + e.getMessage());
+			e.printStackTrace();
+		}
+		// Fallback: intentar con datos en memoria
+		try {
+			if (pildoraEnEdicion.getDescripcionCipher() != null && pildoraEnEdicion.getDescripcionIv() != null) {
+				String plain = security.decrypt(pildoraEnEdicion.getDescripcionCipher(),
+						pildoraEnEdicion.getDescripcionIv());
+				txtDescripcion.setText(plain);
+				return;
+			}
+		} catch (Exception e) {
+			System.err.println("[Editor] Error descifrando desde memoria: " + e.getMessage());
+			e.printStackTrace();
+		}
+		StatusBus.show("No se pudo recuperar el contenido descifrado.", StatusBus.Type.ERROR, Duration.seconds(4));
 	}
 
 	private void onGuardar() {
@@ -238,16 +258,7 @@ public class EditorPildoraController {
 			}
 			// Si el editor está vacío (o deshabilitado), recuperar contenido descifrado
 			if (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()) {
-				try {
-					if (pildoraEnEdicion != null && pildoraEnEdicion.getDescripcionCipher() != null
-							&& pildoraEnEdicion.getDescripcionIv() != null) {
-						String plain = security.decrypt(pildoraEnEdicion.getDescripcionCipher(),
-								pildoraEnEdicion.getDescripcionIv());
-						txtDescripcion.setDisable(false);
-						txtDescripcion.setText(plain);
-					}
-				} catch (Exception ignored) {
-				}
+				recoverDecryptedContent();
 			}
 		}
 
@@ -403,12 +414,27 @@ public class EditorPildoraController {
 					txtDescripcion.setDisable(false);
 					txtDescripcion.setText(plano);
 				} catch (Exception e) {
-					txtDescripcion.clear();
-					txtDescripcion.setDisable(true);
-					txtDescripcion.setPromptText("Contenido protegido (error de descifrado)");
+					System.err.println("[Editor] Descifrado con objeto en memoria falló: " + e.getMessage());
+					// Reintentar recargando de BD (los bytes podrían no coincidir)
+					try {
+						Pildora fresh = pildoraDao.buscarPorId(p.getId());
+						if (fresh != null && fresh.getDescripcionCipher() != null) {
+							String plano = security.decrypt(fresh.getDescripcionCipher(), fresh.getDescripcionIv());
+							txtDescripcion.setDisable(false);
+							txtDescripcion.setText(plano);
+							p.setDescripcionCipher(fresh.getDescripcionCipher());
+							p.setDescripcionIv(fresh.getDescripcionIv());
+						} else {
+							throw new IllegalStateException("No hay cipher en BD");
+						}
+					} catch (Exception e2) {
+						System.err.println("[Editor] Descifrado con recarga de BD también falló: " + e2.getMessage());
+						txtDescripcion.clear();
+						txtDescripcion.setDisable(true);
+						txtDescripcion.setPromptText("Contenido protegido (error de descifrado)");
+					}
 				}
 			} else {
-				// venía bloqueado -> no abrir nunca el contenido aquí
 				txtDescripcion.clear();
 				txtDescripcion.setDisable(true);
 				txtDescripcion.setPromptText("Contenido protegido — desbloquea desde el listado");
