@@ -30,17 +30,9 @@
 	</HBox>
 	  
 	<VBox fx:id="linksSection" spacing="6" visible="false" managed="false">
-		<Label fx:id="lblLinks" text="Enlaces" styleClass="section-title"/>
-		<HBox spacing="20">
-		    <VBox spacing="6">
-		        <Label fx:id="lblLinksOut" text="Enlaza a:"/>
-		        <FlowPane fx:id="linksOutBox" hgap="6" vgap="6"/>
-		    </VBox>
-		    <VBox spacing="6">
-		        <Label fx:id="lblLinksIn" text="Referenciada por:"/>
-		        <FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
-		    </VBox>
-		</HBox>
+		<Label fx:id="lblLinksIn" text="Referenciada por:" styleClass="section-title"/>
+		<FlowPane fx:id="linksInBox" hgap="6" vgap="6"/>
+		<Button fx:id="btnShowMoreLinks" visible="false" managed="false" styleClass="link-btn"/>
 	</VBox>
 
 	<Separator/>

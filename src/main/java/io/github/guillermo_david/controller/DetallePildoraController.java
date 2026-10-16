@@ -51,11 +51,12 @@ public class DetallePildoraController {
 	@FXML private WebView webContenido;
 	@FXML private Button btnVolver, btnEditar, btnBorrar;
 	@FXML private MenuButton btnExportMenu;
-	@FXML private FlowPane linksOutBox;
 	@FXML private FlowPane linksInBox;
-	@FXML private Label lblLinks, lblLinksOut, lblLinksIn;
+	@FXML private Label lblLinksIn;
+	@FXML private Button btnShowMoreLinks;
 
 	private final SecurityService security = SecurityService.getInstance();
+	private Object jsBridge;
 
 	private Runnable onClose;
 	private Consumer<Pildora> onEdit;
@@ -85,24 +86,28 @@ public class DetallePildoraController {
 		cssDark = loadResourceAsString("/css/webview-dark.css");
 
 		// I18n overrides for labels with hardcoded FXML text
-		lblLinks.setText(I18n.get("label.links"));
-		lblLinksOut.setText(I18n.get("label.links.outgoing"));
 		lblLinksIn.setText(I18n.get("label.links.incoming"));
 
 		// Fondo transparente del WebView (JavaFX)
 		webContenido.setStyle("-fx-background-color: transparent;");
 
 		// JS bridge: install once, re-injects on every page load
+		jsBridge = new Object() {
+			@SuppressWarnings("unused")
+			public void openPildora(Object num) {
+				int id;
+				if (num instanceof Number n) id = n.intValue();
+				else {
+					try { id = Integer.parseInt(String.valueOf(num)); } catch (Exception ex) { return; }
+				}
+				Platform.runLater(() -> openPildoraFromJs(id));
+			}
+		};
 		webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
 			if (st == Worker.State.SUCCEEDED) {
 				try {
 					JSObject win = (JSObject) webContenido.getEngine().executeScript("window");
-					win.setMember("app", new Object() {
-						@SuppressWarnings("unused")
-						public void openPildora(int id) {
-							Platform.runLater(() -> openPildoraFromJs(id));
-						}
-					});
+					win.setMember("app", jsBridge);
 				} catch (Throwable ignore) {}
 			}
 		});
@@ -466,17 +471,81 @@ public class DetallePildoraController {
 	    return b;
 	}
 
+	private boolean linksCollapsed = true;
+	private java.util.List<javafx.scene.Node> allBacklinkChips;
+
 	private void loadRefsSection(int currentId) {
 	    var dao = new PildoraLinkDao();
-	    var out = dao.listOutgoingRefs(currentId);
 	    var inb = dao.listIncomingRefs(currentId);
 
-	    linksOutBox.getChildren().setAll(out.stream().map(this::chipForLink).toList());
-	    linksInBox.getChildren().setAll(inb.stream().map(this::chipForLink).toList());
-
-	    boolean hasLinks = !out.isEmpty() || !inb.isEmpty();
+	    boolean hasLinks = !inb.isEmpty();
 	    linksSection.setVisible(hasLinks);
 	    linksSection.setManaged(hasLinks);
+
+	    if (!hasLinks) return;
+
+	    allBacklinkChips = inb.stream()
+	        .map(p -> (javafx.scene.Node) chipForLink(p))
+	        .collect(java.util.stream.Collectors.toList());
+	    linksInBox.getChildren().setAll(allBacklinkChips);
+
+	    linksCollapsed = true;
+	    btnShowMoreLinks.setVisible(false);
+	    btnShowMoreLinks.setManaged(false);
+
+	    Platform.runLater(() -> {
+	        linksInBox.applyCss();
+	        linksInBox.layout();
+	        double twoRowsMax = 2 * (32 + linksInBox.getVgap()) + linksInBox.getVgap();
+	        if (linksInBox.getHeight() > twoRowsMax) {
+	            collapseLinks(twoRowsMax, inb.size());
+	        }
+	    });
+	}
+
+	private void collapseLinks(double maxHeight, int total) {
+	    javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+	    clip.widthProperty().bind(linksInBox.widthProperty());
+	    clip.setHeight(maxHeight);
+	    linksInBox.setClip(clip);
+	    linksCollapsed = true;
+
+	    int visible = countVisibleInRows(2);
+	    int hidden = total - visible;
+	    btnShowMoreLinks.setText(I18n.get("label.show.more", hidden));
+	    btnShowMoreLinks.setVisible(true);
+	    btnShowMoreLinks.setManaged(true);
+	    btnShowMoreLinks.setOnAction(e -> {
+	        if (linksCollapsed) {
+	            linksInBox.setClip(null);
+	            btnShowMoreLinks.setText(I18n.get("label.show.less"));
+	            linksCollapsed = false;
+	        } else {
+	            linksInBox.setClip(clip);
+	            btnShowMoreLinks.setText(I18n.get("label.show.more", hidden));
+	            linksCollapsed = true;
+	        }
+	    });
+	}
+
+	private int countVisibleInRows(int maxRows) {
+	    double width = linksInBox.getWidth();
+	    if (width <= 0) return allBacklinkChips.size();
+	    double hgap = linksInBox.getHgap();
+	    int rows = 1;
+	    double x = 0;
+	    int count = 0;
+	    for (var chip : allBacklinkChips) {
+	        double cw = chip.prefWidth(-1);
+	        if (x + cw > width && x > 0) {
+	            rows++;
+	            if (rows > maxRows) break;
+	            x = 0;
+	        }
+	        x += cw + hgap;
+	        count++;
+	    }
+	    return count;
 	}
 	
 	private void renderContenido(Pildora p) {
@@ -538,8 +607,8 @@ public class DetallePildoraController {
 	        if(href.startsWith('pildora:')){
 	          e.preventDefault();
 	          var id = parseInt(href.substring(8), 10);
-	          if(!isNaN(id) && window.app && typeof window.app.openPildora === 'function'){
-	            window.app.openPildora(id);
+	          if(!isNaN(id) && window.app){
+	            try { window.app.openPildora(id); } catch(ex){}
 	          }
 	        }
 	      });

@@ -406,10 +406,43 @@ public class PildoraDao {
 	}
 
 	public void eliminar(int id) {
+		cleanupDanglingRefs(id);
 		String sql = "DELETE FROM pildoras WHERE id = ?";
 		try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			pstmt.setInt(1, id);
 			pstmt.execute();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void cleanupDanglingRefs(int deletedId) {
+		String pattern = "\\[([^\\]]*)]\\(pildora:" + deletedId + "\\)";
+		var regex = java.util.regex.Pattern.compile(pattern);
+		String findSql = """
+			SELECT p.id, p.descripcion
+			FROM pildora_link l
+			JOIN pildoras p ON p.id = l.from_id
+			WHERE l.to_id = ? AND l.kind = 'ref' AND p.protegida = 0
+		""";
+		String updateSql = "UPDATE pildoras SET descripcion = ? WHERE id = ?";
+		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(findSql)) {
+			ps.setInt(1, deletedId);
+			try (ResultSet rs = ps.executeQuery()) {
+				while (rs.next()) {
+					int pid = rs.getInt("id");
+					String md = rs.getString("descripcion");
+					if (md == null) continue;
+					String cleaned = regex.matcher(md).replaceAll("$1");
+					if (!cleaned.equals(md)) {
+						try (PreparedStatement up = DatabaseHelper.getInstance().getConnection().prepareStatement(updateSql)) {
+							up.setString(1, cleaned);
+							up.setInt(2, pid);
+							up.execute();
+						}
+					}
+				}
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
