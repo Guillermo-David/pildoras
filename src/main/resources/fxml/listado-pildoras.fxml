@@ -39,7 +39,6 @@
 		    <CustomTextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
-		    <ToggleButton fx:id="btnAndOr" styleClass="toggle-btn"/>
 		    <ToggleButton fx:id="btnSoloFav" styleClass="toggle-btn"/>
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		

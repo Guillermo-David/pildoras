@@ -565,7 +565,6 @@ class SettingsMenuHelper {
           .append("Supr                       – Eliminar la fila seleccionada\n")
           .append("M                          – (Tabla enfocada) Alternar favorita\n")
           .append("Ctrl+Shift+F               – Mostrar solo favoritas (toggle)\n")
-          .append("Ctrl+Shift+O               – Cambiar OR/AND para filtro de tags\n")
           .append("Esc                        – Limpiar filtros (si hay foco en filtros) / Volver\n")
           .append("Doble clic fila            – Abrir detalle\n\n")
 

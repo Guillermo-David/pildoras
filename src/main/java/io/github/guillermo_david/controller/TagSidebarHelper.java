@@ -1,7 +1,10 @@
 package io.github.guillermo_david.controller;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
 
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -25,7 +28,7 @@ class TagSidebarHelper {
 
     private Button allBtn;
     private boolean sidebarCollapsed = false;
-    private String selectedSidebarTag = null;
+    private final Set<String> selectedTags = new LinkedHashSet<>();
 
     TagSidebarHelper(VBox tagSidebar, VBox tagListBox, Button btnToggleSidebar,
                      Runnable resetPageAndRefresh, BooleanSupplier includeHidden,
@@ -38,12 +41,19 @@ class TagSidebarHelper {
         this.prefs = prefs;
     }
 
-    String getSelectedTag() {
-        return selectedSidebarTag;
+    String getSelectedTags() {
+        if (selectedTags.isEmpty()) return null;
+        return selectedTags.stream().collect(Collectors.joining(","));
     }
 
     void selectTag(String tagName) {
-        selectedSidebarTag = tagName;
+        selectedTags.clear();
+        if (tagName != null) selectedTags.add(tagName);
+        refresh();
+    }
+
+    void clearSelection() {
+        selectedTags.clear();
         refresh();
     }
 
@@ -54,12 +64,11 @@ class TagSidebarHelper {
         allBtn.getStyleClass().add("tag-sidebar-item");
         allBtn.setMaxWidth(Double.MAX_VALUE);
         allBtn.setOnAction(e -> {
-            selectedSidebarTag = null;
+            selectedTags.clear();
             resetAndRefresh();
             refresh();
         });
 
-        // Insert "Todas" between header and ScrollPane (index 1)
         tagSidebar.getChildren().add(1, allBtn);
 
         refresh();
@@ -72,10 +81,9 @@ class TagSidebarHelper {
     void refresh() {
         tagListBox.getChildren().clear();
 
-        // Update "Todas" styling
         if (allBtn != null) {
             allBtn.getStyleClass().remove("tag-sidebar-selected");
-            if (selectedSidebarTag == null) allBtn.getStyleClass().add("tag-sidebar-selected");
+            if (selectedTags.isEmpty()) allBtn.getStyleClass().add("tag-sidebar-selected");
         }
 
         var tagsWithCount = new TagDao().listAllWithCount(includeHidden.getAsBoolean());
@@ -85,9 +93,13 @@ class TagSidebarHelper {
             var btn = new Button(nombre + "  (" + count + ")");
             btn.getStyleClass().add("tag-sidebar-item");
             btn.setMaxWidth(Double.MAX_VALUE);
-            if (nombre.equals(selectedSidebarTag)) btn.getStyleClass().add("tag-sidebar-selected");
+            if (selectedTags.contains(nombre)) btn.getStyleClass().add("tag-sidebar-selected");
             btn.setOnAction(e -> {
-                selectedSidebarTag = nombre;
+                if (selectedTags.contains(nombre)) {
+                    selectedTags.remove(nombre);
+                } else {
+                    selectedTags.add(nombre);
+                }
                 resetAndRefresh();
                 refresh();
             });

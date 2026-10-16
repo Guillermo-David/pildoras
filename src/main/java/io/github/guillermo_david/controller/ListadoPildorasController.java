@@ -112,7 +112,6 @@ public class ListadoPildorasController {
 
 	private static final Preferences PREFS = Preferences.userNodeForPackage(ListadoPildorasController.class);
 	private static final String PREF_SOLO_FAV = "soloFavoritas";
-	private static final String PREF_AND_OR = "filtroAndOr";
 	private static final String PREF_SHOW_HIDDEN = "mostrarOcultas";
 	private static final String PREF_SIDEBAR_COLLAPSED = "sidebarCollapsed";
 
@@ -138,7 +137,7 @@ public class ListadoPildorasController {
 	@FXML private BorderPane root;
 	@FXML private SplitMenuButton btnNueva;
 	@FXML private Button btnAnterior, btnSiguiente, btnClose;
-	@FXML private ToggleButton btnAndOr, btnSoloFav;
+	@FXML private ToggleButton btnSoloFav;
 	@FXML private MenuButton btnSettings;
 	@FXML private HBox paginationBox, statusBar, titleBar, appHeader;
 	@FXML private Label lblPagina, lblStatus;
@@ -170,7 +169,6 @@ public class ListadoPildorasController {
 		mostrarOcultas = PREFS.getBoolean(PREF_SHOW_HIDDEN, false);
 		setBotones();
 		btnSoloFav.setSelected(PREFS.getBoolean(PREF_SOLO_FAV, false));
-		btnAndOr.setSelected(PREFS.getBoolean(PREF_AND_OR, false));
 
 		settingsHelper = new SettingsMenuHelper(root, security, btnSettings, PREFS,
 				PREF_FONT_FAMILY, PREF_FONT_SIZE, DEF_FONT_FAMILY, DEF_FONT_SIZE,
@@ -214,6 +212,13 @@ public class ListadoPildorasController {
 			paginaActual = 1;
 			refrescarTabla();
 		});
+
+		PauseTransition debounce = new PauseTransition(Duration.millis(300));
+		debounce.setOnFinished(e -> {
+			paginaActual = 1;
+			refrescarTabla();
+		});
+		txtFiltroTexto.textProperty().addListener((obs, old, val) -> debounce.playFromStart());
 
 		txtFiltroTexto.setPrefWidth(275);
 		txtFiltroTexto.setMinWidth(200);
@@ -271,7 +276,20 @@ public class ListadoPildorasController {
 	private void setTableProperties() {
 		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 		table.setFixedCellSize(30); // alto por fila
-		table.setPlaceholder(new Label("Sin resultados"));
+		var emptyIcon = new FontIcon(FontAwesomeSolid.BOX_OPEN);
+		emptyIcon.setIconSize(32);
+		emptyIcon.getStyleClass().add("muted-icon");
+		var emptyLabel = new Label("No se encontraron píldoras");
+		emptyLabel.getStyleClass().add("empty-state-label");
+		var emptyHint = new Label("Prueba a cambiar los filtros o crea una nueva");
+		emptyHint.getStyleClass().add("empty-state-hint");
+		var emptyBtn = new Button("Crear píldora");
+		emptyBtn.getStyleClass().add("btn-accent-flat");
+		emptyBtn.setOnAction(e -> abrirFormularioNueva());
+		var emptyBox = new VBox(8, emptyIcon, emptyLabel, emptyHint, emptyBtn);
+		emptyBox.setAlignment(Pos.CENTER);
+		emptyBox.getStyleClass().add("empty-state-box");
+		table.setPlaceholder(emptyBox);
 		table.skinProperty().addListener((obs, oldSkin, newSkin) -> {
 			if (newSkin == null)
 				return;
@@ -730,26 +748,6 @@ public class ListadoPildorasController {
 					Duration.seconds(2));
 		});
 
-		// --- AND / OR ---
-		FontIcon btnAndOrIcon = new FontIcon(
-				btnAndOr.isSelected() ? FontAwesomeSolid.LINK : FontAwesomeSolid.CODE_BRANCH);
-		btnAndOrIcon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
-
-		btnAndOr.getStyleClass().setAll("round-toggle", "andor-toggle"); // <- y aquí
-		btnAndOr.setGraphic(btnAndOrIcon);
-		btnAndOr.setText(null);
-		btnAndOr.setTooltip(new Tooltip("Alterna entre al menos un tag / todos los tags (Ctrl+Shift+O)"));
-
-		btnAndOr.selectedProperty().addListener((obs, o, sel) -> {
-			btnAndOrIcon.setIconCode(sel ? FontAwesomeSolid.LINK : FontAwesomeSolid.CODE_BRANCH);
-			PREFS.putBoolean(PREF_AND_OR, sel);
-			paginaActual = 1;
-			refrescarTabla();
-
-			StatusBus.show(sel ? "Filtro de tags: contiene todas" : "Filtro de tags: contiene al menos una",
-					StatusBus.Type.INFO, Duration.seconds(2));
-		});
-
 		// --- MOSTRAR/OCULTAR ARCHIVADAS ---
 		var btnOcultas = new ToggleButton();
 		FontIcon eyeIcon = new FontIcon(FontAwesomeSolid.EYE_SLASH);
@@ -1007,9 +1005,6 @@ public class ListadoPildorasController {
 			accel.accept(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
 					() -> btnSoloFav.fire());
 
-			accel.accept(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
-					() -> btnAndOr.fire());
-
 			scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 				if (e.getCode() != KeyCode.DELETE)
 					return;
@@ -1043,11 +1038,11 @@ public class ListadoPildorasController {
 					if (res.getButtonData().isDefaultButton()) {
 						pildoraDao.eliminar(sel.getId());
 						StatusBus.show("Píldora eliminada.", StatusBus.Type.INFO, Duration.seconds(3));
-						String delTags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTag() : null;
+						String delTags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTags() : null;
 						int total = pildoraDao.contarFiltradas(
 								txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
 								delTags,
-								btnAndOr.isSelected(), btnSoloFav.isSelected(), mostrarOcultas);
+								true, btnSoloFav.isSelected(), mostrarOcultas);
 						totalPaginas = Math.max(1, (int) Math.ceil((double) total / TAMANIO_PAGINA));
 						paginaActual = Math.min(paginaActual, totalPaginas);
 						refrescarTabla();
@@ -1061,9 +1056,7 @@ public class ListadoPildorasController {
 				if (e.getCode() == KeyCode.ESCAPE) {
 					if (txtFiltroTexto.isFocused() || root.isFocused()) {
 						txtFiltroTexto.clear();
-						if (tagSidebarHelper != null) tagSidebarHelper.selectTag(null);
-						btnAndOr.setSelected(false);
-						btnAndOr.setGraphic(new FontIcon(FontAwesomeSolid.CODE_BRANCH));
+						if (tagSidebarHelper != null) tagSidebarHelper.clearSelection();
 						paginaActual = 1;
 						refrescarTabla();
 						e.consume();
@@ -1137,8 +1130,6 @@ public class ListadoPildorasController {
 
 				// Aplica el filtro por ese tag
 				if (tagSidebarHelper != null) tagSidebarHelper.selectTag(tagName);
-				btnAndOr.setSelected(false);
-				btnAndOr.setGraphic(new FontIcon(FontAwesomeSolid.CODE_BRANCH));
 
 				// Reinicia a página 1 y carga
 				paginaActual = 1;
@@ -1256,7 +1247,7 @@ public class ListadoPildorasController {
 
 	@SuppressWarnings("unchecked")
 	private void cargarTabla(String tituloFiltro, String tagsFiltro) {
-		boolean andMode = btnAndOr.isSelected();
+		boolean andMode = true;
 
 		boolean soloFavoritas = btnSoloFav.isSelected();
 		int total = pildoraDao.contarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, mostrarOcultas);
@@ -1323,7 +1314,7 @@ public class ListadoPildorasController {
 	private void refrescarTabla() {
 		TagDao.invalidateCache();
 		String texto = txtFiltroTexto.getText().trim();
-		String tags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTag() : null;
+		String tags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTags() : null;
 
 		cargarTabla(texto.isEmpty() ? null : texto, tags);
 		if (tagSidebarHelper != null && !refreshingSidebar) {

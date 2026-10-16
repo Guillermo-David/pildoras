@@ -743,6 +743,33 @@
 	-fx-icon-color: -fx-muted-icon;
 }
 
+/* ---- Empty state (table placeholder) ---- */
+.empty-state-box {
+	-fx-padding: 30 20;
+}
+.empty-state-label {
+	-fx-font-size: 15;
+	-fx-font-weight: bold;
+	-fx-text-fill: -c-fg;
+}
+.empty-state-hint {
+	-fx-font-size: 12;
+	-fx-text-fill: -c-fg-muted;
+}
+.btn-accent-flat {
+	-fx-background-color: transparent;
+	-fx-text-fill: -c-accent;
+	-fx-font-size: 13;
+	-fx-cursor: hand;
+	-fx-padding: 6 16;
+	-fx-border-color: -c-accent;
+	-fx-border-radius: 6;
+	-fx-background-radius: 6;
+}
+.btn-accent-flat:hover {
+	-fx-background-color: -c-accent-soft;
+}
+
 /* ---- Dialogs themed ---- */
 .themed-dialog {
   -fx-background-color: -c-bg;
