@@ -891,6 +891,14 @@
     -fx-background-color: -c-accent;
 }
 
+/* ---------- Ocultar scrollbar de la tabla ---------- */
+.table-view .scroll-bar:vertical,
+.table-view .scroll-bar:horizontal {
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-opacity: 0;
+}
+
 /* ---------- Fila seleccionada con acento ---------- */
 .table-row-cell:filled:selected,
 .table-row-cell:filled:selected:hover {

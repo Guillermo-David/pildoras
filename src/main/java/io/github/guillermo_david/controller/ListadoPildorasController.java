@@ -1372,7 +1372,7 @@ public class ListadoPildorasController {
 	        }
 
 	        long now = System.nanoTime();
-	        if (now - lastWheelNanos < WHEEL_THROTTLE_NS) { e.consume(); return; }
+	        if (now - lastWheelNanos < WHEEL_THROTTLE_NS) return;
 	        lastWheelNanos = now;
 
 	        if (dy < 0 && btnSiguiente != null && !btnSiguiente.isDisabled()) {
