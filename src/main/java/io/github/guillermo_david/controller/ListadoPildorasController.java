@@ -1350,34 +1350,38 @@ public class ListadoPildorasController {
 		}
 	}
 	
+	private javafx.scene.control.ScrollBar cachedVBar;
+
 	private void instalarWheelPagination() {
 	    table.addEventFilter(javafx.scene.input.ScrollEvent.SCROLL, e -> {
+	        if (totalPaginas <= 1) return;
 	        if (e.getTouchCount() > 0) return;
 	        if (e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown()) return;
 
 	        double dy = e.getDeltaY();
 	        if (Math.abs(dy) < Math.abs(e.getDeltaX())) return;
 
-	        var scrollBar = table.lookup(".scroll-bar:vertical");
-	        if (scrollBar instanceof javafx.scene.control.ScrollBar vbar && vbar.isVisible()) {
-	            boolean atBottom = (dy < 0) && vbar.getValue() >= vbar.getMax() - 0.01;
-	            boolean atTop = (dy > 0) && vbar.getValue() <= vbar.getMin() + 0.01;
+	        if (cachedVBar == null) {
+	            var node = table.lookup(".scroll-bar:vertical");
+	            if (node instanceof javafx.scene.control.ScrollBar sb) cachedVBar = sb;
+	        }
+	        if (cachedVBar != null && cachedVBar.isVisible()) {
+	            boolean atBottom = (dy < 0) && cachedVBar.getValue() >= cachedVBar.getMax() - 0.01;
+	            boolean atTop = (dy > 0) && cachedVBar.getValue() <= cachedVBar.getMin() + 0.01;
 	            if (!atBottom && !atTop) return;
 	        }
 
 	        long now = System.nanoTime();
-	        if (now - lastWheelNanos < WHEEL_THROTTLE_NS) {
-	            e.consume();
-	            return;
-	        }
+	        if (now - lastWheelNanos < WHEEL_THROTTLE_NS) { e.consume(); return; }
 	        lastWheelNanos = now;
 
-	        if (dy < 0) {
-	            if (btnSiguiente != null && !btnSiguiente.isDisabled()) btnSiguiente.fire();
-	        } else if (dy > 0) {
-	            if (btnAnterior != null && !btnAnterior.isDisabled()) btnAnterior.fire();
+	        if (dy < 0 && btnSiguiente != null && !btnSiguiente.isDisabled()) {
+	            btnSiguiente.fire();
+	            e.consume();
+	        } else if (dy > 0 && btnAnterior != null && !btnAnterior.isDisabled()) {
+	            btnAnterior.fire();
+	            e.consume();
 	        }
-	        e.consume();
 	    });
 	}
 
