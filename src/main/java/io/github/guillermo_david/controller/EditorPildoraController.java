@@ -174,10 +174,23 @@ public class EditorPildoraController {
 					return;
 				}
 
-				// Solo feedback, sin tocar txtDescripcion
 				if (!wasSelected && nowSelected && !originalProtegida) {
 					StatusBus.show("Se protegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
 				} else if (wasSelected && !nowSelected && originalProtegida && security.isUnlocked()) {
+					// Al desproteger, asegurar que el editor tenga el contenido descifrado
+					if (txtDescripcion.isDisabled() || txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()) {
+						try {
+							if (pildoraEnEdicion.getDescripcionCipher() != null
+									&& pildoraEnEdicion.getDescripcionIv() != null) {
+								String plain = security.decrypt(
+										pildoraEnEdicion.getDescripcionCipher(),
+										pildoraEnEdicion.getDescripcionIv());
+								txtDescripcion.setDisable(false);
+								txtDescripcion.setText(plain);
+							}
+						} catch (Exception ignored) {
+						}
+					}
 					StatusBus.show("Se desprotegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
 				}
 			});
@@ -212,48 +225,29 @@ public class EditorPildoraController {
 			return;
 		}
 
-		// Si venía protegida y sigues bloqueado → exige PIN antes de cualquier guardado
-		if (originalProtegida && !security.isUnlocked()) {
-			if (originalProtegida && !security.isUnlocked()) {
+		// Si venía protegida, asegurar desbloqueo y recuperar texto descifrado
+		if (originalProtegida) {
+			if (!security.isUnlocked()) {
 				boolean ok = security
-						.ensureUnlocked(() -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10))
-						// alternativa sin fx:id root:
-						// () -> PinDialogs.promptPin6(txtTitulo.getScene().getRoot(), true,
-						// Duration.ofMinutes(10))
-						);
+						.ensureUnlocked(() -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10)));
 				if (!ok) {
 					StatusBus.show("No puedes guardar ni desproteger sin PIN.", StatusBus.Type.ERROR,
 							Duration.seconds(4));
 					return;
 				}
-				// Si viene protegida y acabas de desbloquear, rellena el editor con el
-				// contenido real
+			}
+			// Si el editor está vacío (o deshabilitado), recuperar contenido descifrado
+			if (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()) {
 				try {
 					if (pildoraEnEdicion != null && pildoraEnEdicion.getDescripcionCipher() != null
 							&& pildoraEnEdicion.getDescripcionIv() != null) {
 						String plain = security.decrypt(pildoraEnEdicion.getDescripcionCipher(),
 								pildoraEnEdicion.getDescripcionIv());
 						txtDescripcion.setDisable(false);
-						if (txtDescripcion.getText().isBlank()) {
-							txtDescripcion.setText(plain);
-						}
+						txtDescripcion.setText(plain);
 					}
 				} catch (Exception ignored) {
 				}
-			}
-			// Si viene protegida y acabas de desbloquear, rellena el editor con el
-			// contenido real
-			try {
-				if (pildoraEnEdicion != null && pildoraEnEdicion.getDescripcionCipher() != null
-						&& pildoraEnEdicion.getDescripcionIv() != null) {
-					String plain = security.decrypt(pildoraEnEdicion.getDescripcionCipher(),
-							pildoraEnEdicion.getDescripcionIv());
-					txtDescripcion.setDisable(false);
-					if (txtDescripcion.getText().isBlank()) {
-						txtDescripcion.setText(plain);
-					}
-				}
-			} catch (Exception ignored) {
 			}
 		}
 
