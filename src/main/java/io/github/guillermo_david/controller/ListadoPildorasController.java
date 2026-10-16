@@ -206,7 +206,7 @@ public class ListadoPildorasController {
 			var headerNode = table.lookup(".column-header-background");
 			if (headerNode != null) headerH = headerNode.getBoundsInLocal().getHeight();
 			if (headerH <= 0) headerH = 28;
-			double tableIdeal = headerH + tamanioPagina * table.getFixedCellSize();
+			double tableIdeal = headerH + PAGE_SIZES[0] * table.getFixedCellSize() + 2;
 			double tableActual = table.getHeight();
 			double delta = tableIdeal - tableActual;
 			stage.setHeight(stage.getHeight() + delta);
