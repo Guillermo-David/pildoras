@@ -77,12 +77,16 @@ public final class PildoraExporter {
         return sec.decrypt(p.getDescripcionCipher(), p.getDescripcionIv());
     }
 
+    private static final java.util.regex.Pattern P_PILDORA_MD_LINK =
+            java.util.regex.Pattern.compile("\\[([^\\]]*)\\]\\([pP]ildora:\\d+\\)");
+
     public static void exportMarkdown(Pildora p, TagDao tagDao, Path file) throws Exception {
         String tags = tagDao.findByPildoraId(p.getId()).stream()
                 .map(t -> t.getNombre())
                 .collect(Collectors.joining(", "));
 
         String bodyMd = resolveMarkdownBody(p);
+        bodyMd = P_PILDORA_MD_LINK.matcher(bodyMd).replaceAll("$1");
 
         String md = """
                 # %s
@@ -110,6 +114,7 @@ public final class PildoraExporter {
 
     public static void exportPdf(Pildora p, TagDao tagDao, Path file, String extraCss) throws Exception {
         String html = buildFullHtml(p, tagDao, extraCss, false);
+        html = toXhtml(html);
         try (var os = Files.newOutputStream(file)) {
             var builder = new com.openhtmltopdf.pdfboxout.PdfRendererBuilder();
             builder.useFastMode();
@@ -117,6 +122,16 @@ public final class PildoraExporter {
             builder.toStream(os);
             builder.run();
         }
+    }
+
+    private static String toXhtml(String html) {
+        html = html.replace("<!doctype html>",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">");
+        html = html.replace("<html lang=\"es\">",
+                "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\">");
+        html = html.replaceAll("<(meta|br|hr|img|input|link)(\\s[^>]*?)?>",
+                "<$1$2 />");
+        return html;
     }
 
     private static String buildFullHtml(Pildora p, TagDao tagDao, String extraCss, boolean includeMathjax) {
@@ -127,7 +142,7 @@ public final class PildoraExporter {
         String bodyMd = resolveMarkdownBody(p);
         Node doc = MD_PARSER.parse(bodyMd == null ? "" : bodyMd);
         String bodyHtml = HTML_REND.render(doc);
-        bodyHtml = bodyHtml.replaceAll("href\\s*=\\s*\"pill://(\\d+)\"", "href=\"#pill-$1\"");
+        bodyHtml = bodyHtml.replaceAll("<a\\s+href\\s*=\\s*\"[pP]ildora:\\d+\"\\s*>(.*?)</a>", "$1");
 
         String pageCss = """
             body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;
@@ -139,7 +154,7 @@ public final class PildoraExporter {
                   margin-right:.35rem;margin-bottom:.35rem;background:#eef2ff;color:#3730a3}
             pre,code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,
                      "Liberation Mono","Courier New",monospace}
-            pre{padding:12px;background:#0f172a0f;border-radius:6px;overflow:auto}
+            pre{padding:12px;background:rgba(15,23,42,0.06);border-radius:6px;overflow:auto}
         """;
 
         String mathjaxBlock = !includeMathjax ? "" : """
