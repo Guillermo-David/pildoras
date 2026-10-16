@@ -87,6 +87,9 @@ public class MainApp extends Application{
 	    });
 
 	    stage.show();
+
+	    var controller = fxmlLoader.<io.github.guillermo_david.controller.ListadoPildorasController>getController();
+	    javafx.application.Platform.runLater(controller::adjustStageHeight);
 	}
 
 	@Override

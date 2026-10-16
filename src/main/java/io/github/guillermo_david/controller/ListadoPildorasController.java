@@ -198,20 +198,21 @@ public class ListadoPildorasController {
 			centerBackup = root.getCenter();
 		}
 
-		javafx.application.Platform.runLater(() -> {
-			var scene = root.getScene();
-			if (scene == null) return;
-			var stage = (javafx.stage.Stage) scene.getWindow();
-			double headerH = 0;
-			var headerNode = table.lookup(".column-header-background");
-			if (headerNode != null) headerH = headerNode.getBoundsInLocal().getHeight();
-			if (headerH <= 0) headerH = 28;
-			double tableIdeal = headerH + PAGE_SIZES[0] * table.getFixedCellSize() + 2;
-			double tableActual = table.getHeight();
-			double delta = tableIdeal - tableActual;
-			stage.setHeight(stage.getHeight() + delta);
-		});
 
+	}
+
+	public void adjustStageHeight() {
+		double headerH = 0;
+		var headerNode = table.lookup(".column-header-background");
+		if (headerNode != null) headerH = headerNode.getBoundsInLocal().getHeight();
+		if (headerH <= 0) headerH = 28;
+		double tableIdeal = headerH + PAGE_SIZES[0] * table.getFixedCellSize() + 2;
+		double tableActual = table.getHeight();
+		double delta = tableIdeal - tableActual;
+		if (Math.abs(delta) > 1) {
+			var stage = (javafx.stage.Stage) root.getScene().getWindow();
+			stage.setHeight(stage.getHeight() + delta);
+		}
 	}
 
 	private void setTxtFiltros() {
