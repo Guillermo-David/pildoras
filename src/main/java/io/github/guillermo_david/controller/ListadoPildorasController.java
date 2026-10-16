@@ -143,7 +143,7 @@ public class ListadoPildorasController {
 	@FXML private TableView<Pildora> table;
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
 	@FXML private TableColumn<Pildora, Void> colFav, colAcciones;
-	@FXML private CustomTextField txtFiltroTexto, txtFiltroTags;
+	@FXML private CustomTextField txtFiltroTexto;
 	@FXML private ImageView imgLogo;
 	@FXML private VBox tagSidebar, tagListBox;
 	@FXML private Button btnToggleSidebar;
@@ -183,7 +183,7 @@ public class ListadoPildorasController {
 
 		// Panel lateral de tags
 		tagSidebarHelper = new TagSidebarHelper(tagSidebar, tagListBox, btnToggleSidebar,
-				txtFiltroTags, () -> { paginaActual = 1; refrescarTabla(); },
+				() -> { paginaActual = 1; refrescarTabla(); },
 				() -> mostrarOcultas);
 		tagSidebarHelper.init();
 
@@ -201,40 +201,18 @@ public class ListadoPildorasController {
 			paginaActual = 1;
 			refrescarTabla();
 		});
-		txtFiltroTags.setOnAction(e -> {
-			paginaActual = 1;
-			refrescarTabla();
-		});
 
 		txtFiltroTexto.setTooltip(new Tooltip("Ctrl+F"));
-		txtFiltroTags.setTooltip(new Tooltip("Ctrl+T"));
 
 		attachClearButton(txtFiltroTexto, () -> {
 			paginaActual = 1;
 			refrescarTabla();
 		});
-		attachClearButton(txtFiltroTags, () -> {
-			paginaActual = 1;
-			refrescarTabla();
-		});
 
-		// Ancho base (un poco más grandes)
 		txtFiltroTexto.setPrefWidth(275);
 		txtFiltroTexto.setMinWidth(200);
 		txtFiltroTexto.setMaxWidth(Double.MAX_VALUE);
-
-		txtFiltroTags.setPrefWidth(275);
-		txtFiltroTags.setMinWidth(200);
-		txtFiltroTags.setMaxWidth(Double.MAX_VALUE);
-
-		// Que puedan crecer si hay hueco en la barra
 		HBox.setHgrow(txtFiltroTexto, Priority.ALWAYS);
-		HBox.setHgrow(txtFiltroTags, Priority.ALWAYS);
-
-		// (opcional) por columnas, por si prefieres afinar por caracteres
-//	     txtFiltroTexto.setPrefColumnCount(24);
-//	     txtFiltroTags.setPrefColumnCount(18);
-
 	}
 
 	private void setStatusBar() {
@@ -976,11 +954,6 @@ public class ListadoPildorasController {
 				txtFiltroTexto.requestFocus();
 				txtFiltroTexto.selectAll();
 			});
-			accel.accept(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN), () -> {
-				txtFiltroTags.requestFocus();
-				txtFiltroTags.selectAll();
-			});
-
 			// Nueva
 			accel.accept(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN), this::abrirFormularioNueva);
 
@@ -1061,9 +1034,10 @@ public class ListadoPildorasController {
 					if (res.getButtonData().isDefaultButton()) {
 						pildoraDao.eliminar(sel.getId());
 						StatusBus.show("Píldora eliminada.", StatusBus.Type.INFO, Duration.seconds(3));
+						String delTags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTag() : null;
 						int total = pildoraDao.contarFiltradas(
 								txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
-								txtFiltroTags.getText().isBlank() ? null : txtFiltroTags.getText().trim(),
+								delTags,
 								btnAndOr.isSelected(), btnSoloFav.isSelected(), mostrarOcultas);
 						totalPaginas = Math.max(1, (int) Math.ceil((double) total / TAMANIO_PAGINA));
 						paginaActual = Math.min(paginaActual, totalPaginas);
@@ -1076,9 +1050,9 @@ public class ListadoPildorasController {
 			// Esc: limpiar filtros
 			scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 				if (e.getCode() == KeyCode.ESCAPE) {
-					if (txtFiltroTexto.isFocused() || txtFiltroTags.isFocused() || root.isFocused()) {
+					if (txtFiltroTexto.isFocused() || root.isFocused()) {
 						txtFiltroTexto.clear();
-						txtFiltroTags.clear();
+						if (tagSidebarHelper != null) tagSidebarHelper.selectTag(null);
 						btnAndOr.setSelected(false);
 						btnAndOr.setGraphic(new FontIcon(FontAwesomeSolid.CODE_BRANCH));
 						paginaActual = 1;
@@ -1152,8 +1126,8 @@ public class ListadoPildorasController {
 				controller.dispose();
 				restaurarFiltrosYPaginacion();
 
-				// Aplica el filtro por ese tag (modo OR por defecto)
-				txtFiltroTags.setText(tagName);
+				// Aplica el filtro por ese tag
+				if (tagSidebarHelper != null) tagSidebarHelper.selectTag(tagName);
 				btnAndOr.setSelected(false);
 				btnAndOr.setGraphic(new FontIcon(FontAwesomeSolid.CODE_BRANCH));
 
@@ -1338,9 +1312,9 @@ public class ListadoPildorasController {
 
 	private void refrescarTabla() {
 		String texto = txtFiltroTexto.getText().trim();
-		String tags = txtFiltroTags.getText().trim();
+		String tags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTag() : null;
 
-		cargarTabla(texto.isEmpty() ? null : texto, tags.isEmpty() ? null : tags);
+		cargarTabla(texto.isEmpty() ? null : texto, tags);
 		if (tagSidebarHelper != null && !refreshingSidebar) {
 			refreshingSidebar = true;
 			try { tagSidebarHelper.refresh(); } finally { refreshingSidebar = false; }

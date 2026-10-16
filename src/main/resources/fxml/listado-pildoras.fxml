@@ -39,8 +39,6 @@
 		    <CustomTextField fx:id="txtFiltroTexto" promptText="Título o contenido..."/>
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>
 		
-		    <Label text="Tags:"/>
-			<CustomTextField fx:id="txtFiltroTags"  promptText="Buscar por tags..."/>
 		    <ToggleButton fx:id="btnAndOr" styleClass="toggle-btn"/>
 		    <ToggleButton fx:id="btnSoloFav" styleClass="toggle-btn"/>
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>

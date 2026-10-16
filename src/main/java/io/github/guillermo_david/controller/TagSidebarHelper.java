@@ -9,7 +9,6 @@ import io.github.guillermo_david.dao.TagDao;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextInputControl;
 import javafx.scene.layout.VBox;
 
 class TagSidebarHelper {
@@ -17,20 +16,18 @@ class TagSidebarHelper {
     private final VBox tagSidebar;
     private final VBox tagListBox;
     private final Button btnToggleSidebar;
-    private final TextInputControl txtFiltroTags;
     private final Runnable resetPageAndRefresh;
     private final BooleanSupplier includeHidden;
 
+    private Button allBtn;
     private boolean sidebarCollapsed = false;
     private String selectedSidebarTag = null;
 
     TagSidebarHelper(VBox tagSidebar, VBox tagListBox, Button btnToggleSidebar,
-                     TextInputControl txtFiltroTags, Runnable resetPageAndRefresh,
-                     BooleanSupplier includeHidden) {
+                     Runnable resetPageAndRefresh, BooleanSupplier includeHidden) {
         this.tagSidebar = tagSidebar;
         this.tagListBox = tagListBox;
         this.btnToggleSidebar = btnToggleSidebar;
-        this.txtFiltroTags = txtFiltroTags;
         this.resetPageAndRefresh = resetPageAndRefresh;
         this.includeHidden = includeHidden;
     }
@@ -39,25 +36,37 @@ class TagSidebarHelper {
         return selectedSidebarTag;
     }
 
+    void selectTag(String tagName) {
+        selectedSidebarTag = tagName;
+        refresh();
+    }
+
     void init() {
         btnToggleSidebar.setOnAction(e -> toggleSidebar());
+
+        allBtn = new Button("Todas");
+        allBtn.getStyleClass().add("tag-sidebar-item");
+        allBtn.setMaxWidth(Double.MAX_VALUE);
+        allBtn.setOnAction(e -> {
+            selectedSidebarTag = null;
+            resetAndRefresh();
+            refresh();
+        });
+
+        // Insert "Todas" between header and ScrollPane (index 1)
+        tagSidebar.getChildren().add(1, allBtn);
+
         refresh();
     }
 
     void refresh() {
         tagListBox.getChildren().clear();
 
-        var allBtn = new Button("Todas");
-        allBtn.getStyleClass().add("tag-sidebar-item");
-        allBtn.setMaxWidth(Double.MAX_VALUE);
-        if (selectedSidebarTag == null) allBtn.getStyleClass().add("tag-sidebar-selected");
-        allBtn.setOnAction(e -> {
-            selectedSidebarTag = null;
-            txtFiltroTags.clear();
-            resetAndRefresh();
-            refresh();
-        });
-        tagListBox.getChildren().add(allBtn);
+        // Update "Todas" styling
+        if (allBtn != null) {
+            allBtn.getStyleClass().remove("tag-sidebar-selected");
+            if (selectedSidebarTag == null) allBtn.getStyleClass().add("tag-sidebar-selected");
+        }
 
         var tagsWithCount = new TagDao().listAllWithCount(includeHidden.getAsBoolean());
         for (String[] tc : tagsWithCount) {
@@ -69,7 +78,6 @@ class TagSidebarHelper {
             if (nombre.equals(selectedSidebarTag)) btn.getStyleClass().add("tag-sidebar-selected");
             btn.setOnAction(e -> {
                 selectedSidebarTag = nombre;
-                txtFiltroTags.setText(nombre);
                 resetAndRefresh();
                 refresh();
             });
@@ -87,6 +95,7 @@ class TagSidebarHelper {
         if (sidebarCollapsed) {
             header.setVisible(false);
             header.setManaged(false);
+            if (allBtn != null) { allBtn.setVisible(false); allBtn.setManaged(false); }
             tagListBox.setVisible(false);
             tagListBox.setManaged(false);
             for (Node n : tagSidebar.getChildren()) {
@@ -107,6 +116,7 @@ class TagSidebarHelper {
             header = tagSidebar.getChildren().get(0);
             header.setVisible(true);
             header.setManaged(true);
+            if (allBtn != null) { allBtn.setVisible(true); allBtn.setManaged(true); }
             for (Node n : tagSidebar.getChildren()) {
                 if (n instanceof ScrollPane) { n.setVisible(true); n.setManaged(true); }
             }

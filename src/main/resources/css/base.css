@@ -826,11 +826,10 @@
     -fx-max-height: 28;
 }
 
-/* ---------- MenuButton borradores ---------- */
+/* MenuButton icon-btn: sin borde, solo icono */
 .menu-button.icon-btn {
-    -fx-border-color: -c-border;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
 }
 
 /* ---------- Round-toggle con acento activo ---------- */
