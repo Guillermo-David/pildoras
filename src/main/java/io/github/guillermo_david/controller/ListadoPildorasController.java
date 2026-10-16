@@ -1667,7 +1667,14 @@ public class ListadoPildorasController {
 		var miTursoGuide = new MenuItem("Cómo configurar Turso…");
 		miTursoGuide.setOnAction(e -> showTursoGuideDialog());
 
-		miDatabase.getItems().addAll(miTurso, miMigrate, new SeparatorMenuItem(), miTursoGuide);
+		var miBackup = new MenuItem("Exportar backup…");
+		miBackup.setOnAction(e -> handleExportBackup());
+
+		var miRestore = new MenuItem("Importar backup…");
+		miRestore.setOnAction(e -> handleImportBackup());
+
+		miDatabase.getItems().addAll(miTurso, miMigrate, new SeparatorMenuItem(),
+				miBackup, miRestore, new SeparatorMenuItem(), miTursoGuide);
 
 		// =============== Submenú Debug ===============
 		var miDebug = new Menu("Debug");
@@ -2264,6 +2271,48 @@ public class ListadoPildorasController {
 		guide.getDialogPane().setPrefWidth(560);
 		Dialogs.decorate(guide, root);
 		guide.showAndWait();
+	}
+
+	private void handleExportBackup() {
+		var fc = new javafx.stage.FileChooser();
+		fc.setTitle("Exportar backup");
+		fc.setInitialFileName("pildoras-backup.json");
+		fc.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("JSON", "*.json"));
+		var file = fc.showSaveDialog(root.getScene().getWindow());
+		if (file == null) return;
+		try {
+			io.github.guillermo_david.export.BackupService.exportToFile(file);
+			StatusBus.show("Backup exportado correctamente.", StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(4));
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			StatusBus.show("Error exportando: " + ex.getMessage(), StatusBus.Type.ERROR, javafx.util.Duration.seconds(5));
+		}
+	}
+
+	private void handleImportBackup() {
+		var confirm = new Alert(AlertType.WARNING);
+		confirm.setTitle("Importar backup");
+		confirm.setHeaderText("¿Estás seguro?");
+		confirm.setContentText("Se eliminarán TODOS los datos actuales y se reemplazarán con el backup.");
+		confirm.getButtonTypes().setAll(javafx.scene.control.ButtonType.OK, javafx.scene.control.ButtonType.CANCEL);
+		Dialogs.decorate(confirm, root);
+		var res = confirm.showAndWait();
+		if (res.isEmpty() || res.get() != javafx.scene.control.ButtonType.OK) return;
+
+		var fc = new javafx.stage.FileChooser();
+		fc.setTitle("Importar backup");
+		fc.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("JSON", "*.json"));
+		var file = fc.showOpenDialog(root.getScene().getWindow());
+		if (file == null) return;
+		try {
+			int[] counts = io.github.guillermo_david.export.BackupService.importFromFile(file);
+			refrescarTabla();
+			StatusBus.show("Importado: " + counts[0] + " píldoras, " + counts[1] + " tags, "
+					+ counts[2] + " borradores.", StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(5));
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			StatusBus.show("Error importando: " + ex.getMessage(), StatusBus.Type.ERROR, javafx.util.Duration.seconds(5));
+		}
 	}
 
 	private void handleMigrateToTurso() {
