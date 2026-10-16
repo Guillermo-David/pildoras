@@ -100,8 +100,8 @@ public class PildoraDao {
 				  p.favorita,
 				  p.pinned,
 				  p.protegida,
-				  p.descripcion_cipher,
-				  p.descripcion_iv,
+				  hex(p.descripcion_cipher) AS cipher_hex,
+				  hex(p.descripcion_iv)     AS iv_hex,
 				  p.oculta
 				FROM pildoras p
 				""");
@@ -190,17 +190,13 @@ public class PildoraDao {
 						descripcion = "Contenido protegido";
 					}
 					Pildora pil = new Pildora(rs.getInt("id"), rs.getString("titulo"), descripcion,
-							rs.getTimestamp("fecha_creacion") != null
-									? rs.getTimestamp("fecha_creacion").toLocalDateTime()
-									: null,
-							rs.getTimestamp("fecha_actualizacion") != null
-									? rs.getTimestamp("fecha_actualizacion").toLocalDateTime()
-									: null,
+							parseDateTime(rs.getString("fecha_creacion")),
+							parseDateTime(rs.getString("fecha_actualizacion")),
 							rs.getInt("favorita") == 1,
 							rs.getInt("pinned") == 1,
 							rs.getInt("protegida") == 1,
-							rs.getBytes("descripcion_cipher"),
-							rs.getBytes("descripcion_iv"),
+							hexToBytes(rs.getString("cipher_hex")),
+							hexToBytes(rs.getString("iv_hex")),
 							rs.getInt("oculta") == 1);
 					lista.add(pil);
 				}
@@ -279,40 +275,30 @@ public class PildoraDao {
 		String sql =
 				"""
 				SELECT
-					id,
-					titulo,
-					descripcion,
-					fecha_creacion,
-					fecha_actualizacion,
-					favorita,
-					pinned,
-					protegida,
-					descripcion_cipher,
-					descripcion_iv,
+					id, titulo, descripcion,
+					fecha_creacion, fecha_actualizacion,
+					favorita, pinned, protegida,
+					hex(descripcion_cipher) AS cipher_hex,
+					hex(descripcion_iv)     AS iv_hex,
 					oculta
-					FROM pildoras WHERE id = ?
-					""";
+				FROM pildoras WHERE id = ?
+				""";
 		try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
-
 			pstmt.setInt(1, id);
 			try (ResultSet rs = pstmt.executeQuery()) {
 				if (rs.next()) {
 					Pildora p = new Pildora(rs.getInt("id"), rs.getString("titulo"), rs.getString("descripcion"),
-							rs.getString("fecha_creacion") != null
-									? LocalDateTime.parse(rs.getString("fecha_creacion"), FORMATTER)
-									: null,
-							rs.getString("fecha_actualizacion") != null
-									? LocalDateTime.parse(rs.getString("fecha_actualizacion"), FORMATTER)
-									: null,
+							parseDateTime(rs.getString("fecha_creacion")),
+							parseDateTime(rs.getString("fecha_actualizacion")),
 							rs.getInt("favorita") == 1, rs.getInt("pinned") == 1,
-							rs.getInt("protegida") == 1, rs.getBytes("descripcion_cipher"),
-							rs.getBytes("descripcion_iv"),
+							rs.getInt("protegida") == 1,
+							hexToBytes(rs.getString("cipher_hex")),
+							hexToBytes(rs.getString("iv_hex")),
 							rs.getInt("oculta") == 1);
 					return p;
 				}
 			}
-
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -464,6 +450,26 @@ public class PildoraDao {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static LocalDateTime parseDateTime(String s) {
+		if (s == null || s.isBlank()) return null;
+		try {
+			return LocalDateTime.parse(s, FORMATTER);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	private static byte[] hexToBytes(String hex) {
+		if (hex == null || hex.isBlank()) return null;
+		int len = hex.length();
+		byte[] out = new byte[len / 2];
+		for (int i = 0; i < len; i += 2) {
+			out[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+					+ Character.digit(hex.charAt(i + 1), 16));
+		}
+		return out;
 	}
 
 	private static String esc(String val) {
