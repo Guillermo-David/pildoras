@@ -87,6 +87,7 @@ target/jpackage/
 # Lanzadores/propiedades generadas por jpackage
 *.cfg
 *.properties
+!src/main/resources/messages*.properties
 
 # Logs/temporales
 *.log

@@ -3,6 +3,7 @@ package io.github.guillermo_david.controller;
 import java.util.function.Supplier;
 
 import io.github.guillermo_david.dao.DraftDao;
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.javafx.DraftDialogs;
 import io.github.guillermo_david.javafx.PinDialogs;
 import io.github.guillermo_david.javafx.StatusBus;
@@ -63,11 +64,11 @@ class DraftsUIHelper {
         draftsBadge.setMaxSize(16, 16);
         splitBtn.setGraphic(stack);
 
-        var miNuevaPildora = new MenuItem("Nueva píldora");
+        var miNuevaPildora = new MenuItem(I18n.get("menu.new.pildora"));
         miNuevaPildora.setGraphic(new FontIcon(FontAwesomeSolid.FILE_MEDICAL));
         miNuevaPildora.setOnAction(e -> nuevaPildora.run());
 
-        var miNuevoBorrador = new MenuItem("Nuevo borrador...");
+        var miNuevoBorrador = new MenuItem(I18n.get("menu.new.draft"));
         miNuevoBorrador.setGraphic(new FontIcon(FontAwesomeSolid.EDIT));
         miNuevoBorrador.setOnAction(e -> {
             var res = DraftDialogs.showQuickDraftDialog(root, null, null, false);
@@ -76,7 +77,7 @@ class DraftsUIHelper {
             switch (res.action) {
                 case SAVE -> {
                     new DraftDao().insertar(res.draft);
-                    StatusBus.show("Borrador guardado.", StatusBus.Type.SUCCESS, Duration.seconds(2));
+                    StatusBus.show(I18n.get("status.draft.saved"), StatusBus.Type.SUCCESS, Duration.seconds(2));
                     refreshBadge();
                 }
                 case CONVERT -> {
@@ -88,7 +89,7 @@ class DraftsUIHelper {
             }
         });
 
-        var miBandeja = new MenuItem("Bandeja de borradores...");
+        var miBandeja = new MenuItem(I18n.get("menu.drafts.tray"));
         miBandeja.setGraphic(new FontIcon(FontAwesomeSolid.INBOX));
         miBandeja.setOnAction(e -> {
             DraftDialogs.showDraftsTray(root,
@@ -106,7 +107,7 @@ class DraftsUIHelper {
                                 dft.setContenidoCipher(res.draft.getContenidoCipher());
                                 dft.setContenidoIv(res.draft.getContenidoIv());
                                 new DraftDao().actualizar(dft);
-                                StatusBus.show("Borrador actualizado.", StatusBus.Type.SUCCESS,
+                                StatusBus.show(I18n.get("status.draft.updated"), StatusBus.Type.SUCCESS,
                                         Duration.seconds(2));
                             }
                             case CONVERT -> {
@@ -126,7 +127,7 @@ class DraftsUIHelper {
                                 dft.isProtegida());
                         refreshBadge();
                     },
-                    dft -> StatusBus.show("Borrador eliminado.", StatusBus.Type.INFO, Duration.seconds(2)));
+                    dft -> StatusBus.show(I18n.get("status.draft.deleted"), StatusBus.Type.INFO, Duration.seconds(2)));
             refreshBadge();
         });
 
@@ -186,7 +187,7 @@ class DraftsUIHelper {
             root.setCenter(rootEditor);
         } catch (Exception ex) {
             ex.printStackTrace();
-            StatusBus.show("No se pudo abrir el editor.", StatusBus.Type.ERROR, Duration.seconds(3));
+            StatusBus.show(I18n.get("status.editor.open.failed"), StatusBus.Type.ERROR, Duration.seconds(3));
         }
     }
 }

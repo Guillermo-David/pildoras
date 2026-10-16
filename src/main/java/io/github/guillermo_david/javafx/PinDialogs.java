@@ -5,6 +5,7 @@ import java.util.AbstractMap;
 import java.util.Arrays;
 
 import io.github.guillermo_david.security.SecurityService;
+import io.github.guillermo_david.util.I18n;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -35,11 +36,11 @@ public final class PinDialogs {
 
 	/** Pide un nuevo PIN (6 dígitos) dos veces y valida igualdad. */
 	public static char[] promptNewPin6(Parent owner) {
-		char[] p1 = promptPin6(owner, false, java.time.Duration.ZERO, "Nuevo PIN",
-				"Introduce tu nuevo PIN (6 dígitos)");
+		char[] p1 = promptPin6(owner, false, java.time.Duration.ZERO, I18n.get("pin.new.title"),
+				I18n.get("pin.new.header"));
 		if (p1 == null)
 			return null;
-		char[] p2 = promptPin6(owner, false, java.time.Duration.ZERO, "Confirmar PIN", "Repite el PIN");
+		char[] p2 = promptPin6(owner, false, java.time.Duration.ZERO, I18n.get("pin.confirm.title"), I18n.get("pin.confirm.header"));
 		if (p2 == null) {
 			java.util.Arrays.fill(p1, '\0');
 			return null;
@@ -47,7 +48,7 @@ public final class PinDialogs {
 		boolean eq = java.util.Arrays.equals(p1, p2);
 		Arrays.fill(p2, '\0');
 		if (!eq) {
-			showWarn(owner, "Los PIN no coinciden. Vuelve a intentarlo.");
+			showWarn(owner, I18n.get("pin.mismatch"));
 			Arrays.fill(p1, '\0');
 			return null;
 		}
@@ -61,23 +62,23 @@ public final class PinDialogs {
 	public static AbstractMap.SimpleEntry<String, char[]> promptSetSecurityQuestion(Parent owner,
 			String initialQuestion) {
 		Dialog<AbstractMap.SimpleEntry<String, char[]>> d = new Dialog<>();
-		d.setTitle("Pregunta de seguridad");
-		d.setHeaderText("Configura una pregunta y su respuesta (se usará para recuperar el PIN)");
+		d.setTitle(I18n.get("dialog.security.question.title"));
+		d.setHeaderText(I18n.get("dialog.security.question.header"));
 
 		TextField tfQ = new TextField();
-		tfQ.setPromptText("Ej: Nombre de tu primera mascota");
+		tfQ.setPromptText(I18n.get("dialog.security.question.prompt"));
 		if (initialQuestion != null)
 			tfQ.setText(initialQuestion);
 
 		PasswordField pfA = new PasswordField();
-		pfA.setPromptText("Respuesta (se recomienda algo memorable)");
+		pfA.setPromptText(I18n.get("dialog.security.answer.memorable"));
 
-		VBox box = new VBox(8, new Label("Pregunta:"), tfQ, new Label("Respuesta:"), pfA);
+		VBox box = new VBox(8, new Label(I18n.get("label.question")), tfQ, new Label(I18n.get("label.answer")), pfA);
 		box.setPadding(new Insets(4));
 		d.getDialogPane().setContent(box);
 
-		ButtonType ok = new ButtonType("Guardar", ButtonBar.ButtonData.OK_DONE);
-		ButtonType cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+		ButtonType ok = new ButtonType(I18n.get("button.save"), ButtonBar.ButtonData.OK_DONE);
+		ButtonType cancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
 		d.getDialogPane().getButtonTypes().setAll(ok, cancel);
 
 		// deshabilita OK si falta algo
@@ -104,14 +105,14 @@ public final class PinDialogs {
 
 	public static char[] promptAnswer(Parent owner, String question) {
 	    Dialog<char[]> d = new Dialog<>();
-	    d.setTitle("Restablecer PIN");           // el header custom mostrará el título
+	    d.setTitle(I18n.get("dialog.pin.reset.title"));           // el header custom mostrará el título
 	    d.setHeaderText(null);                   // no usamos headerText (lo oculta tu decorate)
 
 	    // Pregunta (visible en el contenido)
 	    Label lblQ = new Label(
 	        (question != null && !question.isBlank())
 	            ? question
-	            : "Escribe la respuesta de seguridad"
+	            : I18n.get("dialog.pin.reset.fallback.label")
 	    );
 	    lblQ.setWrapText(true);
 	    lblQ.setMaxWidth(480); // por si la pregunta es larga
@@ -130,8 +131,8 @@ public final class PinDialogs {
 	    box.setPadding(new Insets(6, 0, 0, 0));
 	    d.getDialogPane().setContent(box);
 
-	    ButtonType ok     = new ButtonType("Aceptar", ButtonBar.ButtonData.OK_DONE);
-	    ButtonType cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+	    ButtonType ok     = new ButtonType(I18n.get("button.accept"), ButtonBar.ButtonData.OK_DONE);
+	    ButtonType cancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
 	    d.getDialogPane().getButtonTypes().setAll(ok, cancel);
 
 	    // Deshabilita OK si está vacío
@@ -150,8 +151,8 @@ public final class PinDialogs {
 
 	public static String promptRecoveryCode(Parent owner) {
 		TextInputDialog d = new TextInputDialog();
-		d.setTitle("Código de recuperación");
-		d.setHeaderText("Introduce el código de recuperación (p.ej. ABCD-EFGH-IJKL-MNOP)");
+		d.setTitle(I18n.get("dialog.recovery.code.title"));
+		d.setHeaderText(I18n.get("dialog.recovery.code.input.header"));
 		d.getEditor().setPromptText("XXXX-XXXX-XXXX-XXXX");
 		Dialogs.decorate(d, owner);
 		Platform.runLater(() -> d.getEditor().requestFocus());
@@ -163,15 +164,15 @@ public final class PinDialogs {
         var sec = SecurityService.getInstance();
         long secs = Math.max(0L, (sec.lockoutRemainingMillis()+999)/1000);
         Alert a = new Alert(Alert.AlertType.WARNING);
-        a.setTitle("Intentos agotados");
-        a.setHeaderText("Has excedido los intentos del PIN");
-        a.setContentText("Podrás volver a intentarlo en " + secs + " segundo" + (secs==1?"":"s") + ".");
+        a.setTitle(I18n.get("alert.lockout.title2"));
+        a.setHeaderText(I18n.get("alert.lockout.header"));
+        a.setContentText(I18n.get("alert.lockout.content", secs));
         Dialogs.decorate(a, owner);
         a.showAndWait();
     }
-    private static void showInfo(Parent owner, String msg)  { show(Alert.AlertType.INFORMATION, "Información", msg, owner); }
-    private static void showWarn(Parent owner, String msg)  { show(Alert.AlertType.WARNING,    "Aviso",        msg, owner); }
-    private static void showError(Parent owner, String msg) { show(Alert.AlertType.ERROR,      "Error",        msg, owner); }
+    private static void showInfo(Parent owner, String msg)  { show(Alert.AlertType.INFORMATION, I18n.get("alert.info.title"), msg, owner); }
+    private static void showWarn(Parent owner, String msg)  { show(Alert.AlertType.WARNING,    I18n.get("alert.warn.title"),  msg, owner); }
+    private static void showError(Parent owner, String msg) { show(Alert.AlertType.ERROR,      I18n.get("alert.error.title"), msg, owner); }
     private static void show(Alert.AlertType t, String title, String msg, Parent owner) {
         Alert a = new Alert(t);
         a.setTitle(title);
@@ -184,24 +185,24 @@ public final class PinDialogs {
 	/** Muestra el código generado con botón de copiar. */
 	public static void showRecoveryCode(Parent owner, String code) {
 		Dialog<Void> d = new Dialog<>();
-		d.setTitle("Código de recuperación");
-		d.setHeaderText("Copia y guarda este código en un lugar seguro");
+		d.setTitle(I18n.get("dialog.show.recovery.code.title"));
+		d.setHeaderText(I18n.get("dialog.show.recovery.code.header"));
 
 		Label lbl = new Label(code);
 		lbl.setStyle("-fx-font-family: Consolas, 'Fira Mono', monospace; -fx-font-size: 18px;");
 
-		Button btnCopy = new Button("Copiar");
+		Button btnCopy = new Button(I18n.get("button.copy"));
 		btnCopy.setOnAction(e -> {
 			ClipboardContent cc = new ClipboardContent();
 			cc.putString(code);
 			Clipboard.getSystemClipboard().setContent(cc);
 		});
 
-		VBox box = new VBox(10, lbl, btnCopy, new Label("Este código es de un solo uso."));
+		VBox box = new VBox(10, lbl, btnCopy, new Label(I18n.get("label.recovery.code.single.use")));
 		box.setPadding(new Insets(8));
 		d.getDialogPane().setContent(box);
 
-		d.getDialogPane().getButtonTypes().add(new ButtonType("Cerrar", ButtonBar.ButtonData.CANCEL_CLOSE));
+		d.getDialogPane().getButtonTypes().add(new ButtonType(I18n.get("button.close"), ButtonBar.ButtonData.CANCEL_CLOSE));
 		Dialogs.decorate(d, owner);
 		d.showAndWait();
 	}
@@ -209,8 +210,8 @@ public final class PinDialogs {
 	public static char[] promptPin6(Parent owner, boolean showRemember, Duration rememberFor, String title,
 			String header) {
 		var dialog = new Dialog<char[]>();
-		dialog.setTitle(title != null ? title : "PIN requerido");
-		dialog.setHeaderText(header != null ? header : "Introduce tu PIN (6 dígitos)");
+		dialog.setTitle(title != null ? title : I18n.get("pin.dialog.title"));
+		dialog.setHeaderText(header != null ? header : I18n.get("pin.dialog.header"));
 
 		var pf = new PasswordField();
 		pf.setPromptText("••••••");
@@ -220,25 +221,25 @@ public final class PinDialogs {
 		}));
 
 		Label hint = new Label(); // mensajes contextuales (post-recuperación, etc.)
-		Hyperlink forgot = new Hyperlink("¿Olvidaste tu PIN?");
+		Hyperlink forgot = new Hyperlink(I18n.get("pin.forgot.link"));
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
 
 		HBox bottom;
 		CheckBox remember = null;
 		if (showRemember) {
-			remember = new CheckBox("Recordar durante " + rememberFor.toMinutes() + " minutos");
+			remember = new CheckBox(I18n.get("pin.remember.minutes", rememberFor.toMinutes()));
 			bottom = new HBox(12, remember, spacer, forgot);
 		} else {
 			bottom = new HBox(12, spacer, forgot);
 		}
 
-		VBox content = new VBox(8, new Label("PIN:"), pf, hint, bottom);
+		VBox content = new VBox(8, new Label(I18n.get("label.pin")), pf, hint, bottom);
 		content.setPadding(new Insets(4));
 		dialog.getDialogPane().setContent(content);
 
-		ButtonType okBtn = new ButtonType("Aceptar", ButtonBar.ButtonData.OK_DONE);
-		ButtonType cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+		ButtonType okBtn = new ButtonType(I18n.get("button.accept"), ButtonBar.ButtonData.OK_DONE);
+		ButtonType cancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
 		dialog.getDialogPane().getButtonTypes().setAll(okBtn, cancel);
 
 		Node okNode = dialog.getDialogPane().lookupButton(okBtn);
@@ -276,11 +277,11 @@ public final class PinDialogs {
 		}
 
 		Dialog<String> hub = new Dialog<>();
-		hub.setTitle("Recuperación de PIN");
-		hub.setHeaderText("Elige un método de recuperación");
-		ButtonType byAnswer = new ButtonType("Con respuesta de seguridad", ButtonBar.ButtonData.OK_DONE);
-		ButtonType byCode = new ButtonType("Con código de recuperación", ButtonBar.ButtonData.OTHER);
-		ButtonType cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+		hub.setTitle(I18n.get("dialog.pin.recovery.title"));
+		hub.setHeaderText(I18n.get("dialog.pin.recovery.header"));
+		ButtonType byAnswer = new ButtonType(I18n.get("button.recovery.by.answer"), ButtonBar.ButtonData.OK_DONE);
+		ButtonType byCode = new ButtonType(I18n.get("button.recovery.by.code"), ButtonBar.ButtonData.OTHER);
+		ButtonType cancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
 		hub.getDialogPane().getButtonTypes().setAll(byAnswer, byCode, cancel);
 		Dialogs.decorate(hub, owner);
 		hub.setResultConverter(bt -> bt == byAnswer ? "answer" : bt == byCode ? "code" : null);
@@ -293,7 +294,7 @@ public final class PinDialogs {
 			switch (choice) {
 			case "answer" -> {
 				if (!sec.hasSecurityQuestion()) {
-					showWarn(owner, "No hay pregunta de seguridad configurada.");
+					showWarn(owner, I18n.get("status.no.security.question"));
 					return;
 				}
 				char[] ans = promptAnswer(owner, sec.getSecurityQuestion());
@@ -313,7 +314,7 @@ public final class PinDialogs {
 			}
 			case "code" -> {
 				if (!sec.hasRecoveryCode()) {
-					showWarn(owner, "No hay código de recuperación activo.");
+					showWarn(owner, I18n.get("status.no.recovery.code"));
 					return;
 				}
 				String code = promptRecoveryCode(owner);
@@ -334,18 +335,18 @@ public final class PinDialogs {
 		}
 
 		if (ok) {
-			showInfo(owner, "PIN restablecido.\nIntroduce el nuevo PIN para continuar.");
+			showInfo(owner, I18n.get("status.pin.reset.success"));
 			pf.clear();
-			hint.setText("PIN restablecido: escribe el nuevo PIN para continuar");
+			hint.setText(I18n.get("hint.pin.reset.enter.new"));
 			Platform.runLater(pf::requestFocus);
 		} else if (sec.isLockedOut()) {
 			showLockoutModal(owner);
 		} else {
-			showError(owner, "No se pudo restablecer el PIN.");
+			showError(owner, I18n.get("status.pin.reset.failed"));
 		}
 	}
 
 	public static char[] promptPin6(Parent owner, boolean showRemember, Duration rememberFor) {
-		return promptPin6(owner, showRemember, rememberFor, "PIN requerido", "Introduce tu PIN (6 dígitos)");
+		return promptPin6(owner, showRemember, rememberFor, I18n.get("pin.dialog.title"), I18n.get("pin.dialog.header"));
 	}
 }

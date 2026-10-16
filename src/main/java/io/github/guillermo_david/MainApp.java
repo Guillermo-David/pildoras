@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.github.guillermo_david.db.DatabaseHelper;
 import io.github.guillermo_david.javafx.ThemeManager;
+import io.github.guillermo_david.util.I18n;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -15,13 +16,13 @@ public class MainApp extends Application{
 
 	private static List<Image> loadIcons() {
 	    String[] names = {
-	        "/icons/gdg_16.png",
-	        "/icons/gdg_20.png",
-	        "/icons/gdg_24.png",
-	        "/icons/gdg_32.png",
-	        "/icons/gdg_48.png",
-	        "/icons/gdg_64.png",
-	        "/icons/gdg_128.png"
+	        "/icons/pill_16.png",
+	        "/icons/pill_20.png",
+	        "/icons/pill_24.png",
+	        "/icons/pill_32.png",
+	        "/icons/pill_48.png",
+	        "/icons/pill_64.png",
+	        "/icons/pill_128.png"
 	    };
 	    ArrayList<Image> list = new ArrayList<>();
 	    for (String n : names) {
@@ -40,7 +41,7 @@ public class MainApp extends Application{
 	        t.printStackTrace();
 	        var alert = new javafx.scene.control.Alert(
 	            javafx.scene.control.Alert.AlertType.ERROR);
-	        alert.setTitle("Error al iniciar");
+	        alert.setTitle(I18n.get("app.error.startup"));
 	        alert.setHeaderText(t.getClass().getName());
 	        var sw = new java.io.StringWriter();
 	        t.printStackTrace(new java.io.PrintWriter(sw));
@@ -73,7 +74,7 @@ public class MainApp extends Application{
 	    var icons = loadIcons();
 	    if (!icons.isEmpty()) stage.getIcons().setAll(icons);
 
-	    stage.setTitle("Pildoras");
+	    stage.setTitle(I18n.get("app.title"));
 	    stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
 	    stage.setResizable(true);
 	    stage.setMinWidth(900);

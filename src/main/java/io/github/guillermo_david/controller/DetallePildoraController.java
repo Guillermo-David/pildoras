@@ -8,6 +8,7 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeRegular;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.dao.PildoraLinkDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.export.PildoraExporter;
@@ -85,6 +86,10 @@ public class DetallePildoraController {
 		cssLight = loadResourceAsString("/css/webview-light.css");
 		cssDark = loadResourceAsString("/css/webview-dark.css");
 
+		// I18n overrides for labels with hardcoded FXML text
+		lblRefs.setText(I18n.get("label.references"));
+		lblBacklinks.setText(I18n.get("label.mentioned.in"));
+
 		// Fondo transparente del WebView (JavaFX)
 		webContenido.setStyle("-fx-background-color: transparent;");
 
@@ -126,7 +131,7 @@ public class DetallePildoraController {
 			btnBorrar.setText(null);
 			btnBorrar.setGraphic(trash);
 			btnBorrar.getStyleClass().addAll("icon-btn", "danger", "btn-big"); // <- para color
-			btnBorrar.setTooltip(new Tooltip("Eliminar (Supr)"));
+			btnBorrar.setTooltip(new Tooltip(I18n.get("tooltip.delete")));
 		}
 
 		// Botón Editar (icono bolígrafo/cuadro)
@@ -136,7 +141,7 @@ public class DetallePildoraController {
 			btnEditar.setText(null);
 			btnEditar.setGraphic(edit);
 			btnEditar.getStyleClass().addAll("icon-btn", "btn-big");
-			btnEditar.setTooltip(new Tooltip("Editar (Ctrl+E)"));
+			btnEditar.setTooltip(new Tooltip(I18n.get("tooltip.edit")));
 		}
 
 		// Botón Volver (flecha izquierda)
@@ -146,7 +151,7 @@ public class DetallePildoraController {
 			btnVolver.setText(null);
 			btnVolver.setGraphic(back);
 			btnVolver.getStyleClass().addAll("icon-btn", "btn-big");
-			btnVolver.setTooltip(new Tooltip("Volver (Esc)"));
+			btnVolver.setTooltip(new Tooltip(I18n.get("tooltip.back")));
 		}
 
 		// Instala atajos cuando haya scene (y solo una vez)
@@ -199,19 +204,19 @@ public class DetallePildoraController {
 		exportIcon.getStyleClass().add("export-icon");
 		btnExportMenu.setText(null);
 		btnExportMenu.setGraphic(exportIcon);
-		btnExportMenu.setTooltip(new Tooltip("Exportar"));
+		btnExportMenu.setTooltip(new Tooltip(I18n.get("tooltip.export")));
 		btnExportMenu.getStyleClass().add("icon-btn");
 		btnExportMenu.getStyleClass().add("btn-big");
 
 		// Opción Markdown
-		var miMd = new MenuItem("Markdown");
+		var miMd = new MenuItem(I18n.get("menu.export.markdown"));
 		var mdIcon = new FontIcon(FontAwesomeBrands.MARKDOWN);
 		mdIcon.setIconSize(16);
 		miMd.setGraphic(mdIcon);
 		miMd.setOnAction(e -> exportMarkdown()); // llama a tu método existente
 
 		// Opción HTML
-		var miHtml = new MenuItem("HTML");
+		var miHtml = new MenuItem(I18n.get("menu.export.html"));
 		var htmlIcon = new FontIcon(FontAwesomeSolid.FILE_CODE);
 		htmlIcon.setIconSize(16);
 		miHtml.setGraphic(htmlIcon);
@@ -224,21 +229,21 @@ public class DetallePildoraController {
 		if (currentPildora == null)
 			return;
 		var chooser = new javafx.stage.FileChooser();
-		chooser.setTitle("Exportar a Markdown");
-		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"));
+		chooser.setTitle(I18n.get("filechooser.export.markdown"));
+		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.markdown"), "*.md"));
 		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".md");
 		var file = chooser.showSaveDialog(root.getScene().getWindow());
 		if (file == null)
 			return;
 		try {
 			PildoraExporter.exportMarkdown(currentPildora, new TagDao(), file.toPath());
-			StatusBus.show("Exportada a " + file.getName(), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
+			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
 		} catch (Exception ex) {
 		    String msg = ex.getMessage();
 		    if (msg != null && msg.contains("Contenido protegido")) {
-		        StatusBus.show("Desbloquea con PIN antes de exportar.", StatusBus.Type.ERROR, Duration.seconds(4));
+		        StatusBus.show(I18n.get("status.unlock.before.export"), StatusBus.Type.ERROR, Duration.seconds(4));
 		    } else {
-		        StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR, Duration.seconds(4));
+		        StatusBus.show(I18n.get("status.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(4));
 		    }
 		}
 
@@ -248,8 +253,8 @@ public class DetallePildoraController {
 		if (currentPildora == null)
 			return;
 		var chooser = new javafx.stage.FileChooser();
-		chooser.setTitle("Exportar a HTML");
-		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("HTML (*.html)", "*.html"));
+		chooser.setTitle(I18n.get("filechooser.export.html"));
+		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.html"), "*.html"));
 		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".html");
 		var file = chooser.showSaveDialog(root.getScene().getWindow());
 		if (file == null)
@@ -259,13 +264,13 @@ public class DetallePildoraController {
 			// aquí (opcional)
 			var extraCss = buildChipsCssForHtml(currentPildora.getId()); // 👈 mismo color que en la app
 			PildoraExporter.exportHtml(currentPildora, new TagDao(), file.toPath(), extraCss);
-			StatusBus.show("Exportada a " + file.getName(), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
+			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
 		} catch (Exception ex) {
 		    String msg = ex.getMessage();
 		    if (msg != null && msg.contains("Contenido protegido")) {
-		        StatusBus.show("Desbloquea con PIN antes de exportar.", StatusBus.Type.ERROR, Duration.seconds(4));
+		        StatusBus.show(I18n.get("status.unlock.before.export"), StatusBus.Type.ERROR, Duration.seconds(4));
 		    } else {
-		        StatusBus.show("Error al exportar: " + ex.getMessage(), StatusBus.Type.ERROR, Duration.seconds(4));
+		        StatusBus.show(I18n.get("status.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(4));
 		    }
 		}
 
@@ -277,7 +282,7 @@ public class DetallePildoraController {
 		var btn = new Button(name);
 		btn.getStyleClass().add("tag-chip"); // reutiliza tu CSS del editor (bordes redondeados, etc.)
 		btn.setFocusTraversable(false);
-		btn.setTooltip(new Tooltip("Filtrar por tag: " + name));
+		btn.setTooltip(new Tooltip(I18n.get("tooltip.filter.by.tag", name)));
 
 		// Colores según tema (igual que antes)
 		boolean dark = ThemeManager.load() == ThemeManager.Theme.DARK;
@@ -360,7 +365,7 @@ public class DetallePildoraController {
 			if (!sec.isUnlocked()) {
 				// mini helper local (mismo patrón que en Listado)
 				if (!unlockWithFeedback()) {
-					StatusBus.show("No puedes borrar sin PIN.", StatusBus.Type.ERROR, Duration.seconds(3));
+					StatusBus.show(I18n.get("status.cannot.delete.without.pin"), StatusBus.Type.ERROR, Duration.seconds(3));
 					return;
 				}
 			}
@@ -386,7 +391,7 @@ public class DetallePildoraController {
 
 		long lockMs = security.lockoutRemainingMillis();
 		if (lockMs > 0) {
-			StatusBus.show("Has agotado los intentos. Vuelve a probar en " + humanize(lockMs) + ".",
+			StatusBus.show(I18n.get("status.lockout.retry", humanize(lockMs)),
 					StatusBus.Type.ERROR, Duration.seconds(4));
 			return false;
 		}
@@ -395,16 +400,16 @@ public class DetallePildoraController {
 			return false;
 		try {
 			if (security.verifyPin(pin)) {
-				StatusBus.show("Desbloqueado.", StatusBus.Type.INFO, Duration.seconds(2));
+				StatusBus.show(I18n.get("status.unlocked"), StatusBus.Type.INFO, Duration.seconds(2));
 				return true;
 			} else {
 				if (security.isLockedOut()) {
 					long ms = security.lockoutRemainingMillis();
-					StatusBus.show("Has agotado los intentos. Vuelve a probar en " + humanize(ms) + ".",
+					StatusBus.show(I18n.get("status.lockout.retry", humanize(ms)),
 							StatusBus.Type.ERROR, Duration.seconds(4));
 				} else {
 					int left = security.attemptsLeft();
-					StatusBus.show("PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + ".",
+					StatusBus.show(I18n.get("alert.pin.incorrect.remaining", left),
 							StatusBus.Type.ERROR, Duration.seconds(3));
 				}
 				return false;
@@ -428,9 +433,10 @@ public class DetallePildoraController {
 		loadRefsSection(p.getId());
 
 		lblTitulo.setText(p.getTitulo());
-		lblFecha.setText("Creada: " + (p.getFechaCreacion() != null
+		lblFecha.setText(I18n.get("detail.created.date",
+				p.getFechaCreacion() != null
 				? p.getFechaCreacion().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-				: "sin fecha"));
+				: I18n.get("detail.no.date")));
 
 		tagsBox.getChildren().clear();
 		for (Tag t : new TagDao().findByPildoraId(p.getId())) {
@@ -503,7 +509,7 @@ public class DetallePildoraController {
 			if (p.isProtegida()) {
 				if (!security.isUnlocked()) {
 					// No intentes desbloquear aquí; el listado es la puerta
-					bodyMd = "_Contenido protegido_";
+					bodyMd = I18n.get("detail.content.protected");
 				} else {
 					bodyMd = security.decrypt(p.getDescripcionCipher(), p.getDescripcionIv());
 				}
@@ -516,7 +522,7 @@ public class DetallePildoraController {
 			renderWithTheme(ThemeManager.load(), lastHtml);
 
 		} catch (Exception ex) {
-			lastHtml = "<p><em>Error al cargar contenido.</em></p>";
+			lastHtml = "<p><em>" + I18n.get("detail.content.load.error") + "</em></p>";
 			renderWithTheme(ThemeManager.load(), lastHtml);
 		}
 	}
@@ -557,7 +563,7 @@ public class DetallePildoraController {
 	        var dao = new io.github.guillermo_david.dao.PildoraDao();
 	        var target = dao.buscarPorId(id);
 	        if (target == null) {
-	            StatusBus.show("Píldora no encontrada (" + id + ")", StatusBus.Type.WARN, Duration.seconds(3));
+	            StatusBus.show(I18n.get("status.pildora.not.found", id), StatusBus.Type.WARN, Duration.seconds(3));
 	            return;
 	        }
 	        if (target.isProtegida() && !security.isUnlocked()) {
@@ -567,7 +573,7 @@ public class DetallePildoraController {
 	        }
 	        mostrarPildora(target); // navega dentro del propio detalle
 	    } catch (Exception ex) {
-	        StatusBus.show("No se pudo abrir la píldora.", StatusBus.Type.ERROR, Duration.seconds(3));
+	        StatusBus.show(I18n.get("status.pildora.open.failed"), StatusBus.Type.ERROR, Duration.seconds(3));
 	    }
 	}
 

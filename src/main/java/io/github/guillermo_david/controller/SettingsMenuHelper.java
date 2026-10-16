@@ -10,6 +10,7 @@ import java.util.prefs.Preferences;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.db.DatabaseHelper;
 import io.github.guillermo_david.db.TursoConfig;
@@ -94,11 +95,11 @@ class SettingsMenuHelper {
         var gear = new FontIcon(FontAwesomeSolid.COG);
         btnSettings.setText(null);
         btnSettings.setGraphic(gear);
-        btnSettings.setTooltip(new Tooltip("Ajustes"));
+        btnSettings.setTooltip(new Tooltip(I18n.get("tooltip.settings")));
         btnSettings.getStyleClass().addAll("icon-btn", "primary");
 
         // --- Importar (.md) ---
-        var miImport = new MenuItem("Importar (.md)…");
+        var miImport = new MenuItem(I18n.get("menu.import.md"));
         miImport.setOnAction(e -> handleImportMarkdown());
 
         // --- Tipografías ---
@@ -114,7 +115,7 @@ class SettingsMenuHelper {
                 new Family("Serif (Times)", "Times New Roman"),
                 new Family("Monospace (Consolas)", "Consolas"),
                 new Family("Monospace (Courier)", "Courier New"));
-        var miFamily = new Menu("Tipografía");
+        var miFamily = new Menu(I18n.get("menu.typography"));
         var tgFamily = new ToggleGroup();
         String currentFamily = prefs.get(prefFontFamily, defFontFamily);
         for (var f : families) {
@@ -130,15 +131,15 @@ class SettingsMenuHelper {
         }
 
         // --- Tamaño letra ---
-        var miSize = new Menu("Tamaño");
+        var miSize = new Menu(I18n.get("menu.font.size"));
         var tgSize = new ToggleGroup();
         var sizes = List.of(
-                new Family("Muy pequeño (10px)", "xsmall"),
-                new Family("Pequeño (11px)", "small"),
-                new Family("Normal (13px)", "normal"),
-                new Family("Mediano (15px)", "medium"),
-                new Family("Grande (17px)", "large"),
-                new Family("Muy grande (20px)", "vlarge"));
+                new Family(I18n.get("font.size.xsmall"), "xsmall"),
+                new Family(I18n.get("font.size.small"), "small"),
+                new Family(I18n.get("font.size.normal"), "normal"),
+                new Family(I18n.get("font.size.medium"), "medium"),
+                new Family(I18n.get("font.size.large"), "large"),
+                new Family(I18n.get("font.size.vlarge"), "vlarge"));
         String currentSize = prefs.get(prefFontSize, defFontSize);
         for (var item : sizes) {
             var r = new RadioMenuItem(item.label);
@@ -152,7 +153,7 @@ class SettingsMenuHelper {
         }
 
         // --- Tema (color schemes) ---
-        var miTheme = new Menu("Tema");
+        var miTheme = new Menu(I18n.get("menu.theme"));
         var tgTheme = new ToggleGroup();
         String currentThemeId = ThemeManager.loadId();
         for (var entry : ThemeManager.getThemes().values()) {
@@ -166,15 +167,34 @@ class SettingsMenuHelper {
                 ThemeManager.apply(scene, tid);
                 ThemeManager.save(tid);
                 setLogoFor.accept(ThemeManager.load());
-                StatusBus.show("Tema: " + entry.label(), StatusBus.Type.INFO, Duration.seconds(2));
+                StatusBus.show(I18n.get("status.theme.changed", entry.label()), StatusBus.Type.INFO, Duration.seconds(2));
             });
             miTheme.getItems().add(r);
         }
 
-        // =============== Submenú Seguridad ===============
-        var miSecurity = new Menu("Seguridad");
+        // =============== Idioma ===============
+        Menu langMenu = new Menu(I18n.get("menu.language"));
+        ToggleGroup langGroup = new ToggleGroup();
+        RadioMenuItem langEs = new RadioMenuItem("Español");
+        langEs.setToggleGroup(langGroup);
+        RadioMenuItem langEn = new RadioMenuItem("English");
+        langEn.setToggleGroup(langGroup);
+        if (I18n.getLocale().getLanguage().equals("es")) langEs.setSelected(true);
+        else langEn.setSelected(true);
+        langEs.setOnAction(e -> {
+            I18n.setLocale(new java.util.Locale("es"));
+            showLanguageRestartAlert();
+        });
+        langEn.setOnAction(e -> {
+            I18n.setLocale(java.util.Locale.ENGLISH);
+            showLanguageRestartAlert();
+        });
+        langMenu.getItems().addAll(langEs, langEn);
 
-        var miChangePin = new MenuItem(security.hasPin() ? "Cambiar PIN…" : "Crear PIN…");
+        // =============== Submenú Seguridad ===============
+        var miSecurity = new Menu(I18n.get("menu.security"));
+
+        var miChangePin = new MenuItem(security.hasPin() ? I18n.get("menu.pin.change") : I18n.get("menu.pin.create"));
         miChangePin.setOnAction(e -> {
             try {
                 if (!security.hasPin()) {
@@ -182,7 +202,7 @@ class SettingsMenuHelper {
                     if (np == null) return;
                     try {
                         security.setupPin(np);
-                        StatusBus.show("PIN creado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+                        StatusBus.show(I18n.get("status.pin.created"), StatusBus.Type.SUCCESS, Duration.seconds(3));
                         initSettingsMenu();
                     } finally {
                         Arrays.fill(np, '\0');
@@ -193,36 +213,36 @@ class SettingsMenuHelper {
                     if (np == null) return;
                     try {
                         security.changePin(null, np);
-                        StatusBus.show("PIN cambiado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+                        StatusBus.show(I18n.get("status.pin.changed"), StatusBus.Type.SUCCESS, Duration.seconds(3));
                     } finally {
                         Arrays.fill(np, '\0');
                     }
                 }
             } catch (Exception ex) {
-                StatusBus.show("No se pudo " + (security.hasPin() ? "cambiar" : "crear") + " el PIN.",
+                StatusBus.show(security.hasPin() ? I18n.get("status.pin.change.failed") : I18n.get("status.pin.create.failed"),
                         StatusBus.Type.ERROR, Duration.seconds(4));
             }
         });
 
-        var miSetQuestion = new MenuItem("Configurar pregunta de seguridad…");
+        var miSetQuestion = new MenuItem(I18n.get("menu.security.question.setup"));
         miSetQuestion.setOnAction(e -> {
             try {
                 if (!security.hasPin()) {
-                    StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
+                    StatusBus.show(I18n.get("status.pin.create.first"), StatusBus.Type.WARN, Duration.seconds(3));
                     return;
                 }
                 if (!ensureUnlocked.getAsBoolean()) return;
                 showSetupSecurityQuestion();
             } catch (Exception ex) {
-                StatusBus.show("No se pudo guardar la pregunta.", StatusBus.Type.ERROR, Duration.seconds(4));
+                StatusBus.show(I18n.get("status.security.question.save.failed"), StatusBus.Type.ERROR, Duration.seconds(4));
             }
         });
 
-        var miResetByAnswer = new MenuItem("Restablecer PIN con respuesta…");
+        var miResetByAnswer = new MenuItem(I18n.get("menu.pin.reset.answer"));
         miResetByAnswer.setOnAction(e -> {
             try {
                 if (!security.hasSecurityQuestion()) {
-                    StatusBus.show("No hay pregunta de seguridad configurada.", StatusBus.Type.WARN,
+                    StatusBus.show(I18n.get("status.no.security.question"), StatusBus.Type.WARN,
                             Duration.seconds(3));
                     return;
                 }
@@ -249,37 +269,37 @@ class SettingsMenuHelper {
                 }
 
                 if (ok) {
-                    StatusBus.show("PIN restablecido.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+                    StatusBus.show(I18n.get("status.pin.reset"), StatusBus.Type.SUCCESS, Duration.seconds(3));
                     initSettingsMenu();
                 } else if (security.isLockedOut()) {
                     showLockoutModal();
                 } else {
-                    StatusBus.show("Respuesta incorrecta.", StatusBus.Type.ERROR, Duration.seconds(3));
+                    StatusBus.show(I18n.get("status.answer.incorrect"), StatusBus.Type.ERROR, Duration.seconds(3));
                 }
             } catch (Exception ex) {
-                StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
+                StatusBus.show(I18n.get("status.pin.reset.failed"), StatusBus.Type.ERROR, Duration.seconds(4));
             }
         });
 
-        var miGenRecovery = new MenuItem("Generar código de recuperación…");
+        var miGenRecovery = new MenuItem(I18n.get("menu.recovery.code.generate"));
         miGenRecovery.setOnAction(e -> {
             try {
                 if (!security.hasPin()) {
-                    StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
+                    StatusBus.show(I18n.get("status.pin.create.first"), StatusBus.Type.WARN, Duration.seconds(3));
                     return;
                 }
                 if (!ensureUnlocked.getAsBoolean()) return;
                 showGenerateRecoveryCode();
             } catch (Exception ex) {
-                StatusBus.show("No se pudo generar el código.", StatusBus.Type.ERROR, Duration.seconds(4));
+                StatusBus.show(I18n.get("status.recovery.code.generate.failed"), StatusBus.Type.ERROR, Duration.seconds(4));
             }
         });
 
-        var miResetByCode = new MenuItem("Restablecer PIN con código…");
+        var miResetByCode = new MenuItem(I18n.get("menu.pin.reset.code"));
         miResetByCode.setOnAction(e -> {
             try {
                 if (!security.hasRecoveryCode()) {
-                    StatusBus.show("No hay código de recuperación activo.", StatusBus.Type.WARN, Duration.seconds(3));
+                    StatusBus.show(I18n.get("status.no.recovery.code"), StatusBus.Type.WARN, Duration.seconds(3));
                     return;
                 }
                 if (security.isLockedOut()) {
@@ -300,22 +320,22 @@ class SettingsMenuHelper {
                 }
 
                 if (ok) {
-                    StatusBus.show("PIN restablecido con código.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+                    StatusBus.show(I18n.get("status.pin.reset.with.code"), StatusBus.Type.SUCCESS, Duration.seconds(3));
                     initSettingsMenu();
                 } else if (security.isLockedOut()) {
                     showLockoutModal();
                 } else {
-                    StatusBus.show("Código incorrecto o expirado.", StatusBus.Type.ERROR, Duration.seconds(3));
+                    StatusBus.show(I18n.get("status.code.incorrect.expired"), StatusBus.Type.ERROR, Duration.seconds(3));
                 }
             } catch (Exception ex) {
-                StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
+                StatusBus.show(I18n.get("status.pin.reset.failed"), StatusBus.Type.ERROR, Duration.seconds(4));
             }
         });
 
-        var miLock = new MenuItem("Bloquear ahora");
+        var miLock = new MenuItem(I18n.get("menu.lock.now"));
         miLock.setOnAction(e -> {
             security.lockNow();
-            StatusBus.show("Sesión bloqueada. Se pedirá PIN al acceder a contenido protegido.", StatusBus.Type.INFO,
+            StatusBus.show(I18n.get("status.session.locked"), StatusBus.Type.INFO,
                     Duration.seconds(3));
         });
 
@@ -323,21 +343,21 @@ class SettingsMenuHelper {
                 new SeparatorMenuItem(), miGenRecovery, miResetByCode, new SeparatorMenuItem(), miLock);
 
         // =============== Submenú Base de datos ===============
-        var miDatabase = new Menu("Base de datos");
+        var miDatabase = new Menu(I18n.get("menu.database"));
 
-        var miTurso = new MenuItem(TursoConfig.isConfigured() ? "Turso: conectado" : "Configurar Turso…");
+        var miTurso = new MenuItem(TursoConfig.isConfigured() ? I18n.get("menu.turso.connected") : I18n.get("menu.turso.configure"));
         miTurso.setOnAction(e -> showTursoDialog(miTurso));
 
-        var miMigrate = new MenuItem("Migrar datos locales a Turso…");
+        var miMigrate = new MenuItem(I18n.get("menu.turso.migrate"));
         miMigrate.setOnAction(e -> handleMigrateToTurso());
 
-        var miTursoGuide = new MenuItem("Cómo configurar Turso…");
+        var miTursoGuide = new MenuItem(I18n.get("menu.turso.guide"));
         miTursoGuide.setOnAction(e -> showTursoGuideDialog());
 
-        var miBackup = new MenuItem("Exportar backup…");
+        var miBackup = new MenuItem(I18n.get("menu.backup.export"));
         miBackup.setOnAction(e -> handleExportBackup());
 
-        var miRestore = new MenuItem("Importar backup…");
+        var miRestore = new MenuItem(I18n.get("menu.backup.import"));
         miRestore.setOnAction(e -> handleImportBackup());
 
         miDatabase.getItems().addAll(miImport, new SeparatorMenuItem(),
@@ -345,10 +365,10 @@ class SettingsMenuHelper {
                 miBackup, miRestore, new SeparatorMenuItem(), miTursoGuide);
 
         // =============== Submenú Debug ===============
-        var miDebug = new Menu("Debug");
+        var miDebug = new Menu(I18n.get("menu.debug"));
         miDebug.getItems().add(createOpenLogMenuItem());
 
-        var miShortcuts = new MenuItem("Atajos de teclado…");
+        var miShortcuts = new MenuItem(I18n.get("menu.shortcuts"));
         miShortcuts.setOnAction(e -> showShortcutsDialog());
 
         btnSettings.getItems().setAll(
@@ -356,6 +376,7 @@ class SettingsMenuHelper {
                 miSize,
                 new SeparatorMenuItem(),
                 miTheme,
+                langMenu,
                 new SeparatorMenuItem(),
                 miDatabase,
                 new SeparatorMenuItem(),
@@ -397,9 +418,9 @@ class SettingsMenuHelper {
     private void showLockoutModal() {
         long secs = Math.max(0L, (security.lockoutRemainingMillis() + 999) / 1000);
         Alert a = new Alert(Alert.AlertType.WARNING);
-        a.setTitle("Intentos agotados");
-        a.setHeaderText("Has excedido los intentos del PIN");
-        a.setContentText("Podrás volver a intentarlo en " + secs + " segundo" + (secs == 1 ? "" : "s") + ".");
+        a.setTitle(I18n.get("alert.lockout.title2"));
+        a.setHeaderText(I18n.get("alert.lockout.header"));
+        a.setContentText(I18n.get("alert.lockout.content", secs));
         Dialogs.decorate(a, root);
         a.showAndWait();
     }
@@ -408,26 +429,26 @@ class SettingsMenuHelper {
         if (!ensureUnlocked.getAsBoolean()) return;
 
         Dialog<ButtonType> dlg = new Dialog<>();
-        dlg.setTitle("Pregunta de seguridad");
-        dlg.setHeaderText("Configura una pregunta y su respuesta para recuperar el PIN");
+        dlg.setTitle(I18n.get("dialog.security.question.title"));
+        dlg.setHeaderText(I18n.get("dialog.security.question.header"));
         Dialogs.decorate(dlg, root);
 
         TextField txtQ = new TextField();
-        txtQ.setPromptText("Ej: Nombre de tu primera mascota");
+        txtQ.setPromptText(I18n.get("dialog.security.question.prompt"));
 
         PasswordField pfA = new PasswordField();
-        pfA.setPromptText("Respuesta");
+        pfA.setPromptText(I18n.get("dialog.security.answer.prompt"));
 
         PasswordField pfA2 = new PasswordField();
-        pfA2.setPromptText("Repite la respuesta");
+        pfA2.setPromptText(I18n.get("dialog.security.answer.confirm.prompt"));
 
-        VBox content = new VBox(8, new Label("Pregunta:"), txtQ, new Label("Respuesta:"), pfA,
-                new Label("Confirmar respuesta:"), pfA2);
+        VBox content = new VBox(8, new Label(I18n.get("label.question")), txtQ, new Label(I18n.get("label.answer")), pfA,
+                new Label(I18n.get("label.answer.confirm")), pfA2);
         content.setPrefWidth(420);
         dlg.getDialogPane().setContent(content);
 
-        ButtonType OK = new ButtonType("Guardar", ButtonBar.ButtonData.OK_DONE);
-        ButtonType CANCEL = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType OK = new ButtonType(I18n.get("button.save"), ButtonBar.ButtonData.OK_DONE);
+        ButtonType CANCEL = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
         dlg.getDialogPane().getButtonTypes().setAll(OK, CANCEL);
 
         Node okBtn = dlg.getDialogPane().lookupButton(OK);
@@ -450,9 +471,9 @@ class SettingsMenuHelper {
         char[] ans = pfA.getText().toCharArray();
         try {
             security.setSecurityQuestion(txtQ.getText().trim(), ans);
-            StatusBus.show("Pregunta de seguridad guardada.", StatusBus.Type.SUCCESS, Duration.seconds(3));
+            StatusBus.show(I18n.get("status.security.question.saved"), StatusBus.Type.SUCCESS, Duration.seconds(3));
         } catch (Exception ex) {
-            StatusBus.show("No se pudo guardar la pregunta: " + ex.getMessage(), StatusBus.Type.ERROR,
+            StatusBus.show(I18n.get("status.security.question.save.error", ex.getMessage()), StatusBus.Type.ERROR,
                     Duration.seconds(4));
         } finally {
             Arrays.fill(ans, '\0');
@@ -466,51 +487,50 @@ class SettingsMenuHelper {
         try {
             code = security.generateRecoveryCode();
         } catch (Exception ex) {
-            StatusBus.show("No se pudo generar el código: " + ex.getMessage(), StatusBus.Type.ERROR,
+            StatusBus.show(I18n.get("status.recovery.code.error", ex.getMessage()), StatusBus.Type.ERROR,
                     Duration.seconds(4));
             return;
         }
 
         Dialog<ButtonType> dlg = new Dialog<>();
-        dlg.setTitle("Código de recuperación");
-        dlg.setHeaderText("Guarda este código en un lugar seguro.\nTe permitirá restablecer el PIN si lo olvidas.");
+        dlg.setTitle(I18n.get("dialog.recovery.code.title"));
+        dlg.setHeaderText(I18n.get("dialog.recovery.code.header"));
         Dialogs.decorate(dlg, root);
 
         TextField txt = new TextField(code);
         txt.setEditable(false);
         txt.setStyle("-fx-font-family: 'Consolas', 'Menlo', 'Courier New', monospace; -fx-font-size: 14px;");
-        Button btnCopy = new Button("Copiar");
+        Button btnCopy = new Button(I18n.get("button.copy"));
         btnCopy.setOnAction(ev -> {
             ClipboardContent cc = new ClipboardContent();
             cc.putString(code);
             Clipboard.getSystemClipboard().setContent(cc);
-            StatusBus.show("Código copiado al portapapeles.", StatusBus.Type.INFO, Duration.seconds(2));
+            StatusBus.show(I18n.get("status.code.copied"), StatusBus.Type.INFO, Duration.seconds(2));
         });
 
-        VBox box = new VBox(12, new Label("Código de recuperación (mostrado una sola vez):"), new HBox(8, txt, btnCopy),
-                new Label("⚠ Si lo pierdes y olvidas el PIN, no podrás recuperar el acceso."));
+        VBox box = new VBox(12, new Label(I18n.get("label.recovery.code.shown.once")), new HBox(8, txt, btnCopy),
+                new Label(I18n.get("label.recovery.code.warning")));
         box.setPrefWidth(480);
         dlg.getDialogPane().setContent(box);
 
-        dlg.getDialogPane().getButtonTypes().setAll(new ButtonType("Entendido", ButtonBar.ButtonData.OK_DONE));
+        dlg.getDialogPane().getButtonTypes().setAll(new ButtonType(I18n.get("button.understood"), ButtonBar.ButtonData.OK_DONE));
         dlg.showAndWait();
     }
 
     private void showTursoDialog(MenuItem miTurso) {
         if (TursoConfig.isConfigured()) {
             Alert info = new Alert(Alert.AlertType.CONFIRMATION);
-            info.setTitle("Turso");
-            info.setHeaderText("Conexión activa");
-            info.setContentText("URL: " + TursoConfig.getUrl()
-                + "\n\nPulsa Aceptar para desconectar y volver a SQLite local.");
+            info.setTitle(I18n.get("dialog.turso.title"));
+            info.setHeaderText(I18n.get("dialog.turso.connected.header"));
+            info.setContentText(I18n.get("dialog.turso.connected.content", TursoConfig.getUrl()));
             Dialogs.decorate(info, root);
             info.showAndWait().ifPresent(res -> {
                 if (res.getButtonData().isDefaultButton()) {
                     TursoConfig.clear();
                     DatabaseHelper.reconnect();
-                    miTurso.setText("Configurar Turso…");
+                    miTurso.setText(I18n.get("menu.turso.configure"));
                     refrescarTabla.run();
-                    StatusBus.show("Desconectado de Turso. Usando BD local.",
+                    StatusBus.show(I18n.get("status.turso.disconnected"),
                         StatusBus.Type.INFO, Duration.seconds(3));
                 }
             });
@@ -518,16 +538,16 @@ class SettingsMenuHelper {
         }
 
         var dlg = new Alert(Alert.AlertType.NONE);
-        dlg.setTitle("Configurar Turso");
+        dlg.setTitle(I18n.get("dialog.turso.configure.title"));
 
-        var lblUrl = new Label("URL de la base de datos:");
+        var lblUrl = new Label(I18n.get("label.turso.url"));
         var txtUrl = new TextField();
-        txtUrl.setPromptText("libsql://mi-db.turso.io");
+        txtUrl.setPromptText(I18n.get("prompt.turso.url"));
         txtUrl.setPrefWidth(420);
 
-        var lblToken = new Label("Token de autenticación:");
+        var lblToken = new Label(I18n.get("label.turso.token"));
         var txtToken = new TextField();
-        txtToken.setPromptText("eyJhbGciOi...");
+        txtToken.setPromptText(I18n.get("prompt.turso.token"));
         txtToken.setPrefWidth(420);
 
         var content = new VBox(8, lblUrl, txtUrl, lblToken, txtToken);
@@ -543,7 +563,7 @@ class SettingsMenuHelper {
                 String url = txtUrl.getText().trim();
                 String token = txtToken.getText().trim();
                 if (url.isEmpty() || token.isEmpty()) {
-                    StatusBus.show("URL y token son obligatorios.",
+                    StatusBus.show(I18n.get("validation.turso.required"),
                         StatusBus.Type.WARN, Duration.seconds(3));
                     return;
                 }
@@ -555,7 +575,7 @@ class SettingsMenuHelper {
                          var rs = stmt.executeQuery("SELECT 1")) {
                     }
                 } catch (Exception ex) {
-                    StatusBus.show("Error de conexión: " + ex.getMessage(),
+                    StatusBus.show(I18n.get("status.turso.connection.error", ex.getMessage()),
                         StatusBus.Type.ERROR, Duration.seconds(5));
                     ex.printStackTrace();
                     return;
@@ -563,9 +583,9 @@ class SettingsMenuHelper {
 
                 TursoConfig.save(url, token);
                 DatabaseHelper.reconnect();
-                miTurso.setText("Turso: conectado");
+                miTurso.setText(I18n.get("menu.turso.connected"));
                 refrescarTabla.run();
-                StatusBus.show("Conectado a Turso correctamente.",
+                StatusBus.show(I18n.get("status.turso.connected"),
                     StatusBus.Type.SUCCESS, Duration.seconds(3));
             }
         });
@@ -574,55 +594,24 @@ class SettingsMenuHelper {
     private void showShortcutsDialog() {
         var sb = new StringBuilder();
 
-        sb.append("LISTADO\n")
+        sb.append(I18n.get("shortcuts.section.list.title")).append("\n")
           .append("───────\n")
-          .append("Rueda ratón                – Desplazar la lista\n")
-          .append("PageUp / Ctrl+←            – Página anterior\n")
-          .append("PageDown / Ctrl+→          – Página siguiente\n")
-          .append("Ctrl+F                     – Foco en filtro de texto\n")
-          .append("Ctrl+T                     – Foco en filtro de tags\n")
-          .append("Ctrl+N                     – Nueva píldora\n")
-          .append("Ctrl+O                     – Abrir detalle de la fila seleccionada\n")
-          .append("Ctrl+E                     – Editar la fila seleccionada\n")
-          .append("Supr                       – Eliminar la fila seleccionada\n")
-          .append("M                          – (Tabla enfocada) Alternar favorita\n")
-          .append("Ctrl+Shift+F               – Mostrar solo favoritas (toggle)\n")
-          .append("Esc                        – Limpiar filtros (si hay foco en filtros) / Volver\n")
-          .append("Doble clic fila            – Abrir detalle\n\n")
+          .append(I18n.get("shortcuts.section.list.content")).append("\n\n")
 
-          .append("DETALLE\n")
+          .append(I18n.get("shortcuts.section.detail.title")).append("\n")
           .append("───────\n")
-          .append("Ctrl+E                     – Editar\n")
-          .append("Supr                       – Eliminar\n")
-          .append("Esc                        – Volver al listado\n")
-          .append("Click en tag               – Filtrar listado por ese tag\n\n")
+          .append(I18n.get("shortcuts.section.detail.content")).append("\n\n")
 
-          .append("EDITOR\n")
+          .append(I18n.get("shortcuts.section.editor.title")).append("\n")
           .append("──────\n")
-          .append("Ctrl+S / Ctrl+Enter       – Guardar\n")
-          .append("Esc                       – Cancelar y volver\n")
-          .append("Ctrl+B                    – Insertar **negrita**\n")
-          .append("Ctrl+I                    – Insertar *cursiva*\n")
-          .append("Ctrl+K                    – Insertar [enlace](https://)\n")
-          .append("Ctrl+E                    – Insertar `código`\n")
-          .append("Tab / Shift+Tab           – Indentar / desindentar líneas (listas)\n")
-          .append("Vista previa              – Conmutador en la barra de herramientas\n")
-          .append("Enter / ','               – Confirmar tag en el campo de tags\n")
-          .append("Backspace (tags)          – Con input vacío, borrar el último tag\n\n")
+          .append(I18n.get("shortcuts.section.editor.content")).append("\n\n")
 
-          .append("BORRADORES\n")
+          .append(I18n.get("shortcuts.section.drafts.title")).append("\n")
           .append("──────────\n")
-          .append("Desde Ajustes → Borradores\n")
-          .append("  Nuevo borrador…         – Diálogo rápido\n")
-          .append("  Bandeja de borradores…  – Lista de borradores\n")
-          .append("Bandeja\n")
-          .append("  Doble clic fila         – Editar borrador\n")
-          .append("  Supr                    – Eliminar borrador seleccionado\n")
-          .append("Diálogo rápido de borrador\n")
-          .append("  Ctrl+S / Ctrl+Enter     – Guardar\n");
+          .append(I18n.get("shortcuts.section.drafts.content")).append("\n");
 
         var alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Atajos de teclado");
+        alert.setTitle(I18n.get("shortcuts.dialog.title"));
         alert.setHeaderText(null);
 
         var ta = new TextArea(sb.toString());
@@ -642,48 +631,30 @@ class SettingsMenuHelper {
 
     private void showTursoGuideDialog() {
         Alert guide = new Alert(AlertType.INFORMATION);
-        guide.setTitle("Cómo configurar Turso");
+        guide.setTitle(I18n.get("guide.turso.title"));
         guide.setHeaderText(null);
 
         var content = new javafx.scene.layout.VBox(10);
         content.setPadding(new javafx.geometry.Insets(10));
 
-        var title = new Label("☁ Sincronización en la nube con Turso");
+        var title = new Label(I18n.get("guide.turso.headline"));
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
-        var intro = new Label(
-                "Píldoras guarda tus datos de forma local por defecto. "
-                + "Si quieres acceder a tus píldoras desde varios equipos, "
-                + "puedes sincronizarlas con Turso, un servicio gratuito de "
-                + "bases de datos en la nube.\n\n"
-                + "Sin Turso, la app funciona perfectamente en local. "
-                + "Turso es totalmente opcional.");
+        var intro = new Label(I18n.get("guide.turso.intro"));
         intro.setWrapText(true);
         intro.setStyle("-fx-font-size: 13px;");
 
-        var stepsTitle = new Label("Pasos para configurar Turso:");
+        var stepsTitle = new Label(I18n.get("guide.turso.steps.title"));
         stepsTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 8 0 0 0;");
 
-        var steps = new Label(
-                "1. Crea una cuenta gratuita en turso.tech\n"
-                + "2. Instala la herramienta de Turso en tu terminal:\n"
-                + "     curl -sSfL https://get.tur.so/install.sh | bash\n"
-                + "3. Inicia sesión: turso auth login\n"
-                + "4. Crea una base de datos: turso db create pildoras\n"
-                + "5. Copia la URL: turso db show pildoras --url\n"
-                + "     (Ejemplo: libsql://pildoras-tu-usuario.turso.io)\n"
-                + "6. Genera un token: turso db tokens create pildoras\n"
-                + "7. En Píldoras: Ajustes → Base de datos → Configurar Turso\n"
-                + "     Pega la URL y el token, y pulsa Aceptar.\n"
-                + "8. (Opcional) Migra tus datos locales:\n"
-                + "     Ajustes → Base de datos → Migrar datos locales a Turso");
+        var steps = new Label(I18n.get("guide.turso.steps"));
         steps.setWrapText(true);
         steps.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: 12px;");
 
         var linkBox = new javafx.scene.layout.HBox(6);
         linkBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         linkBox.setPadding(new javafx.geometry.Insets(6, 0, 0, 0));
-        var linkLabel = new Label("Más información:");
+        var linkLabel = new Label(I18n.get("guide.turso.more.info"));
         linkLabel.setStyle("-fx-font-size: 13px;");
         var linkBtn = new Hyperlink("turso.tech");
         linkBtn.setStyle("-fx-font-size: 13px;");
@@ -708,43 +679,43 @@ class SettingsMenuHelper {
 
     private void handleExportBackup() {
         var fc = new FileChooser();
-        fc.setTitle("Exportar backup");
+        fc.setTitle(I18n.get("filechooser.export.backup"));
         fc.setInitialFileName("pildoras-backup.json");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON", "*.json"));
         var file = fc.showSaveDialog(root.getScene().getWindow());
         if (file == null) return;
         try {
             io.github.guillermo_david.export.BackupService.exportToFile(file);
-            StatusBus.show("Backup exportado correctamente.", StatusBus.Type.SUCCESS, Duration.seconds(4));
+            StatusBus.show(I18n.get("status.backup.exported"), StatusBus.Type.SUCCESS, Duration.seconds(4));
         } catch (Exception ex) {
             ex.printStackTrace();
-            StatusBus.show("Error exportando: " + ex.getMessage(), StatusBus.Type.ERROR, Duration.seconds(5));
+            StatusBus.show(I18n.get("status.backup.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(5));
         }
     }
 
     private void handleImportBackup() {
         var confirm = new Alert(AlertType.WARNING);
-        confirm.setTitle("Importar backup");
-        confirm.setHeaderText("¿Estás seguro?");
-        confirm.setContentText("Se eliminarán TODOS los datos actuales y se reemplazarán con el backup.");
+        confirm.setTitle(I18n.get("filechooser.import.backup"));
+        confirm.setHeaderText(I18n.get("confirm.import.backup.header"));
+        confirm.setContentText(I18n.get("confirm.import.backup.content"));
         confirm.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
         Dialogs.decorate(confirm, root);
         var res = confirm.showAndWait();
         if (res.isEmpty() || res.get() != ButtonType.OK) return;
 
         var fc = new FileChooser();
-        fc.setTitle("Importar backup");
+        fc.setTitle(I18n.get("filechooser.import.backup"));
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON", "*.json"));
         var file = fc.showOpenDialog(root.getScene().getWindow());
         if (file == null) return;
         try {
             int[] counts = io.github.guillermo_david.export.BackupService.importFromFile(file);
             refrescarTabla.run();
-            StatusBus.show("Importado: " + counts[0] + " píldoras, " + counts[1] + " tags, "
-                    + counts[2] + " borradores.", StatusBus.Type.SUCCESS, Duration.seconds(5));
+            StatusBus.show(I18n.get("status.backup.imported", counts[0], counts[1], counts[2]),
+                    StatusBus.Type.SUCCESS, Duration.seconds(5));
         } catch (Exception ex) {
             ex.printStackTrace();
-            StatusBus.show("Error importando: " + ex.getMessage(), StatusBus.Type.ERROR, Duration.seconds(5));
+            StatusBus.show(I18n.get("status.backup.import.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(5));
         }
     }
 
@@ -753,10 +724,10 @@ class SettingsMenuHelper {
         if (scene == null) return;
 
         FileChooser fc = new FileChooser();
-        fc.setTitle("Importar (.md)...");
+        fc.setTitle(I18n.get("filechooser.import.md"));
         fc.getExtensionFilters().addAll(
-            new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"),
-            new FileChooser.ExtensionFilter("Todos los archivos", "*.*")
+            new FileChooser.ExtensionFilter(I18n.get("filechooser.filter.markdown"), "*.md"),
+            new FileChooser.ExtensionFilter(I18n.get("filechooser.filter.all"), "*.*")
         );
 
         List<File> files = fc.showOpenMultipleDialog(scene.getWindow());
@@ -786,8 +757,8 @@ class SettingsMenuHelper {
                     refrescarTabla.run();
                     StatusBus.show(
                         (failCount == 0
-                            ? ("Importadas " + okCount + " píldoras.")
-                            : ("Importadas " + okCount + " de " + totalCount + " (" + failCount + " con error).")),
+                            ? I18n.get("status.import.success", okCount)
+                            : I18n.get("status.import.partial", okCount, totalCount, failCount)),
                         (failCount == 0 ? StatusBus.Type.SUCCESS : StatusBus.Type.WARN),
                         Duration.seconds(5)
                     );
@@ -800,7 +771,7 @@ class SettingsMenuHelper {
         task.setOnSucceeded(e -> root.setDisable(false));
         task.setOnFailed(e -> {
             root.setDisable(false);
-            StatusBus.show("Error inesperado en importación.", StatusBus.Type.ERROR, Duration.seconds(5));
+            StatusBus.show(I18n.get("status.import.unexpected.error"), StatusBus.Type.ERROR, Duration.seconds(5));
         });
 
         new Thread(task, "ImportMarkdown").start();
@@ -809,20 +780,18 @@ class SettingsMenuHelper {
     private void handleMigrateToTurso() {
         if (!TursoConfig.isConfigured()) {
             var alert = new Alert(AlertType.WARNING);
-            alert.setTitle("Turso no configurado");
+            alert.setTitle(I18n.get("alert.turso.not.configured.title"));
             alert.setHeaderText(null);
-            alert.setContentText("Configura la conexion a Turso antes de migrar.");
+            alert.setContentText(I18n.get("alert.turso.not.configured.content"));
             Dialogs.decorate(alert, root);
             alert.showAndWait();
             return;
         }
 
         var confirm = new Alert(AlertType.CONFIRMATION);
-        confirm.setTitle("Migrar datos locales a Turso");
-        confirm.setHeaderText("Importar todos los datos locales a Turso?");
-        confirm.setContentText("Se copiaran pildoras, tags, borradores y enlaces "
-            + "desde la base de datos local a Turso (INSERT OR REPLACE).\n\n"
-            + "Los datos existentes en Turso con el mismo ID seran sobrescritos.");
+        confirm.setTitle(I18n.get("alert.turso.migrate.title"));
+        confirm.setHeaderText(I18n.get("alert.turso.migrate.header"));
+        confirm.setContentText(I18n.get("alert.turso.migrate.content"));
         Dialogs.decorate(confirm, root);
         var choice = confirm.showAndWait();
         if (choice.isEmpty() || choice.get() != ButtonType.OK) return;
@@ -840,46 +809,52 @@ class SettingsMenuHelper {
             setPaginaActual.accept(1);
             refrescarTabla.run();
             StatusBus.show(
-                "Migracion completada: " + r.total() + " registros "
-                    + "(pildoras=" + r.pildoras + ", tags=" + r.tags
-                    + ", relaciones=" + r.pildoraTag
-                    + ", borradores=" + r.drafts + ", enlaces=" + r.pildoraLink + ")",
+                I18n.get("status.turso.migration.completed", r.total()),
                 StatusBus.Type.SUCCESS, Duration.seconds(8));
         });
         task.setOnFailed(e -> {
             root.setDisable(false);
             Throwable ex = task.getException();
             if (ex != null) ex.printStackTrace();
-            String detail = "desconocido";
+            String detail = I18n.get("status.error.unknown");
             if (ex != null) {
                 detail = ex.getClass().getSimpleName();
                 if (ex.getMessage() != null) detail += ": " + ex.getMessage();
                 if (ex.getCause() != null) {
-                    detail += " [causa: " + ex.getCause().getClass().getSimpleName();
+                    detail += " [" + I18n.get("status.error.cause") + ": " + ex.getCause().getClass().getSimpleName();
                     if (ex.getCause().getMessage() != null) detail += ": " + ex.getCause().getMessage();
                     detail += "]";
                 }
             }
-            StatusBus.show("Error en migracion: " + detail,
+            StatusBus.show(I18n.get("status.turso.migration.error", detail),
                 StatusBus.Type.ERROR, Duration.seconds(15));
         });
 
         new Thread(task, "MigrateToTurso").start();
     }
 
+    private void showLanguageRestartAlert() {
+        var alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(I18n.get("language.restart.title"));
+        alert.setHeaderText(I18n.get("language.restart.header"));
+        alert.setContentText(I18n.get("language.restart.content"));
+        Dialogs.decorate(alert, root);
+        alert.showAndWait();
+    }
+
     private MenuItem createOpenLogMenuItem() {
-        var mi = new MenuItem("Abrir log...");
+        var mi = new MenuItem(I18n.get("menu.debug.open.log"));
         mi.setOnAction(e -> {
             var logPath = io.github.guillermo_david.util.AppLogger.getLogPath();
             if (java.nio.file.Files.exists(logPath)) {
                 try {
                     java.awt.Desktop.getDesktop().open(logPath.toFile());
                 } catch (Exception ex) {
-                    StatusBus.show("No se pudo abrir: " + logPath,
+                    StatusBus.show(I18n.get("status.log.open.failed", logPath.toString()),
                         StatusBus.Type.ERROR, Duration.seconds(5));
                 }
             } else {
-                StatusBus.show("Log no encontrado: " + logPath,
+                StatusBus.show(I18n.get("status.log.not.found", logPath.toString()),
                     StatusBus.Type.WARN, Duration.seconds(5));
             }
         });

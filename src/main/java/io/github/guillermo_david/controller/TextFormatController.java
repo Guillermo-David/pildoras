@@ -1,6 +1,7 @@
 package io.github.guillermo_david.controller;
 
 import io.github.guillermo_david.javafx.Dialogs;
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.javafx.PildoraPickerDialogs;
 import io.github.guillermo_david.model.Pildora;
 import javafx.application.Platform;
@@ -205,10 +206,10 @@ public class TextFormatController {
 	}
 
 	// ==== Handlers básicos (B, I, ~~ , `) ====
-	public void mdBold()       { toggleWrapInline("**", "**", "negrita"); }
-	public void mdItalic()     { toggleWrapInline("*", "*", "cursiva"); }
-	public void mdStrike()     { toggleWrapInline("~~", "~~", "tachado"); }
-	public void mdCodeInline() { toggleWrapInline("`", "`", "codigo"); }
+	public void mdBold()       { toggleWrapInline("**", "**", I18n.get("md.placeholder.bold")); }
+	public void mdItalic()     { toggleWrapInline("*", "*", I18n.get("md.placeholder.italic")); }
+	public void mdStrike()     { toggleWrapInline("~~", "~~", I18n.get("md.placeholder.strikethrough")); }
+	public void mdCodeInline() { toggleWrapInline("`", "`", I18n.get("md.placeholder.code")); }
 
 	// ==== Encabezados ====
 	public void applyHeading(int level) {
@@ -219,7 +220,7 @@ public class TextFormatController {
 	    line = line.replaceFirst("^(#{1,6})\\s+", "");
 	    if (level > 0) {
 	        String hashes = "#".repeat(level);
-	        line = hashes + " " + (line.isBlank()? "Título" : line);
+	        line = hashes + " " + (line.isBlank()? I18n.get("md.placeholder.heading") : line);
 	    }
 	    txtDescripcion.replaceText(s0, e0, line);
 	    txtDescripcion.positionCaret(Math.min(s0 + line.length(), txtDescripcion.getText().length()));
@@ -249,30 +250,28 @@ public class TextFormatController {
 	public void mdHorizontalRule() { insertOnNewLine("\n---\n"); }
 
 	public void mdTable2x2() {
-	    String tbl = """
-	            | Col 1 | Col 2 |
-	            | ----- | ----- |
-	            |       |       |
-	            |       |       |
-	            """;
+	    String tbl = "| " + I18n.get("md.table.col1") + " | " + I18n.get("md.table.col2") + " |\n"
+	             + "| ----- | ----- |\n"
+	             + "|       |       |\n"
+	             + "|       |       |\n";
 	    insertOnNewLine(tbl);
 	}
 
 	// ==== Insertar: enlace/imagen (diálogos simples) ====
 	public void mdInsertLinkDialog() {
-	    TextInputDialogEx td = new TextInputDialogEx("Texto del enlace", "URL (https://…)");
+	    TextInputDialogEx td = new TextInputDialogEx(I18n.get("md.link.text.prompt"), I18n.get("md.link.url.prompt"));
 	    var res = td.showAndWait();
 	    if (res == null) return;
-	    String text = res[0].isBlank()? "enlace" : res[0];
+	    String text = res[0].isBlank()? I18n.get("md.link.default.text") : res[0];
 	    String url  = res[1].isBlank()? "https://" : res[1];
 	    replaceSel("[" + text + "](" + url + ")");
 	}
 
 	public void mdInsertImageDialog() {
-	    TextInputDialogEx td = new TextInputDialogEx("Texto alternativo", "URL de la imagen (https://…)");
+	    TextInputDialogEx td = new TextInputDialogEx(I18n.get("md.image.alt.prompt"), I18n.get("md.image.url.prompt"));
 	    var res = td.showAndWait();
 	    if (res == null) return;
-	    String alt = res[0].isBlank()? "imagen" : res[0];
+	    String alt = res[0].isBlank()? I18n.get("md.image.default.alt") : res[0];
 	    String url = res[1].isBlank()? "https://" : res[1];
 	    insertOnNewLine("![" + alt + "](" + url + ")\n");
 	}
@@ -287,7 +286,7 @@ public class TextFormatController {
 	    // Inserta referencia en texto
 	    insertAtCaret("[^" + idx + "]");
 	    // Añade definición al final del documento
-	    txtDescripcion.appendText("\n\n[^" + idx + "]: Detalle de la nota\n");
+	    txtDescripcion.appendText("\n\n[^" + idx + "]: " + I18n.get("md.footnote.placeholder") + "\n");
 	}
 
 	public void mdInsertTOC() {
@@ -504,15 +503,15 @@ public class TextFormatController {
 	    private final TextField tf1 = new TextField();
 	    private final TextField tf2 = new TextField();
 	    TextInputDialogEx(String prompt1, String prompt2) {
-	        dlg.setTitle("Insertar");
+	        dlg.setTitle(I18n.get("md.dialog.insert.title"));
 	        dlg.setHeaderText(null);
 	        tf1.setPromptText(prompt1);
 	        tf2.setPromptText(prompt2);
 	        var content = new VBox(8, new Label(prompt1 + ":"), tf1, new Label(prompt2 + ":"), tf2);
 	        content.setPadding(new Insets(8));
 	        dlg.getDialogPane().setContent(content);
-	        var ok = new ButtonType("Aceptar", ButtonBar.ButtonData.OK_DONE);
-	        var cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+	        var ok = new ButtonType(I18n.get("button.accept"), ButtonBar.ButtonData.OK_DONE);
+	        var cancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
 	        dlg.getDialogPane().getButtonTypes().setAll(ok, cancel);
 	        // Tema
 	        if (root != null) Dialogs.decorate(dlg, root);
@@ -555,7 +554,7 @@ public class TextFormatController {
 	    mb.getItems().clear();
 
 	    // --- Fracciones / raíces / super-sub / formatos ---
-	    var mFrac = new javafx.scene.control.Menu("Fracciones/raíces");
+	    var mFrac = new javafx.scene.control.Menu(I18n.get("math.menu.fractions"));
 	    mFrac.getItems().addAll(
 	        item("Fracción  \\frac{…}{…}", () -> mdMathFrac()),
 	        item("Raíz √     \\sqrt{…}",   () -> mdMathSqrt()),
@@ -564,7 +563,7 @@ public class TextFormatController {
 	        item("Subíndice   _{}",        () -> mdMathSub())
 	    );
 
-	    var mCal = new javafx.scene.control.Menu("Cálculo");
+	    var mCal = new javafx.scene.control.Menu(I18n.get("math.menu.calculus"));
 	    mCal.getItems().addAll(
 	        item("Límite      \\lim_{x\\to 0}", () -> mdMathLim()),
 	        item("Sumatorio   \\sum_\\{i=1}^{n\\}{}$", () -> mdMathSum()), //$\sum_\{i=1}^{n\}{}$
@@ -572,7 +571,7 @@ public class TextFormatController {
 	        item("Integral    \\int_{a\\}^{b\\}",   () -> mdMathInt())
 	    );
 
-	    var mGreek = new javafx.scene.control.Menu("Griegas");
+	    var mGreek = new javafx.scene.control.Menu(I18n.get("math.menu.greek"));
 	    // Un subconjunto útil y compacto (añade más si quieres)
 	    mGreek.getItems().addAll(
 	        insertInline("\\alpha", "α"),
@@ -597,7 +596,7 @@ public class TextFormatController {
 	        insertInline("\\Omega", "Ω")
 	    );
 
-	    var mOps = new javafx.scene.control.Menu("Operadores");
+	    var mOps = new javafx.scene.control.Menu(I18n.get("math.menu.operators"));
 	    mOps.getItems().addAll(
 	        insertInline("\\times", "×"),
 	        insertInline("\\cdot",  "·"),
@@ -607,7 +606,7 @@ public class TextFormatController {
 	        insertInline("\\star",  "⋆")
 	    );
 
-	    var mRel = new javafx.scene.control.Menu("Relaciones");
+	    var mRel = new javafx.scene.control.Menu(I18n.get("math.menu.relations"));
 	    mRel.getItems().addAll(
 	        insertInline("=",        "="),
 	        insertInline("\\neq",    "≠"),
@@ -618,7 +617,7 @@ public class TextFormatController {
 	        insertInline("\\propto", "∝")
 	    );
 
-	    var mSet = new javafx.scene.control.Menu("Conjuntos/Lógica");
+	    var mSet = new javafx.scene.control.Menu(I18n.get("math.menu.sets.logic"));
 	    mSet.getItems().addAll(
 	        insertInline("\\in",  "∈"),
 	        insertInline("\\notin","∉"),
@@ -639,7 +638,7 @@ public class TextFormatController {
 	        insertInline("\\Leftrightarrow","⇔")
 	    );
 
-	    var mArr = new javafx.scene.control.Menu("Flechas");
+	    var mArr = new javafx.scene.control.Menu(I18n.get("math.menu.arrows"));
 	    mArr.getItems().addAll(
 	        insertInline("\\to",          "→"),
 	        insertInline("\\gets",        "←"),
@@ -649,14 +648,14 @@ public class TextFormatController {
 	        insertInline("\\Longrightarrow","⟹")
 	    );
 
-	    var mFmt = new javafx.scene.control.Menu("Formato vector/acento");
+	    var mFmt = new javafx.scene.control.Menu(I18n.get("math.menu.vector.accent"));
 	    mFmt.getItems().addAll(
 	        item("Vector  \\vec{}", () -> mdMathVec()),
 	        item("Barra   \\bar{}", () -> mdMathBar()),
 	        item("Sombrero\\hat{}", () -> mdMathHat())
 	    );
 
-	    var mDelim = new javafx.scene.control.Menu("Delimitadores");
+	    var mDelim = new javafx.scene.control.Menu(I18n.get("math.menu.delimiters"));
 	    mDelim.getItems().addAll(
 	        item("\\left( … \\right)", () -> mdMathDelimsParen()),
 	        item("\\left[ … \\right]", () -> mdMathDelimsBrack()),
@@ -664,7 +663,7 @@ public class TextFormatController {
 	    );
 
 	    // Acciones rápidas de bloque
-	    var mBlock = new javafx.scene.control.Menu("Bloques");
+	    var mBlock = new javafx.scene.control.Menu(I18n.get("math.menu.blocks"));
 	    mBlock.getItems().addAll(
 	        insertBlock("E=mc^2", "Insertar $$…$$ con E=mc^2"),
 	        insertBlock("\\int_0^{\\pi} \\sin x\\,dx", "Insertar $$…$$ con integral")

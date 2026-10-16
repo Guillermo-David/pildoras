@@ -23,6 +23,7 @@ import com.vladsch.flexmark.util.data.MutableDataSet;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.security.SecurityService;
+import io.github.guillermo_david.util.I18n;
 
 public final class PildoraExporter {
 
@@ -72,7 +73,7 @@ public final class PildoraExporter {
         // Protegida -> exige estar desbloqueado y descifra
         SecurityService sec = SecurityService.getInstance();
         if (!sec.isUnlocked())
-            throw new IllegalStateException("Contenido protegido: desbloquea con PIN antes de exportar.");
+            throw new IllegalStateException(I18n.get("export.protected.error"));
         return sec.decrypt(p.getDescripcionCipher(), p.getDescripcionIv());
     }
 
@@ -94,7 +95,7 @@ public final class PildoraExporter {
                 %s
                 """.formatted(
                 p.getTitulo(),
-                p.getFechaCreacion() != null ? p.getFechaCreacion().format(DF) : "sin fecha",
+                p.getFechaCreacion() != null ? p.getFechaCreacion().format(DF) : I18n.get("export.no.date"),
                 (tags == null || tags.isBlank()) ? "—" : tags,
                 bodyMd == null ? "" : bodyMd
         );
@@ -157,7 +158,8 @@ public final class PildoraExporter {
             <body class="md-body">
               <h1>%s</h1>
               <div class="meta">
-                <div><strong>Creada:</strong> %s</div>
+                <div><strong>""" + escape(I18n.get("export.created")) + """
+                </strong> %s</div>
                 <div class="tags">%s</div>
               </div>
               %s
@@ -170,7 +172,7 @@ public final class PildoraExporter {
             (extraCss == null ? "" : extraCss),
             mathjax,
             escape(p.getTitulo()),
-            p.getFechaCreacion() != null ? p.getFechaCreacion().format(DF) : "sin fecha",
+            p.getFechaCreacion() != null ? p.getFechaCreacion().format(DF) : I18n.get("export.no.date"),
             (tags == null || tags.isBlank()) ? "" : tagsToChips(tags),
             bodyHtml
         );

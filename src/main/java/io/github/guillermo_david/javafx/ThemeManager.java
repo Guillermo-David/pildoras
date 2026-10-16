@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.prefs.Preferences;
 
+import io.github.guillermo_david.util.I18n;
 import javafx.scene.Scene;
 
 public final class ThemeManager {
@@ -21,13 +22,13 @@ public final class ThemeManager {
     public static void initStyles(String baseCss, Map<String, String> themeCssPaths) {
         BASE = baseCss;
         THEMES.clear();
-        THEMES.put("light",          new ThemeEntry("light",          "Claro",            Theme.LIGHT, themeCssPaths.get("light")));
-        THEMES.put("dark",           new ThemeEntry("dark",           "Oscuro",           Theme.DARK,  themeCssPaths.get("dark")));
-        THEMES.put("nord-light",     new ThemeEntry("nord-light",     "Nord Light",       Theme.LIGHT, themeCssPaths.get("nord-light")));
-        THEMES.put("nord-dark",      new ThemeEntry("nord-dark",      "Nord Dark",        Theme.DARK,  themeCssPaths.get("nord-dark")));
-        THEMES.put("dracula",        new ThemeEntry("dracula",        "Dracula",          Theme.DARK,  themeCssPaths.get("dracula")));
-        THEMES.put("solarized-light", new ThemeEntry("solarized-light","Solarized Light", Theme.LIGHT, themeCssPaths.get("solarized-light")));
-        THEMES.put("solarized-dark", new ThemeEntry("solarized-dark", "Solarized Dark",   Theme.DARK,  themeCssPaths.get("solarized-dark")));
+        THEMES.put("light",          new ThemeEntry("light",          I18n.get("theme.light"),            Theme.LIGHT, themeCssPaths.get("light")));
+        THEMES.put("dark",           new ThemeEntry("dark",           I18n.get("theme.dark"),             Theme.DARK,  themeCssPaths.get("dark")));
+        THEMES.put("nord-light",     new ThemeEntry("nord-light",     I18n.get("theme.nord.light"),       Theme.LIGHT, themeCssPaths.get("nord-light")));
+        THEMES.put("nord-dark",      new ThemeEntry("nord-dark",      I18n.get("theme.nord.dark"),        Theme.DARK,  themeCssPaths.get("nord-dark")));
+        THEMES.put("dracula",        new ThemeEntry("dracula",        I18n.get("theme.dracula"),          Theme.DARK,  themeCssPaths.get("dracula")));
+        THEMES.put("solarized-light", new ThemeEntry("solarized-light", I18n.get("theme.solarized.light"), Theme.LIGHT, themeCssPaths.get("solarized-light")));
+        THEMES.put("solarized-dark", new ThemeEntry("solarized-dark", I18n.get("theme.solarized.dark"),   Theme.DARK,  themeCssPaths.get("solarized-dark")));
     }
 
     public static Map<String, ThemeEntry> getThemes() {
@@ -79,7 +80,7 @@ public final class ThemeManager {
     public static void initStyles(String base, String light, String dark) {
         BASE = base;
         THEMES.clear();
-        THEMES.put("light", new ThemeEntry("light", "Claro", Theme.LIGHT, light));
-        THEMES.put("dark",  new ThemeEntry("dark",  "Oscuro", Theme.DARK,  dark));
+        THEMES.put("light", new ThemeEntry("light", I18n.get("theme.light"), Theme.LIGHT, light));
+        THEMES.put("dark",  new ThemeEntry("dark",  I18n.get("theme.dark"), Theme.DARK,  dark));
     }
 }

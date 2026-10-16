@@ -12,6 +12,7 @@ import org.controlsfx.control.ToggleSwitch;
 import org.controlsfx.control.textfield.AutoCompletionBinding;
 import org.controlsfx.control.textfield.TextFields;
 
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.PildoraLinkDao;
 import io.github.guillermo_david.dao.PildoraTagDao;
@@ -96,6 +97,15 @@ public class EditorPildoraController {
 	@FXML
 	public void initialize() {
 
+		// --- I18n: override hardcoded FXML text for elements with fx:id ---
+		switchProteger.setText(I18n.get("switch.protect.content"));
+		switchOcultar.setText(I18n.get("switch.hide.pildora"));
+		txtTagInput.setPromptText(I18n.get("prompt.add.tag"));
+		btnGuardar.setText(I18n.get("button.save.icon"));
+		btnCancelar.setText(I18n.get("button.cancel.icon"));
+		mbMath.setText(I18n.get("menu.math"));
+		switchPreview.setText(I18n.get("switch.preview"));
+
 		btnCancelar.setOnAction(e -> {
 			clearRecoveryDraft();
 			if (onClose != null)
@@ -107,8 +117,8 @@ public class EditorPildoraController {
 		});
 
 		// (Opcional) Tooltips con pistas
-		btnGuardar.setTooltip(new Tooltip("Guardar (Ctrl+S/Ctrl+Enter)"));
-		btnCancelar.setTooltip(new Tooltip("Cancelar (Esc)"));
+		btnGuardar.setTooltip(new Tooltip(I18n.get("tooltip.save")));
+		btnCancelar.setTooltip(new Tooltip(I18n.get("tooltip.cancel.editor")));
 
 		// Autocompletado
 		tagAuto = TextFields.bindAutoCompletion(txtTagInput,
@@ -162,11 +172,11 @@ public class EditorPildoraController {
 		});
 
 		if (switchOcultar != null) {
-			switchOcultar.setTooltip(new Tooltip("Ocultar esta píldora del listado principal"));
+			switchOcultar.setTooltip(new Tooltip(I18n.get("tooltip.hide.pildora")));
 		}
 
 		if (switchProteger != null) {
-			switchProteger.setTooltip(new Tooltip("Proteger con PIN (cifra el contenido)"));
+			switchProteger.setTooltip(new Tooltip(I18n.get("tooltip.protect.pin")));
 
 			switchProteger.selectedProperty().addListener((obs, wasSelected, nowSelected) -> {
 				if (pildoraEnEdicion == null)
@@ -175,12 +185,12 @@ public class EditorPildoraController {
 				// No permitir DESPROTEGER si la píldora venía protegida y seguimos bloqueados
 				if (originalProtegida && !security.isUnlocked() && !nowSelected) {
 					Platform.runLater(() -> switchProteger.setSelected(true));
-					StatusBus.show("Desbloquea con PIN para desproteger.", StatusBus.Type.WARN, Duration.seconds(3));
+					StatusBus.show(I18n.get("status.unlock.to.unprotect"), StatusBus.Type.WARN, Duration.seconds(3));
 					return;
 				}
 
 				if (!wasSelected && nowSelected && !originalProtegida) {
-					StatusBus.show("Se protegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
+					StatusBus.show(I18n.get("status.will.protect.on.save"), StatusBus.Type.INFO, Duration.seconds(2));
 				} else if (wasSelected && !nowSelected && originalProtegida) {
 					txtDescripcion.setDisable(false);
 					// Restaurar contenido descifrado si el campo está vacío
@@ -190,7 +200,7 @@ public class EditorPildoraController {
 					} else if (existing == null || existing.isBlank()) {
 						recoverDecryptedContent();
 					}
-					StatusBus.show("Se desprotegerá al guardar.", StatusBus.Type.INFO, Duration.seconds(2));
+					StatusBus.show(I18n.get("status.will.unprotect.on.save"), StatusBus.Type.INFO, Duration.seconds(2));
 				}
 			});
 		}
@@ -260,13 +270,13 @@ public class EditorPildoraController {
 		}
 
 		Platform.runLater(() -> {
-			String when = ageMinutes < 1 ? "hace menos de 1 minuto"
-					: ageMinutes < 60 ? "hace " + ageMinutes + " minutos"
-					: "hace " + (ageMinutes / 60) + " horas";
+			String when = ageMinutes < 1 ? I18n.get("time.less.than.1min")
+					: ageMinutes < 60 ? I18n.get("time.minutes.ago", ageMinutes)
+					: I18n.get("time.hours.ago", ageMinutes / 60);
 			Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-			alert.setTitle("Recuperar borrador");
-			alert.setHeaderText("Se encontró un borrador sin guardar (" + when + ")");
-			alert.setContentText("¿Deseas recuperar el contenido?");
+			alert.setTitle(I18n.get("alert.recover.draft.title"));
+			alert.setHeaderText(I18n.get("alert.recover.draft.header", when));
+			alert.setContentText(I18n.get("alert.recover.draft.content"));
 			Dialogs.decorate(alert, root);
 			var res = alert.showAndWait();
 			if (res.isPresent() && res.get() == javafx.scene.control.ButtonType.OK) {
@@ -276,7 +286,7 @@ public class EditorPildoraController {
 				if (contenido != null && !contenido.isBlank() && txtDescripcion.getText().isBlank()) {
 					txtDescripcion.setText(contenido);
 				}
-				StatusBus.show("Borrador recuperado.", StatusBus.Type.INFO, Duration.seconds(3));
+				StatusBus.show(I18n.get("status.draft.recovered"), StatusBus.Type.INFO, Duration.seconds(3));
 			}
 			clearRecoveryDraft();
 		});
@@ -315,23 +325,23 @@ public class EditorPildoraController {
 					} catch (Exception e) {
 						System.err.println("[Editor] Descifrado falló con BD (cipher.len="
 								+ fc.length + ", iv.len=" + fiv.length + "): " + e.getMessage());
-						StatusBus.show("Error descifrando: " + e.getMessage(),
+						StatusBus.show(I18n.get("status.decrypt.error", e.getMessage()),
 								StatusBus.Type.ERROR, Duration.seconds(6));
 					}
 				} else {
 					System.err.println("[Editor] BD devolvió cipher/iv nulos para id=" + p.getId());
-					StatusBus.show("La BD no tiene datos cifrados para esta píldora.",
+					StatusBus.show(I18n.get("status.db.no.cipher.data"),
 							StatusBus.Type.ERROR, Duration.seconds(6));
 				}
 			} else {
 				System.err.println("[Editor] buscarPorId devolvió null para id=" + p.getId());
-				StatusBus.show("No se encontró la píldora en la BD (id=" + p.getId() + ").",
+				StatusBus.show(I18n.get("status.db.pildora.not.found", p.getId()),
 						StatusBus.Type.ERROR, Duration.seconds(6));
 			}
 		} catch (Exception e) {
 			System.err.println("[Editor] Error consultando BD: " + e.getMessage());
 			e.printStackTrace();
-			StatusBus.show("Error leyendo BD: " + e.getMessage(), StatusBus.Type.ERROR, Duration.seconds(6));
+			StatusBus.show(I18n.get("status.db.read.error", e.getMessage()), StatusBus.Type.ERROR, Duration.seconds(6));
 		}
 		return null;
 	}
@@ -356,7 +366,7 @@ public class EditorPildoraController {
 		boolean proteger = switchProteger.isSelected();
 
 		if (titulo.isBlank()) {
-			StatusBus.show("El título es obligatorio.", Type.WARN, Duration.seconds(4));
+			StatusBus.show(I18n.get("validation.title.required"), Type.WARN, Duration.seconds(4));
 			return;
 		}
 
@@ -366,7 +376,7 @@ public class EditorPildoraController {
 				boolean ok = security
 						.ensureUnlocked(() -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10)));
 				if (!ok) {
-					StatusBus.show("No puedes guardar ni desproteger sin PIN.", StatusBus.Type.ERROR,
+					StatusBus.show(I18n.get("status.cannot.save.without.pin"), StatusBus.Type.ERROR,
 							Duration.seconds(4));
 					return;
 				}
@@ -385,7 +395,7 @@ public class EditorPildoraController {
 		String descripcionPlano = txtDescripcion.getText();
 
 		if (!proteger && (descripcionPlano == null || descripcionPlano.trim().isBlank())) {
-			StatusBus.show("La descripción es obligatoria si no proteges la píldora.", Type.WARN, Duration.seconds(4));
+			StatusBus.show(I18n.get("validation.description.required"), Type.WARN, Duration.seconds(4));
 			return;
 		}
 
@@ -397,7 +407,7 @@ public class EditorPildoraController {
 				if (!security.hasPin()) {
 					char[] pin = askNewPin6();
 					if (pin == null) {
-						StatusBus.show("Protección cancelada.", StatusBus.Type.WARN, Duration.seconds(3));
+						StatusBus.show(I18n.get("status.protection.cancelled"), StatusBus.Type.WARN, Duration.seconds(3));
 						return;
 					}
 					try {
@@ -443,7 +453,7 @@ public class EditorPildoraController {
 				var ids = extractLinkedIds(bodyForLinks);
 				new PildoraLinkDao().replaceRefs((pildoraEnEdicion == null ? nueva.getId() : pildoraEnEdicion.getId()), ids);
 			} catch (Exception ex) {
-				StatusBus.show("No se pudieron sincronizar las referencias.", StatusBus.Type.WARN, Duration.seconds(3));
+				StatusBus.show(I18n.get("status.refs.sync.failed"), StatusBus.Type.WARN, Duration.seconds(3));
 			}
 
 
@@ -451,10 +461,10 @@ public class EditorPildoraController {
 			boolean becameProtected = (pildoraEnEdicion == null && switchProteger.isSelected())
 					|| (pildoraEnEdicion != null && !originalProtegida && switchProteger.isSelected());
 
-			String msg = "Píldora guardada correctamente.";
+			String msg = I18n.get("status.pildora.saved");
 			if (becameProtected) {
 				SecurityService.getInstance().lockNow();
-				msg = "Píldora guardada y protegida. Se pedirá PIN al abrirla.";
+				msg = I18n.get("status.pildora.saved.protected");
 			}
 
 			StatusBus.show(msg, StatusBus.Type.SUCCESS, Duration.seconds(3));
@@ -465,7 +475,7 @@ public class EditorPildoraController {
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
-			StatusBus.show("Error al guardar: " + ex.getMessage(), Type.ERROR, Duration.seconds(4));
+			StatusBus.show(I18n.get("status.error.saving", ex.getMessage()), Type.ERROR, Duration.seconds(4));
 		}
 	}
 	
@@ -484,9 +494,9 @@ public class EditorPildoraController {
 
 	private char[] askPin6() {
 		var dlg = new javafx.scene.control.TextInputDialog();
-		dlg.setTitle("PIN requerido");
-		dlg.setHeaderText("Introduce tu PIN (6 dígitos)");
-		dlg.setContentText("PIN:");
+		dlg.setTitle(I18n.get("pin.dialog.title"));
+		dlg.setHeaderText(I18n.get("pin.dialog.header"));
+		dlg.setContentText(I18n.get("label.pin"));
 		var tf = dlg.getEditor();
 		tf.setPromptText("••••••");
 		tf.setTextFormatter(new javafx.scene.control.TextFormatter<String>(c -> {
@@ -512,7 +522,7 @@ public class EditorPildoraController {
 		boolean eq = java.util.Arrays.equals(p1, p2);
 		java.util.Arrays.fill(p2, '\0');
 		if (!eq) {
-			StatusBus.show("Los PIN no coinciden.", Type.WARN, Duration.seconds(3));
+			StatusBus.show(I18n.get("status.pin.mismatch"), Type.WARN, Duration.seconds(3));
 			java.util.Arrays.fill(p1, '\0');
 			return null;
 		}
@@ -537,12 +547,12 @@ public class EditorPildoraController {
 				} else {
 					txtDescripcion.clear();
 					txtDescripcion.setDisable(true);
-					txtDescripcion.setPromptText("Error de descifrado — revisa el log");
+					txtDescripcion.setPromptText(I18n.get("editor.decrypt.error.prompt"));
 				}
 			} else {
 				txtDescripcion.clear();
 				txtDescripcion.setDisable(true);
-				txtDescripcion.setPromptText("Contenido protegido — desbloquea desde el listado");
+				txtDescripcion.setPromptText(I18n.get("editor.content.protected.prompt"));
 			}
 		} else {
 			txtDescripcion.setDisable(false);
@@ -564,9 +574,9 @@ public class EditorPildoraController {
 		long secs = Math.max(0L, (security.lockoutRemainingMillis() + 999) / 1000);
 
 		Alert a = new Alert(Alert.AlertType.WARNING);
-		a.setTitle("Intentos agotados");
-		a.setHeaderText("Has excedido los intentos del PIN");
-		a.setContentText("Podrás volver a intentarlo en " + secs + " segundo" + (secs == 1 ? "" : "s") + ".");
+		a.setTitle(I18n.get("alert.lockout.title2"));
+		a.setHeaderText(I18n.get("alert.lockout.header"));
+		a.setContentText(I18n.get("alert.lockout.content", secs));
 		Dialogs.decorate(a, root); // 👈 mantiene el tema/estilo de la app
 		a.showAndWait();
 	}
@@ -595,7 +605,7 @@ public class EditorPildoraController {
 
 			try {
 				if (security.verifyPin(pin)) {
-					StatusBus.show("Desbloqueado por 10 minutos.", StatusBus.Type.INFO, Duration.seconds(3));
+					StatusBus.show(I18n.get("status.unlocked.10min"), StatusBus.Type.INFO, Duration.seconds(3));
 					return true;
 				} else {
 					attempts++;
@@ -605,7 +615,7 @@ public class EditorPildoraController {
 						return false;
 					}
 					int left = MAX - attempts;
-					StatusBus.show("PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + ".",
+					StatusBus.show(I18n.get("alert.pin.incorrect.remaining", left),
 							StatusBus.Type.WARN, Duration.seconds(3));
 				}
 			} finally {
@@ -697,22 +707,22 @@ public class EditorPildoraController {
 			}
 			// Markdown rápidos
 			if (e.isControlDown() && e.getCode() == KeyCode.B) {
-				insertarTexto("**negrita**");
+				insertarTexto("**" + I18n.get("md.placeholder.bold") + "**");
 				e.consume();
 				return;
 			}
 			if (e.isControlDown() && e.getCode() == KeyCode.I) {
-				insertarTexto("*cursiva*");
+				insertarTexto("*" + I18n.get("md.placeholder.italic") + "*");
 				e.consume();
 				return;
 			}
 			if (e.isControlDown() && e.getCode() == KeyCode.K) {
-				insertarTexto("[texto](https://)");
+				insertarTexto("[" + I18n.get("md.link.default.text") + "](https://)");
 				e.consume();
 				return;
 			}
 			if (e.isControlDown() && e.getCode() == KeyCode.E) {
-				insertarTexto("`código`");
+				insertarTexto("`" + I18n.get("md.placeholder.code") + "`");
 				e.consume();
 				return;
 			}
@@ -829,14 +839,9 @@ public class EditorPildoraController {
 	@FXML
 	private void mostrarAyuda() {
 		Alert ayuda = new Alert(Alert.AlertType.INFORMATION);
-		ayuda.setTitle("Ayuda Markdown");
-		ayuda.setHeaderText("Sintaxis básica");
-		ayuda.setContentText("""
-				**negrita** → texto en negrita
-				*cursiva* → texto en cursiva
-				[enlace](https://) → hipervínculo
-				`código` → fragmento de código
-				""");
+		ayuda.setTitle(I18n.get("help.markdown.title"));
+		ayuda.setHeaderText(I18n.get("help.markdown.header"));
+		ayuda.setContentText(I18n.get("help.markdown.content"));
 		ayuda.showAndWait();
 	}
 	
@@ -883,7 +888,7 @@ public class EditorPildoraController {
 
 		// Estado inicial: OFF
 		switchPreview.setSelected(false);
-		switchPreview.setTooltip(new Tooltip("Mostrar vista previa del Markdown"));
+		switchPreview.setTooltip(new Tooltip(I18n.get("tooltip.preview.markdown")));
 		syncPreview(false);
 
 		// Debounce solo si ON

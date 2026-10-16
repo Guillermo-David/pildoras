@@ -10,6 +10,7 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import io.github.guillermo_david.dao.TagDao;
+import io.github.guillermo_david.util.I18n;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
@@ -60,7 +61,7 @@ class TagSidebarHelper {
     void init() {
         btnToggleSidebar.setOnAction(e -> toggleSidebar());
 
-        allBtn = new Button("Todas");
+        allBtn = new Button(I18n.get("sidebar.all.tags"));
         allBtn.getStyleClass().add("tag-sidebar-item");
         allBtn.setMaxWidth(Double.MAX_VALUE);
         allBtn.setOnAction(e -> {

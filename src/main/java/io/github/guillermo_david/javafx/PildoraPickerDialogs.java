@@ -3,6 +3,7 @@ package io.github.guillermo_david.javafx;
 import java.util.List;
 
 import io.github.guillermo_david.dao.PildoraDao;
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.model.Pildora;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -30,22 +31,22 @@ public final class PildoraPickerDialogs {
     @SuppressWarnings("unchecked")
     public static Pildora show(Parent owner) {
         Dialog<Pildora> d = new Dialog<>();
-        d.setTitle("Elegir píldora");
+        d.setTitle(I18n.get("dialog.picker.title"));
         d.setHeaderText(null);
 
         TextField tfFilter = new TextField();
-        tfFilter.setPromptText("Filtrar por título…");
+        tfFilter.setPromptText(I18n.get("dialog.picker.filter.prompt"));
 
         TableView<Pildora> table = new TableView<>();
         table.setFocusTraversable(false);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
-        TableColumn<Pildora, Number> cId = new TableColumn<>("#");
+        TableColumn<Pildora, Number> cId = new TableColumn<>(I18n.get("dialog.picker.col.id"));
         cId.setMinWidth(60);
         cId.setMaxWidth(80);
         cId.setCellValueFactory(cd -> new SimpleIntegerProperty(cd.getValue().getId()));
 
-        TableColumn<Pildora, String> cTitulo = new TableColumn<>("Título");
+        TableColumn<Pildora, String> cTitulo = new TableColumn<>(I18n.get("dialog.picker.col.title"));
         cTitulo.setCellValueFactory(cd -> new SimpleStringProperty(
                 cd.getValue().getTitulo() == null ? "" : cd.getValue().getTitulo()
         ));
@@ -60,8 +61,8 @@ public final class PildoraPickerDialogs {
         VBox.setVgrow(table, Priority.ALWAYS);
         d.getDialogPane().setContent(content);
 
-        ButtonType btOk = new ButtonType("Seleccionar", ButtonBar.ButtonData.OK_DONE);
-        ButtonType btCancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType btOk = new ButtonType(I18n.get("button.select"), ButtonBar.ButtonData.OK_DONE);
+        ButtonType btCancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
         d.getDialogPane().getButtonTypes().setAll(btOk, btCancel);
 
         // Tema

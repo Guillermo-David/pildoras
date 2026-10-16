@@ -13,6 +13,7 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import io.github.guillermo_david.MainApp;
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
 import io.github.guillermo_david.javafx.Dialogs;
@@ -165,6 +166,11 @@ public class ListadoPildorasController {
 		setColDescripcion();
 		setColTags();
 		setColAcciones();
+		colTitulo.setText(I18n.get("col.title"));
+		colDescripcion.setText(I18n.get("col.description"));
+		colTags.setText(I18n.get("col.tags"));
+		colAcciones.setText(I18n.get("col.actions"));
+		txtFiltroTexto.setPromptText(I18n.get("prompt.search"));
 		// Restore saved toggle states before setBotones() wires them up
 		mostrarOcultas = PREFS.getBoolean(PREF_SHOW_HIDDEN, false);
 		tamanioPagina = PREFS.getInt(PREF_PAGE_SIZE, 20);
@@ -221,7 +227,7 @@ public class ListadoPildorasController {
 			refrescarTabla();
 		});
 
-		txtFiltroTexto.setTooltip(new Tooltip("Ctrl+F"));
+		txtFiltroTexto.setTooltip(new Tooltip(I18n.get("tooltip.search.shortcut")));
 
 		attachClearButton(txtFiltroTexto, () -> {
 			paginaActual = 1;
@@ -283,7 +289,7 @@ public class ListadoPildorasController {
 	    var coffeeBtn = new Button();
 	    coffeeBtn.setGraphic(coffeeIcon);
 	    coffeeBtn.getStyleClass().addAll("icon-btn", "coffee-btn");
-	    coffeeBtn.setTooltip(new Tooltip("Invite me a coffee!"));
+	    coffeeBtn.setTooltip(new Tooltip(I18n.get("tooltip.coffee")));
 	    coffeeBtn.setOnAction(e -> {
 	        try {
 	            java.awt.Desktop.getDesktop().browse(new java.net.URI("https://ko-fi.com/guillermo_david"));
@@ -308,11 +314,11 @@ public class ListadoPildorasController {
 		var emptyIcon = new FontIcon(FontAwesomeSolid.BOX_OPEN);
 		emptyIcon.setIconSize(32);
 		emptyIcon.getStyleClass().add("muted-icon");
-		var emptyLabel = new Label("No se encontraron píldoras");
+		var emptyLabel = new Label(I18n.get("table.empty.label"));
 		emptyLabel.getStyleClass().add("empty-state-label");
-		var emptyHint = new Label("Prueba a cambiar los filtros o crea una nueva");
+		var emptyHint = new Label(I18n.get("table.empty.hint"));
 		emptyHint.getStyleClass().add("empty-state-hint");
-		var emptyBtn = new Button("Crear píldora");
+		var emptyBtn = new Button(I18n.get("table.empty.button"));
 		emptyBtn.getStyleClass().add("btn-accent-flat");
 		emptyBtn.setOnAction(e -> abrirFormularioNueva());
 		var emptyBox = new VBox(8, emptyIcon, emptyLabel, emptyHint, emptyBtn);
@@ -436,66 +442,66 @@ public class ListadoPildorasController {
 				Pildora p = row.getItem();
 				if (p == null) return;
 
-				var miAbrir = new MenuItem("Abrir");
+				var miAbrir = new MenuItem(I18n.get("menu.open"));
 				miAbrir.setGraphic(new FontIcon(FontAwesomeSolid.EYE));
 				miAbrir.setOnAction(ev -> {
 					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
 					abrirDetallePildora(p);
 				});
 
-				var miEditar = new MenuItem("Editar");
+				var miEditar = new MenuItem(I18n.get("menu.edit"));
 				miEditar.setGraphic(new FontIcon(FontAwesomeRegular.EDIT));
 				miEditar.setOnAction(ev -> {
 					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
 					abrirFormularioEditar(p);
 				});
 
-				var miFav = new MenuItem(p.isFavorita() ? "Quitar de favoritas" : "Añadir a favoritas");
+				var miFav = new MenuItem(p.isFavorita() ? I18n.get("menu.favorites.remove") : I18n.get("menu.favorites.add"));
 				miFav.setGraphic(new FontIcon(p.isFavorita() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR));
 				miFav.setOnAction(ev -> {
 					boolean nueva = !p.isFavorita();
 					pildoraDao.marcarFavorita(p.getId(), nueva);
 					p.setFavorita(nueva);
-					StatusBus.show(nueva ? "Añadida a favoritas" : "Quitada de favoritas",
+					StatusBus.show(nueva ? I18n.get("status.favorites.added") : I18n.get("status.favorites.removed"),
 							StatusBus.Type.INFO, Duration.seconds(2));
 					table.refresh();
 					if (btnSoloFav.isSelected()) refrescarTabla();
 				});
 
-				var miPin = new MenuItem(p.isPinned() ? "Desfijar" : "Fijar arriba");
+				var miPin = new MenuItem(p.isPinned() ? I18n.get("menu.unpin") : I18n.get("menu.pin"));
 				miPin.setGraphic(new FontIcon(FontAwesomeSolid.THUMBTACK));
 				miPin.setOnAction(ev -> {
 					boolean nuevo = !p.isPinned();
 					pildoraDao.marcarPinned(p.getId(), nuevo);
 					p.setPinned(nuevo);
-					StatusBus.show(nuevo ? "Píldora anclada" : "Píldora desanclada",
+					StatusBus.show(nuevo ? I18n.get("status.pildora.pinned") : I18n.get("status.pildora.unpinned"),
 							StatusBus.Type.INFO, Duration.seconds(2));
 					refrescarTabla();
 				});
 
-				var miOcultar = new MenuItem(p.isOculta() ? "Mostrar" : "Ocultar");
+				var miOcultar = new MenuItem(p.isOculta() ? I18n.get("menu.show") : I18n.get("menu.hide"));
 				miOcultar.setGraphic(new FontIcon(p.isOculta() ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH));
 				miOcultar.setOnAction(ev -> {
 					boolean nuevo = !p.isOculta();
 					pildoraDao.marcarOculta(p.getId(), nuevo);
 					p.setOculta(nuevo);
-					StatusBus.show(nuevo ? "Píldora oculta" : "Píldora visible",
+					StatusBus.show(nuevo ? I18n.get("status.pildora.hidden") : I18n.get("status.pildora.visible"),
 							StatusBus.Type.INFO, Duration.seconds(2));
 					refrescarTabla();
 				});
 
-				var miEliminar = new MenuItem("Eliminar");
+				var miEliminar = new MenuItem(I18n.get("menu.delete"));
 				miEliminar.setGraphic(new FontIcon(FontAwesomeSolid.TRASH));
 				miEliminar.getStyleClass().add("danger");
 				miEliminar.setOnAction(ev -> {
 					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
 					Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-							"¿Seguro que quieres eliminar la píldora \"" + p.getTitulo() + "\"?");
+							I18n.get("confirm.delete.pildora", p.getTitulo()));
 					Dialogs.decorate(confirm, root);
 					confirm.showAndWait().ifPresent(res -> {
 						if (res.getButtonData().isDefaultButton()) {
 							pildoraDao.eliminar(p.getId());
-							StatusBus.show("Píldora eliminada.", StatusBus.Type.INFO, Duration.seconds(3));
+							StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
 							refrescarTabla();
 						}
 					});
@@ -527,8 +533,8 @@ public class ListadoPildorasController {
 
 	private char[] promptPinOnce() {
 		var dialog = new Dialog<char[]>();
-		dialog.setTitle("PIN requerido");
-		dialog.setHeaderText("Introduce tu PIN (6 dígitos)");
+		dialog.setTitle(I18n.get("pin.dialog.title"));
+		dialog.setHeaderText(I18n.get("pin.dialog.header"));
 
 		var pf = new PasswordField();
 		pf.setPromptText("******");
@@ -538,12 +544,12 @@ public class ListadoPildorasController {
 			return c;
 		}));
 
-		var remember = new CheckBox("Recordar durante 10 minutos");
-		var content = new VBox(8, new Label("PIN:"), pf, remember);
+		var remember = new CheckBox(I18n.get("pin.remember.minutes", 10));
+		var content = new VBox(8, new Label(I18n.get("label.pin")), pf, remember);
 		dialog.getDialogPane().setContent(content);
 
-		var okBtn = new ButtonType("Aceptar", ButtonBar.ButtonData.OK_DONE);
-		var cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+		var okBtn = new ButtonType(I18n.get("button.accept"), ButtonBar.ButtonData.OK_DONE);
+		var cancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
 		dialog.getDialogPane().getButtonTypes().setAll(okBtn, cancel);
 
 		var okNode = dialog.getDialogPane().lookupButton(okBtn);
@@ -588,7 +594,7 @@ public class ListadoPildorasController {
 
 			try {
 				if (security.verifyPin(pin)) {
-					StatusBus.show("Desbloqueado por 10 minutos.", StatusBus.Type.INFO, Duration.seconds(3));
+					StatusBus.show(I18n.get("status.unlocked.10min"), StatusBus.Type.INFO, Duration.seconds(3));
 					return true;
 				} else {
 					attempts++;
@@ -599,11 +605,11 @@ public class ListadoPildorasController {
 					}
 					int left = MAX - attempts;
 					Alert warn = new Alert(AlertType.WARNING);
-					warn.setTitle("PIN incorrecto");
+					warn.setTitle(I18n.get("alert.pin.incorrect.title"));
 					warn.setHeaderText(null);
 					warn.setContentText(
-							left > 0 ? "PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + "."
-									: "Has agotado los intentos.");
+							left > 0 ? I18n.get("alert.pin.incorrect.remaining", left)
+									: I18n.get("alert.pin.exhausted"));
 					Dialogs.decorate(warn, root); // 👈 temado igual que el resto
 					warn.showAndWait();
 				}
@@ -622,9 +628,9 @@ public class ListadoPildorasController {
 		var security = SecurityService.getInstance();
 		long secs = (security.lockoutRemainingMillis() + 999) / 1000;
 		Alert lock = new Alert(AlertType.ERROR);
-		lock.setTitle("Demasiados intentos");
-		lock.setHeaderText("Has excedido los intentos de PIN");
-		lock.setContentText("Vuelve a intentarlo en " + secs + " segundos.");
+		lock.setTitle(I18n.get("alert.lockout.title"));
+		lock.setHeaderText(I18n.get("alert.lockout.header"));
+		lock.setContentText(I18n.get("alert.lockout.content", secs));
 		Dialogs.decorate(lock, root); // 👈 temado
 		lock.showAndWait();
 	}
@@ -636,7 +642,7 @@ public class ListadoPildorasController {
 
 		long lockMs = security.lockoutRemainingMillis();
 		if (lockMs > 0) {
-			StatusBus.show("Has agotado los intentos. Vuelve a probar en " + humanize(lockMs) + ".",
+			StatusBus.show(I18n.get("status.lockout.retry", humanize(lockMs)),
 					StatusBus.Type.ERROR, Duration.seconds(4));
 			return false;
 		}
@@ -648,16 +654,16 @@ public class ListadoPildorasController {
 		try {
 			boolean ok = security.verifyPin(pin);
 			if (ok) {
-				StatusBus.show("Desbloqueado.", StatusBus.Type.INFO, Duration.seconds(2));
+				StatusBus.show(I18n.get("status.unlocked"), StatusBus.Type.INFO, Duration.seconds(2));
 				return true;
 			} else {
 				if (security.isLockedOut()) {
 					long ms = security.lockoutRemainingMillis();
-					StatusBus.show("Has agotado los intentos. Vuelve a probar en " + humanize(ms) + ".",
+					StatusBus.show(I18n.get("status.lockout.retry", humanize(ms)),
 							StatusBus.Type.ERROR, Duration.seconds(4));
 				} else {
 					int left = security.attemptsLeft();
-					StatusBus.show("PIN incorrecto. Te quedan " + left + " intento" + (left == 1 ? "" : "s") + ".",
+					StatusBus.show(I18n.get("alert.pin.incorrect.remaining", left),
 							StatusBus.Type.ERROR, Duration.seconds(3));
 				}
 				return false;
@@ -697,7 +703,7 @@ public class ListadoPildorasController {
 				if (p.isPinned()) pinIcon.getStyleClass().add("pin-active");
 				pinIcon.setRotate(p.isPinned() ? -20 : 0);
 				pinBtn.setGraphic(pinIcon);
-				pinBtn.setTooltip(new Tooltip(p.isPinned() ? "Desfijar" : "Fijar"));
+				pinBtn.setTooltip(new Tooltip(p.isPinned() ? I18n.get("tooltip.unpin") : I18n.get("tooltip.pin")));
 				pinBtn.setOnAction(e -> {
 					boolean nuevo = !p.isPinned();
 					pildoraDao.marcarPinned(p.getId(), nuevo);
@@ -705,8 +711,8 @@ public class ListadoPildorasController {
 					pinIcon.getStyleClass().remove("pin-active");
 					if (nuevo) pinIcon.getStyleClass().add("pin-active");
 					pinIcon.setRotate(nuevo ? -20 : 0);
-					pinBtn.setTooltip(new Tooltip(nuevo ? "Desfijar" : "Fijar"));
-					StatusBus.show(nuevo ? "Píldora anclada" : "Píldora desanclada", StatusBus.Type.INFO, Duration.seconds(2));
+					pinBtn.setTooltip(new Tooltip(nuevo ? I18n.get("tooltip.unpin") : I18n.get("tooltip.pin")));
+					StatusBus.show(nuevo ? I18n.get("status.pildora.pinned") : I18n.get("status.pildora.unpinned"), StatusBus.Type.INFO, Duration.seconds(2));
 					ListadoPildorasController.this.refrescarTabla();
 				});
 
@@ -725,7 +731,7 @@ public class ListadoPildorasController {
 					starIcon.setIconCode(nueva ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
 					starIcon.getStyleClass().remove("star-fav");
 					if (nueva) starIcon.getStyleClass().add("star-fav");
-					StatusBus.show(nueva ? "Añadida a favoritas" : "Quitada de favoritas", StatusBus.Type.INFO, Duration.seconds(2));
+					StatusBus.show(nueva ? I18n.get("status.favorites.added") : I18n.get("status.favorites.removed"), StatusBus.Type.INFO, Duration.seconds(2));
 					if (btnSoloFav.isSelected()) refrescarTabla();
 				});
 
@@ -744,7 +750,7 @@ public class ListadoPildorasController {
 		btnSoloFav.getStyleClass().setAll("round-toggle", "fav-toggle"); // <- aquí
 		btnSoloFav.setGraphic(favTopIcon);
 		btnSoloFav.setText(null);
-		btnSoloFav.setTooltip(new Tooltip("Solo favoritas (Ctrl+Shift+F)"));
+		btnSoloFav.setTooltip(new Tooltip(I18n.get("tooltip.favorites.only")));
 
 		btnSoloFav.selectedProperty().addListener((obs, old, sel) -> {
 			favTopIcon.setIconCode(sel ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
@@ -752,7 +758,7 @@ public class ListadoPildorasController {
 			paginaActual = 1;
 			refrescarTabla();
 
-			StatusBus.show(sel ? "Mostrando solo favoritas" : "Mostrando todas las píldoras", StatusBus.Type.INFO,
+			StatusBus.show(sel ? I18n.get("status.showing.favorites.only") : I18n.get("status.showing.all"), StatusBus.Type.INFO,
 					Duration.seconds(2));
 		});
 
@@ -763,7 +769,7 @@ public class ListadoPildorasController {
 		btnOcultas.getStyleClass().setAll("round-toggle", "eye-toggle");
 		btnOcultas.setGraphic(eyeIcon);
 		btnOcultas.setText(null);
-		btnOcultas.setTooltip(new Tooltip("Mostrar/ocultar archivadas"));
+		btnOcultas.setTooltip(new Tooltip(I18n.get("tooltip.toggle.hidden")));
 		btnOcultas.setSelected(mostrarOcultas);
 		eyeIcon.setIconCode(mostrarOcultas ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH);
 		btnOcultas.selectedProperty().addListener((obs, old, sel) -> {
@@ -772,7 +778,7 @@ public class ListadoPildorasController {
 			eyeIcon.setIconCode(sel ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH);
 			paginaActual = 1;
 			refrescarTabla();
-			StatusBus.show(sel ? "Mostrando ocultas: activado" : "Mostrando ocultas: desactivado",
+			StatusBus.show(sel ? I18n.get("status.hidden.on") : I18n.get("status.hidden.off"),
 					StatusBus.Type.INFO, Duration.seconds(2));
 		});
 		// Insert toggle into header after btnSoloFav
@@ -787,7 +793,7 @@ public class ListadoPildorasController {
 		nuevaIcon.setIconSize(14);
 		btnNueva.setGraphic(nuevaIcon);
 		btnNueva.setText(null);
-		btnNueva.setTooltip(new Tooltip("Nueva píldora (Ctrl+N)"));
+		btnNueva.setTooltip(new Tooltip(I18n.get("tooltip.new.pildora")));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
 		btnNueva.getStyleClass().add("btn-accent");
 
@@ -800,7 +806,7 @@ public class ListadoPildorasController {
 		btnAnterior.setGraphic(prevIcon);
 		btnAnterior.setText(null);
 		btnAnterior.getStyleClass().addAll("icon-btn", "pagination-arrow");
-		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
+		btnAnterior.setTooltip(new Tooltip(I18n.get("tooltip.page.previous")));
 		btnAnterior.setOnAction(e -> {
 			if (paginaActual > 1) {
 				paginaActual--;
@@ -813,7 +819,7 @@ public class ListadoPildorasController {
 		btnSiguiente.setGraphic(nextIcon);
 		btnSiguiente.setText(null);
 		btnSiguiente.getStyleClass().addAll("icon-btn", "pagination-arrow");
-		btnSiguiente.setTooltip(new Tooltip("Página siguiente (Ctrl+→ / PageDown)"));
+		btnSiguiente.setTooltip(new Tooltip(I18n.get("tooltip.page.next")));
 		btnSiguiente.setOnAction(e -> {
 			if (paginaActual < totalPaginas) {
 				paginaActual++;
@@ -827,13 +833,13 @@ public class ListadoPildorasController {
 	private javafx.scene.control.MenuButton pageSizeMenu;
 
 	private void buildPageSizeSelector() {
-		String currentLabel = tamanioPagina == Integer.MAX_VALUE ? "Todo" : String.valueOf(tamanioPagina);
+		String currentLabel = tamanioPagina == Integer.MAX_VALUE ? I18n.get("pagination.all") : String.valueOf(tamanioPagina);
 		pageSizeMenu = new javafx.scene.control.MenuButton(currentLabel);
 		pageSizeMenu.getStyleClass().add("page-size-menu");
-		pageSizeMenu.setTooltip(new Tooltip("Píldoras por página"));
+		pageSizeMenu.setTooltip(new Tooltip(I18n.get("tooltip.page.size")));
 
 		for (int size : PAGE_SIZES) {
-			String label = size == Integer.MAX_VALUE ? "Todo" : String.valueOf(size);
+			String label = size == Integer.MAX_VALUE ? I18n.get("pagination.all") : String.valueOf(size);
 			var mi = new javafx.scene.control.MenuItem(label);
 			final int s = size;
 			mi.setOnAction(e -> applyPageSize(s));
@@ -847,7 +853,7 @@ public class ListadoPildorasController {
 		tamanioPagina = size;
 		PREFS.putInt(PREF_PAGE_SIZE, size);
 		paginaActual = 1;
-		pageSizeMenu.setText(size == Integer.MAX_VALUE ? "Todo" : String.valueOf(size));
+		pageSizeMenu.setText(size == Integer.MAX_VALUE ? I18n.get("pagination.all") : String.valueOf(size));
 		refrescarTabla();
 	}
 
@@ -902,7 +908,7 @@ public class ListadoPildorasController {
 				}
 				Pildora p = (Pildora) getTableRow().getItem();
 				if (p.isProtegida()) {
-					lbl.setText("Contenido protegido");
+					lbl.setText(I18n.get("table.content.protected"));
 					lbl.setTooltip(null);
 					setGraphic(wrap);
 				} else {
@@ -937,7 +943,7 @@ public class ListadoPildorasController {
 		colAcciones.setSortable(false);
 
 		colAcciones.setCellFactory(col -> new TableCell<>() {
-			private final Button btnEditar = iconButton(new FontIcon(FontAwesomeRegular.EDIT), "Editar (Ctrl+E)",
+			private final Button btnEditar = iconButton(new FontIcon(FontAwesomeRegular.EDIT), I18n.get("tooltip.edit"),
 					() -> {
 						Pildora p = (Pildora) getTableRow().getItem();
 						if (p == null)
@@ -949,7 +955,7 @@ public class ListadoPildorasController {
 						abrirFormularioEditar(p);
 					});
 
-			private final Button btnBorrar = iconButton(new FontIcon(FontAwesomeSolid.TRASH), "Eliminar (Supr)", () -> {
+			private final Button btnBorrar = iconButton(new FontIcon(FontAwesomeSolid.TRASH), I18n.get("tooltip.delete"), () -> {
 				Pildora p = (Pildora) getTableRow().getItem();
 				if (p == null)
 					return;
@@ -960,12 +966,12 @@ public class ListadoPildorasController {
 				}
 
 				Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-						"¿Seguro que quieres eliminar la píldora \"" + p.getTitulo() + "\"?");
+						I18n.get("confirm.delete.pildora", p.getTitulo()));
 				Dialogs.decorate(confirm, root);
 				confirm.showAndWait().ifPresent(res -> {
 					if (res.getButtonData().isDefaultButton()) {
 						pildoraDao.eliminar(p.getId());
-						StatusBus.show("Píldora eliminada.", StatusBus.Type.INFO, Duration.seconds(3));
+						StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
 						refrescarTabla();
 					}
 				});
@@ -1083,14 +1089,14 @@ public class ListadoPildorasController {
 					return;
 
 				Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-						"¿Seguro que quieres eliminar la píldora \"" + sel.getTitulo() + "\"?");
+						I18n.get("confirm.delete.pildora", sel.getTitulo()));
 
 				Dialogs.decorate(confirm, root);
 
 				confirm.showAndWait().ifPresent(res -> {
 					if (res.getButtonData().isDefaultButton()) {
 						pildoraDao.eliminar(sel.getId());
-						StatusBus.show("Píldora eliminada.", StatusBus.Type.INFO, Duration.seconds(3));
+						StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
 						String delTags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTags() : null;
 						int total = pildoraDao.contarFiltradas(
 								txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
@@ -1124,7 +1130,7 @@ public class ListadoPildorasController {
 						boolean nueva = !sel.isFavorita();
 						pildoraDao.marcarFavorita(sel.getId(), nueva);
 						sel.setFavorita(nueva);
-						StatusBus.show(nueva ? "Añadida a favoritas" : "Quitada de favoritas", StatusBus.Type.INFO,
+						StatusBus.show(nueva ? I18n.get("status.favorites.added") : I18n.get("status.favorites.removed"), StatusBus.Type.INFO,
 								Duration.seconds(2));
 						table.refresh();
 						if (btnSoloFav.isSelected())
@@ -1192,7 +1198,7 @@ public class ListadoPildorasController {
 				table.requestFocus();
 
 				// (opcional) feedback al usuario
-				StatusBus.show("Filtrado por tag: " + tagName, StatusBus.Type.INFO, Duration.seconds(2));
+				StatusBus.show(I18n.get("status.filtered.by.tag", tagName), StatusBus.Type.INFO, Duration.seconds(2));
 			});
 
 			ocultarFiltrosYPaginacion();
@@ -1209,7 +1215,7 @@ public class ListadoPildorasController {
 			controller.setOnEdit(pildora -> {
 				if (pildora.isProtegida()) {
 					if (!unlockWithFeedback()) {
-						StatusBus.show("Introduce el PIN para editar.", StatusBus.Type.WARN, Duration.seconds(3));
+						StatusBus.show(I18n.get("status.pin.required.edit"), StatusBus.Type.WARN, Duration.seconds(3));
 						return;
 					}
 				}
@@ -1219,8 +1225,8 @@ public class ListadoPildorasController {
 
 			controller.setOnDelete(pildora -> {
 				Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-				confirm.setTitle("Confirmar borrado");
-				confirm.setHeaderText("¿Seguro que quieres borrar esta píldora?");
+				confirm.setTitle(I18n.get("confirm.delete.title"));
+				confirm.setHeaderText(I18n.get("confirm.delete.header"));
 				confirm.setContentText(pildora.getTitulo());
 
 				Dialogs.decorate(confirm, root);
@@ -1228,7 +1234,7 @@ public class ListadoPildorasController {
 				confirm.showAndWait().ifPresent(res -> {
 					if (res == ButtonType.OK) {
 						pildoraDao.eliminar(p.getId());
-						StatusBus.show("Píldora eliminada.", StatusBus.Type.INFO, Duration.seconds(3));
+						StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
 						controller.dispose(); // 👈 limpiar también aquí
 						restaurarFiltrosYPaginacion();
 						refrescarTabla();
@@ -1329,13 +1335,13 @@ public class ListadoPildorasController {
 
 		boolean singlePage = (tamanioPagina == Integer.MAX_VALUE || totalPaginas <= 1);
 		if (total == 0) {
-			lblPagina.setText("0 de 0");
+			lblPagina.setText(I18n.get("pagination.zero"));
 		} else if (singlePage) {
-			lblPagina.setText(total + (total == 1 ? " píldora" : " píldoras"));
+			lblPagina.setText(total == 1 ? I18n.get("pagination.count.singular", total) : I18n.get("pagination.count.plural", total));
 		} else {
 			int desde = (paginaActual - 1) * tamanioPagina + 1;
 			int hasta = Math.min(paginaActual * tamanioPagina, total);
-			lblPagina.setText(String.format("%d - %d de %d", desde, hasta, total));
+			lblPagina.setText(I18n.get("pagination.range", desde, hasta, total));
 		}
 		btnAnterior.setVisible(!singlePage);
 		btnAnterior.setManaged(!singlePage);

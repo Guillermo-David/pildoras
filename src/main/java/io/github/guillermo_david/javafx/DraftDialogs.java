@@ -6,6 +6,7 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import io.github.guillermo_david.dao.DraftDao;
+import io.github.guillermo_david.util.I18n;
 import io.github.guillermo_david.model.Draft;
 import io.github.guillermo_david.security.SecurityService;
 import javafx.application.Platform;
@@ -63,29 +64,29 @@ public final class DraftDialogs {
         var sec = SecurityService.getInstance();
 
         Dialog<QuickResult> d = new Dialog<>();
-        d.setTitle("Borrador rápido");
-        d.setHeaderText("Escribe una nota rápida");
+        d.setTitle(I18n.get("dialog.quick.draft.title"));
+        d.setHeaderText(I18n.get("dialog.quick.draft.header"));
 
         TextField tfTitulo = new TextField();
-        tfTitulo.setPromptText("Título (opcional)");
+        tfTitulo.setPromptText(I18n.get("prompt.title.optional"));
         tfTitulo.setText(initialTitle == null ? "" : initialTitle);
 
         TextArea ta = new TextArea();
-        ta.setPromptText("Contenido…");
+        ta.setPromptText(I18n.get("prompt.content"));
         ta.setWrapText(true);
         ta.setPrefRowCount(10);
         ta.setText(initialBody == null ? "" : initialBody);
 
-        CheckBox cbProtect = new CheckBox("Proteger con PIN");
+        CheckBox cbProtect = new CheckBox(I18n.get("checkbox.protect.pin"));
         cbProtect.setSelected(initialProtected);
 
-        VBox content = new VBox(8, new Label("Título:"), tfTitulo, new Label("Contenido:"), ta, cbProtect);
+        VBox content = new VBox(8, new Label(I18n.get("label.title")), tfTitulo, new Label(I18n.get("label.content")), ta, cbProtect);
         content.setPadding(new Insets(8));
         d.getDialogPane().setContent(content);
 
-        ButtonType btSave    = new ButtonType("Guardar", ButtonBar.ButtonData.APPLY);
-        ButtonType btConvert = new ButtonType("Convertir a píldora", ButtonBar.ButtonData.OK_DONE);
-        ButtonType btCancel  = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType btSave    = new ButtonType(I18n.get("button.save"), ButtonBar.ButtonData.APPLY);
+        ButtonType btConvert = new ButtonType(I18n.get("button.convert.to.pildora"), ButtonBar.ButtonData.OK_DONE);
+        ButtonType btCancel  = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
         d.getDialogPane().getButtonTypes().setAll(btSave, btConvert, btCancel);
         
      // Atajos: Ctrl+S y Ctrl+Enter -> Guardar (robusto en diálogos)
@@ -140,7 +141,7 @@ public final class DraftDialogs {
             // Si quiere proteger, necesitamos asegurar PIN
             if (proteger) {
                 if (!sec.hasPin()) {
-                    StatusBus.show("Primero crea un PIN en Ajustes → Seguridad.", StatusBus.Type.WARN, Duration.seconds(4));
+                    StatusBus.show(I18n.get("status.create.pin.in.settings"), StatusBus.Type.WARN, Duration.seconds(4));
                     return null;
                 }
                 if (!sec.ensureUnlocked(() -> PinDialogs.promptPin6(owner, true, java.time.Duration.ofMinutes(10)))) {
@@ -175,19 +176,19 @@ public final class DraftDialogs {
         var sec = SecurityService.getInstance();
 
         Dialog<Void> d = new Dialog<>();
-        d.setTitle("Borradores");
+        d.setTitle(I18n.get("dialog.drafts.tray.title"));
         d.setHeaderText(null);
 
         // --- Tabla ---
         TableView<Draft> table = new TableView<>();
 
-        TableColumn<Draft, String> cTit = new TableColumn<>("Título");
+        TableColumn<Draft, String> cTit = new TableColumn<>(I18n.get("col.title"));
         cTit.setCellValueFactory(cd -> new SimpleStringProperty(
             cd.getValue().getTitulo() == null ? "" : cd.getValue().getTitulo()
         ));
         cTit.setPrefWidth(150);
 
-        TableColumn<Draft, String> cProt = new TableColumn<>("Contenido");
+        TableColumn<Draft, String> cProt = new TableColumn<>(I18n.get("col.content"));
         cProt.setCellValueFactory(cd -> new SimpleStringProperty(
         		cd.getValue().getContenido()
         		));
@@ -218,7 +219,7 @@ public final class DraftDialogs {
                 box.getChildren().clear();
 
                 if (dft.isProtegida()) {
-                    lbl.setText("Contenido protegido");
+                    lbl.setText(I18n.get("table.content.protected"));
                     box.getChildren().addAll(lock, lbl);
                     setTooltip(null); // sin tooltip para protegidos (igual que en la tabla principal)
                 } else {
@@ -248,7 +249,7 @@ public final class DraftDialogs {
         // Helper local: borrar con confirmación + refresco
         Consumer<Draft> doDelete = (dft) -> {
             if (dft == null) return;
-            var conf = new Alert(Alert.AlertType.CONFIRMATION, "¿Eliminar este borrador?");
+            var conf = new Alert(Alert.AlertType.CONFIRMATION, I18n.get("confirm.delete.draft"));
             Dialogs.decorate(conf, owner);
             conf.showAndWait().ifPresent(res -> {
                 if (res.getButtonData().isDefaultButton()) {
@@ -269,7 +270,7 @@ public final class DraftDialogs {
         
 
         cAcc.setCellFactory(col -> new TableCell<>() {
-            final Button btnDel = new Button("Eliminar");
+            final Button btnDel = new Button(I18n.get("button.delete"));
 //            final Button btnDel = new Button(new FontIcon(FontAwesomeSolid.TRASH), "Eliminar (Supr)");
             final HBox box = new HBox(8, btnDel);
             {
@@ -336,7 +337,7 @@ public final class DraftDialogs {
                         dft.setContenidoIv(res.draft.getContenidoIv());
                         new DraftDao().actualizar(dft);
                         table.setItems(FXCollections.observableList(dao.listarTodos()));
-                        StatusBus.show("Borrador actualizado.", StatusBus.Type.SUCCESS, Duration.seconds(2));
+                        StatusBus.show(I18n.get("status.draft.updated"), StatusBus.Type.SUCCESS, Duration.seconds(2));
                     }
                     case CONVERT -> {
                         // Delegas la conversión al caller (ListadopildorasController), si te interesa.
@@ -352,7 +353,7 @@ public final class DraftDialogs {
         });
 
         d.getDialogPane().setContent(new VBox(8, table));
-        d.getDialogPane().getButtonTypes().add(new ButtonType("Cerrar", ButtonBar.ButtonData.CANCEL_CLOSE));
+        d.getDialogPane().getButtonTypes().add(new ButtonType(I18n.get("button.close"), ButtonBar.ButtonData.CANCEL_CLOSE));
 
         Dialogs.decorate(d, owner); // <- se encargará de poner la barra de título (con ✕ que cierra)
         d.showAndWait();
@@ -371,7 +372,7 @@ public final class DraftDialogs {
             return sec.decrypt(dft.getContenidoCipher(), dft.getContenidoIv());
         } catch (Exception ex) {
             // Datos corruptos o clave no válida
-            StatusBus.show("No se pudo descifrar el borrador.", StatusBus.Type.ERROR, Duration.seconds(3));
+            StatusBus.show(I18n.get("status.draft.decrypt.failed"), StatusBus.Type.ERROR, Duration.seconds(3));
             return null;
         }
     }
