@@ -576,7 +576,7 @@ class SettingsMenuHelper {
 
         sb.append("LISTADO\n")
           .append("───────\n")
-          .append("Rueda ratón                – Página anterior / siguiente\n")
+          .append("Rueda ratón                – Desplazar la lista\n")
           .append("PageUp / Ctrl+←            – Página anterior\n")
           .append("PageDown / Ctrl+→          – Página siguiente\n")
           .append("Ctrl+F                     – Foco en filtro de texto\n")

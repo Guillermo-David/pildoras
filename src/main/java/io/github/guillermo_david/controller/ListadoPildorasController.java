@@ -105,9 +105,6 @@ public class ListadoPildorasController {
 	private String direccionOrden = DEFAULT_ORDER_DIR;
 	private TableColumn<Pildora, ?> lastSortColumn = null;
 	
-	// Campos (arriba en el controller)
-	private long lastWheelNanos = 0L;
-	private static final long WHEEL_THROTTLE_NS = 180_000_000L; // ~180 ms
 
 	private SortState lastState = SortState.NONE;
 	private boolean suppressSort = false;
@@ -179,7 +176,6 @@ public class ListadoPildorasController {
 				this::setLogoFor, p -> paginaActual = p);
 		settingsHelper.initSettingsMenu();
 		settingsHelper.applyTypographyNow();
-		instalarWheelPagination();
 		cargarTabla(null, null);
 		setLogoFor(ThemeManager.load());
 		setTxtFiltros();
@@ -1350,40 +1346,6 @@ public class ListadoPildorasController {
 		}
 	}
 	
-	private javafx.scene.control.ScrollBar cachedVBar;
-
-	private void instalarWheelPagination() {
-	    table.addEventFilter(javafx.scene.input.ScrollEvent.SCROLL, e -> {
-	        if (totalPaginas <= 1) return;
-	        if (e.getTouchCount() > 0) return;
-	        if (e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown()) return;
-
-	        double dy = e.getDeltaY();
-	        if (Math.abs(dy) < Math.abs(e.getDeltaX())) return;
-
-	        if (cachedVBar == null) {
-	            var node = table.lookup(".scroll-bar:vertical");
-	            if (node instanceof javafx.scene.control.ScrollBar sb) cachedVBar = sb;
-	        }
-	        if (cachedVBar != null && cachedVBar.isVisible()) {
-	            boolean atBottom = (dy < 0) && cachedVBar.getValue() >= cachedVBar.getMax() - 0.01;
-	            boolean atTop = (dy > 0) && cachedVBar.getValue() <= cachedVBar.getMin() + 0.01;
-	            if (!atBottom && !atTop) return;
-	        }
-
-	        long now = System.nanoTime();
-	        if (now - lastWheelNanos < WHEEL_THROTTLE_NS) return;
-	        lastWheelNanos = now;
-
-	        if (dy < 0 && btnSiguiente != null && !btnSiguiente.isDisabled()) {
-	            btnSiguiente.fire();
-	            e.consume();
-	        } else if (dy > 0 && btnAnterior != null && !btnAnterior.isDisabled()) {
-	            btnAnterior.fire();
-	            e.consume();
-	        }
-	    });
-	}
 
 
 	private void ocultarFiltrosYPaginacion() {
