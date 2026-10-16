@@ -56,7 +56,20 @@ public class DetallePildoraController {
 	@FXML private Button btnShowMoreLinks;
 
 	private final SecurityService security = SecurityService.getInstance();
-	private Object jsBridge;
+	private JsBridge jsBridge;
+
+	public static class JsBridge {
+		private final DetallePildoraController ctrl;
+		JsBridge(DetallePildoraController ctrl) { this.ctrl = ctrl; }
+		public void openPildora(Object num) {
+			int id;
+			if (num instanceof Number n) id = n.intValue();
+			else {
+				try { id = Integer.parseInt(String.valueOf(num)); } catch (Exception ex) { return; }
+			}
+			Platform.runLater(() -> ctrl.openPildoraFromJs(id));
+		}
+	}
 
 	private Runnable onClose;
 	private Consumer<Pildora> onEdit;
@@ -92,17 +105,7 @@ public class DetallePildoraController {
 		webContenido.setStyle("-fx-background-color: transparent;");
 
 		// JS bridge: install once, re-injects on every page load
-		jsBridge = new Object() {
-			@SuppressWarnings("unused")
-			public void openPildora(Object num) {
-				int id;
-				if (num instanceof Number n) id = n.intValue();
-				else {
-					try { id = Integer.parseInt(String.valueOf(num)); } catch (Exception ex) { return; }
-				}
-				Platform.runLater(() -> openPildoraFromJs(id));
-			}
-		};
+		jsBridge = new JsBridge(this);
 		webContenido.getEngine().getLoadWorker().stateProperty().addListener((obs, old, st) -> {
 			if (st == Worker.State.SUCCEEDED) {
 				try {
