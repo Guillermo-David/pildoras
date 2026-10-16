@@ -63,6 +63,7 @@
                     <TableColumn fx:id="colTitulo" text="Título" prefWidth="200"/>
                     <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="400"/>
                     <TableColumn fx:id="colTags" text="Tags" prefWidth="200"/>
+                    <TableColumn fx:id="colFecha" text="Fecha" prefWidth="140"/>
                     <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="105"/>
                 </columns>
             </TableView>

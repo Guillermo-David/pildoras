@@ -481,4 +481,40 @@ public class PildoraDao {
 		}
 	}
 
+	public int contarTotal() {
+		return countWhere("");
+	}
+
+	public int contarProtegidas() {
+		return countWhere("WHERE protegida = 1");
+	}
+
+	public int contarFavoritas() {
+		return countWhere("WHERE favorita = 1");
+	}
+
+	public int contarOcultas() {
+		return countWhere("WHERE oculta = 1");
+	}
+
+	public int contarCreadasDesde(LocalDateTime since) {
+		String sql = "SELECT COUNT(*) FROM pildoras WHERE fecha_creacion >= ?";
+		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+			ps.setString(1, since.format(DATETIME_FMT));
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) return rs.getInt(1);
+			}
+		} catch (SQLException e) { e.printStackTrace(); }
+		return 0;
+	}
+
+	private int countWhere(String where) {
+		String sql = "SELECT COUNT(*) FROM pildoras " + where;
+		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement();
+			 ResultSet rs = st.executeQuery(sql)) {
+			if (rs.next()) return rs.getInt(1);
+		} catch (SQLException e) { e.printStackTrace(); }
+		return 0;
+	}
+
 }

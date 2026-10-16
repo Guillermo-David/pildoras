@@ -210,6 +210,34 @@ public class TagDao {
         return list;
     }
 
+    public List<String[]> topTagsByUsage(int limit) {
+        String sql = """
+            SELECT t.nombre, COUNT(pt.pildora_id) AS cnt
+            FROM tags t
+            JOIN pildora_tag pt ON t.id = pt.tag_id
+            GROUP BY t.id, t.nombre
+            ORDER BY cnt DESC, t.nombre ASC
+            LIMIT ?
+            """;
+        List<String[]> out = new ArrayList<>();
+        try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) out.add(new String[]{ rs.getString("nombre"), String.valueOf(rs.getInt("cnt")) });
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return out;
+    }
+
+    public int countAll() {
+        String sql = "SELECT COUNT(*) FROM tags";
+        try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
+
     public List<String> listAllLike(String prefix, int limit) {
         String sql = """
             SELECT t.nombre

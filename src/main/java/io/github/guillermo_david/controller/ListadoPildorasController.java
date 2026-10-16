@@ -120,6 +120,7 @@ public class ListadoPildorasController {
 	private static final String PREF_FONT_SIZE = "uiFontSize"; // "small" | "normal" | "large"
 	private static final String DEF_FONT_FAMILY = "System";
 	private static final String DEF_FONT_SIZE = "normal";
+	private static final String PREF_VISIBLE_COLS = "visibleColumns";
 	private final int DEFAULT_SMALL_ICON_SIZE = 14;
 
 	private double dragOffsetX, dragOffsetY;
@@ -143,7 +144,7 @@ public class ListadoPildorasController {
 	@FXML private HBox paginationBox, statusBar, titleBar, appHeader;
 	@FXML private Label lblPagina, lblStatus;
 	@FXML private TableView<Pildora> table;
-	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
+	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags, colFecha;
 	@FXML private TableColumn<Pildora, Void> colFav, colAcciones;
 	@FXML private CustomTextField txtFiltroTexto;
 	@FXML private Label lblSearch;
@@ -166,11 +167,14 @@ public class ListadoPildorasController {
 		setColTitulo();
 		setColDescripcion();
 		setColTags();
+		setColFecha();
 		setColAcciones();
 		colTitulo.setText(I18n.get("col.title"));
 		colDescripcion.setText(I18n.get("col.description"));
 		colTags.setText(I18n.get("col.tags"));
+		colFecha.setText(I18n.get("col.date"));
 		colAcciones.setText(I18n.get("col.actions"));
+		restoreColumnVisibility();
 		txtFiltroTexto.setPromptText(I18n.get("prompt.search"));
 		lblSearch.setText(I18n.get("label.search"));
 		// Restore saved toggle states before setBotones() wires them up
@@ -182,7 +186,8 @@ public class ListadoPildorasController {
 		settingsHelper = new SettingsMenuHelper(root, security, btnSettings, PREFS,
 				PREF_FONT_FAMILY, PREF_FONT_SIZE, DEF_FONT_FAMILY, DEF_FONT_SIZE,
 				this::ensureUnlockedWithRetries, this::refrescarTabla,
-				this::setLogoFor, p -> paginaActual = p);
+				this::setLogoFor, p -> paginaActual = p,
+				this::showColumnSelector);
 		settingsHelper.initSettingsMenu();
 		settingsHelper.applyTypographyNow();
 		cargarTabla(null, null);
@@ -331,6 +336,7 @@ public class ListadoPildorasController {
 		colTitulo.setSortable(true);
 		colDescripcion.setSortable(true);
 		colTags.setSortable(false);
+		colFecha.setSortable(true);
 		colFav.setSortable(false);
 		colAcciones.setSortable(false);
 
@@ -395,6 +401,8 @@ public class ListadoPildorasController {
 						columnaOrden = "titulo";
 					} else if (primary == colDescripcion) {
 						columnaOrden = "descripcion";
+					} else if (primary == colFecha) {
+						columnaOrden = "fecha_creacion";
 					} else {
 						tv.getSortOrder().clear();
 						lastSortColumn = null;
@@ -938,6 +946,74 @@ public class ListadoPildorasController {
 		});
 		colTags.setMaxWidth(300);
 		colTags.setSortable(false);
+	}
+
+	private static final java.time.format.DateTimeFormatter DATE_FMT =
+			java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+	private void setColFecha() {
+		colFecha.setCellValueFactory(cell -> {
+			var fc = cell.getValue().getFechaCreacion();
+			return new SimpleStringProperty(fc != null ? fc.format(DATE_FMT) : "");
+		});
+		colFecha.setMaxWidth(160);
+	}
+
+	private void restoreColumnVisibility() {
+		String saved = PREFS.get(PREF_VISIBLE_COLS, null);
+		if (saved == null) {
+			colFecha.setVisible(false);
+			return;
+		}
+		var visible = java.util.Set.of(saved.split(","));
+		colTitulo.setVisible(visible.contains("titulo"));
+		colDescripcion.setVisible(visible.contains("descripcion"));
+		colTags.setVisible(visible.contains("tags"));
+		colFecha.setVisible(visible.contains("fecha"));
+	}
+
+	private void saveColumnVisibility() {
+		var sb = new StringBuilder();
+		if (colTitulo.isVisible()) sb.append("titulo,");
+		if (colDescripcion.isVisible()) sb.append("descripcion,");
+		if (colTags.isVisible()) sb.append("tags,");
+		if (colFecha.isVisible()) sb.append("fecha,");
+		PREFS.put(PREF_VISIBLE_COLS, sb.toString());
+	}
+
+	void showColumnSelector() {
+		Dialog<ButtonType> dlg = new Dialog<>();
+		dlg.setTitle(I18n.get("dialog.columns.title"));
+		dlg.setHeaderText(I18n.get("dialog.columns.header"));
+
+		CheckBox cbTitulo = new CheckBox(I18n.get("col.title"));
+		cbTitulo.setSelected(colTitulo.isVisible());
+		CheckBox cbDesc = new CheckBox(I18n.get("col.description"));
+		cbDesc.setSelected(colDescripcion.isVisible());
+		CheckBox cbTags = new CheckBox(I18n.get("col.tags"));
+		cbTags.setSelected(colTags.isVisible());
+		CheckBox cbFecha = new CheckBox(I18n.get("col.date"));
+		cbFecha.setSelected(colFecha.isVisible());
+
+		VBox content = new VBox(8, cbTitulo, cbDesc, cbTags, cbFecha);
+		content.setPadding(new Insets(10));
+		dlg.getDialogPane().setContent(content);
+
+		ButtonType btOk = new ButtonType(I18n.get("button.accept"), ButtonBar.ButtonData.OK_DONE);
+		ButtonType btCancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
+		dlg.getDialogPane().getButtonTypes().setAll(btOk, btCancel);
+		Dialogs.decorate(dlg, root);
+
+		dlg.setResultConverter(bt -> bt);
+		dlg.showAndWait().ifPresent(bt -> {
+			if (bt == btOk) {
+				colTitulo.setVisible(cbTitulo.isSelected());
+				colDescripcion.setVisible(cbDesc.isSelected());
+				colTags.setVisible(cbTags.isSelected());
+				colFecha.setVisible(cbFecha.isSelected());
+				saveColumnVisibility();
+			}
+		});
 	}
 
 	private void setColAcciones() {

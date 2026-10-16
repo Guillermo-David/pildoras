@@ -79,7 +79,12 @@ public class DetallePildoraController {
 
 	private EventHandler<KeyEvent> deleteFilter;
 	private EventHandler<KeyEvent> escFilter;
+	private EventHandler<KeyEvent> searchFilter;
 	private KeyCombination kcEditar = new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN);
+
+	private javafx.scene.layout.HBox searchBar;
+	private javafx.scene.control.TextField searchField;
+	private Label searchStatus;
 
 	private static final MarkdownEngine MD = new MarkdownEngine();
 
@@ -201,6 +206,14 @@ public class DetallePildoraController {
 
 			root.addEventFilter(KeyEvent.KEY_PRESSED, deleteFilter);
 			root.addEventFilter(KeyEvent.KEY_PRESSED, escFilter);
+
+			searchFilter = e -> {
+				if (e.isControlDown() && e.getCode() == KeyCode.F) {
+					e.consume();
+					toggleSearchBar();
+				}
+			};
+			root.addEventFilter(KeyEvent.KEY_PRESSED, searchFilter);
 
 			// Acelerador Ctrl+E en la SCENE (se retira en dispose())
 			scene.getAccelerators().put(kcEditar, () -> btnEditar.fire());
@@ -697,12 +710,81 @@ public class DetallePildoraController {
 		}
 	}
 
+	private void toggleSearchBar() {
+		if (searchBar == null) {
+			searchField = new javafx.scene.control.TextField();
+			searchField.setPromptText(I18n.get("search.prompt"));
+			searchField.setPrefWidth(250);
+			searchStatus = new Label();
+			searchStatus.setStyle("-fx-opacity: 0.6; -fx-font-size: 11px;");
+			var closeBtn = new Button("X");
+			closeBtn.getStyleClass().add("icon-btn");
+			closeBtn.setOnAction(e -> hideSearchBar());
+			searchBar = new javafx.scene.layout.HBox(8, searchField, searchStatus, closeBtn);
+			searchBar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+			searchBar.setPadding(new javafx.geometry.Insets(4, 10, 4, 10));
+			searchBar.setStyle("-fx-background-color: -fx-background; -fx-border-color: -fx-box-border; -fx-border-width: 0 0 1 0;");
+
+			searchField.setOnAction(e -> doSearch(false));
+			searchField.setOnKeyPressed(e -> {
+				if (e.getCode() == KeyCode.ESCAPE) {
+					e.consume();
+					hideSearchBar();
+				}
+			});
+
+			PauseTransition debounce = new PauseTransition(Duration.millis(300));
+			debounce.setOnFinished(e -> doSearch(false));
+			searchField.textProperty().addListener((o, a, b) -> debounce.playFromStart());
+		}
+
+		int idx = root.getChildren().indexOf(webContenido);
+		if (!root.getChildren().contains(searchBar)) {
+			root.getChildren().add(idx, searchBar);
+		}
+		searchField.requestFocus();
+		searchField.selectAll();
+	}
+
+	private void hideSearchBar() {
+		if (searchBar != null) {
+			root.getChildren().remove(searchBar);
+			clearSearchHighlights();
+			webContenido.requestFocus();
+		}
+	}
+
+	private void doSearch(boolean backwards) {
+		String query = searchField.getText();
+		if (query == null || query.isBlank()) {
+			clearSearchHighlights();
+			searchStatus.setText("");
+			return;
+		}
+		try {
+			Object result = webContenido.getEngine().executeScript(
+				"window.find('" + query.replace("'", "\\'").replace("\\", "\\\\") + "', false, " + backwards + ", true)");
+			boolean found = Boolean.TRUE.equals(result);
+			searchStatus.setText(found ? "" : I18n.get("search.no.results"));
+		} catch (Exception ignored) {
+			searchStatus.setText("");
+		}
+	}
+
+	private void clearSearchHighlights() {
+		try {
+			webContenido.getEngine().executeScript("window.getSelection().removeAllRanges()");
+		} catch (Exception ignored) {}
+	}
+
 	public void dispose() {
 		try {
 			if (deleteFilter != null)
 				root.removeEventFilter(KeyEvent.KEY_PRESSED, deleteFilter);
 			if (escFilter != null)
 				root.removeEventFilter(KeyEvent.KEY_PRESSED, escFilter);
+			if (searchFilter != null)
+				root.removeEventFilter(KeyEvent.KEY_PRESSED, searchFilter);
 			var scene = root.getScene();
 			if (scene != null)
 				scene.getAccelerators().remove(kcEditar);

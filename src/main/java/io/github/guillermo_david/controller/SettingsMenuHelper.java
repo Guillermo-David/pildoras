@@ -68,13 +68,15 @@ class SettingsMenuHelper {
     private final Runnable refrescarTabla;
     private final Consumer<Theme> setLogoFor;
     private final Consumer<Integer> setPaginaActual;
+    private final Runnable showColumnSelector;
 
     SettingsMenuHelper(BorderPane root, SecurityService security, MenuButton btnSettings,
                        Preferences prefs,
                        String prefFontFamily, String prefFontSize,
                        String defFontFamily, String defFontSize,
                        BooleanSupplier ensureUnlocked, Runnable refrescarTabla,
-                       Consumer<Theme> setLogoFor, Consumer<Integer> setPaginaActual) {
+                       Consumer<Theme> setLogoFor, Consumer<Integer> setPaginaActual,
+                       Runnable showColumnSelector) {
         this.root = root;
         this.security = security;
         this.btnSettings = btnSettings;
@@ -87,6 +89,7 @@ class SettingsMenuHelper {
         this.refrescarTabla = refrescarTabla;
         this.setLogoFor = setLogoFor;
         this.setPaginaActual = setPaginaActual;
+        this.showColumnSelector = showColumnSelector;
     }
 
     void initSettingsMenu() {
@@ -371,6 +374,30 @@ class SettingsMenuHelper {
         var miShortcuts = new MenuItem(I18n.get("menu.shortcuts"));
         miShortcuts.setOnAction(e -> showShortcutsDialog());
 
+        var miColumns = new MenuItem(I18n.get("menu.columns"));
+        var colIcon = new FontIcon(FontAwesomeSolid.COLUMNS);
+        colIcon.setIconSize(14);
+        miColumns.setGraphic(colIcon);
+        miColumns.setOnAction(e -> { if (showColumnSelector != null) showColumnSelector.run(); });
+
+        var miStats = new MenuItem(I18n.get("menu.statistics"));
+        var statsIcon = new FontIcon(FontAwesomeSolid.CHART_BAR);
+        statsIcon.setIconSize(14);
+        miStats.setGraphic(statsIcon);
+        miStats.setOnAction(e -> showStatisticsDialog());
+
+        var miAbout = new MenuItem(I18n.get("menu.about"));
+        var aboutIcon = new FontIcon(FontAwesomeSolid.INFO_CIRCLE);
+        aboutIcon.setIconSize(14);
+        miAbout.setGraphic(aboutIcon);
+        miAbout.setOnAction(e -> showAboutDialog());
+
+        var miHelp = new MenuItem(I18n.get("menu.help"));
+        var helpIcon = new FontIcon(FontAwesomeSolid.QUESTION_CIRCLE);
+        helpIcon.setIconSize(14);
+        miHelp.setGraphic(helpIcon);
+        miHelp.setOnAction(e -> showHelpDialog());
+
         btnSettings.getItems().setAll(
                 miFamily,
                 miSize,
@@ -378,11 +405,17 @@ class SettingsMenuHelper {
                 miTheme,
                 langMenu,
                 new SeparatorMenuItem(),
+                miColumns,
+                new SeparatorMenuItem(),
                 miDatabase,
                 new SeparatorMenuItem(),
                 miSecurity,
                 new SeparatorMenuItem(),
                 miShortcuts,
+                miStats,
+                new SeparatorMenuItem(),
+                miHelp,
+                miAbout,
                 new SeparatorMenuItem(),
                 miDebug);
     }
@@ -840,6 +873,168 @@ class SettingsMenuHelper {
         alert.setContentText(I18n.get("language.restart.content"));
         Dialogs.decorate(alert, root);
         alert.showAndWait();
+    }
+
+    private void showAboutDialog() {
+        Alert dlg = new Alert(Alert.AlertType.INFORMATION);
+        dlg.setTitle(I18n.get("about.title"));
+        dlg.setHeaderText(null);
+
+        var logoUrl = getClass().getResource("/icons/gdg_B.png");
+        javafx.scene.image.ImageView logo = null;
+        if (logoUrl != null) {
+            logo = new javafx.scene.image.ImageView(
+                    new javafx.scene.image.Image(logoUrl.toExternalForm(), 0, 64, true, true));
+            logo.setFitHeight(64);
+            logo.setPreserveRatio(true);
+        }
+
+        Label lblTitle = new Label("Pildoras");
+        lblTitle.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        Label lblVersion = new Label(I18n.get("about.version",
+                io.github.guillermo_david.util.AppVersion.get()));
+        lblVersion.setStyle("-fx-font-size: 13px; -fx-opacity: 0.7;");
+
+        Label lblDesc = new Label(I18n.get("about.description"));
+        lblDesc.setWrapText(true);
+        lblDesc.setMaxWidth(400);
+
+        Label lblAuthor = new Label(I18n.get("about.author"));
+        lblAuthor.setStyle("-fx-font-size: 12px; -fx-opacity: 0.6;");
+        Label lblAuthorName = new Label(I18n.get("about.author.name"));
+        lblAuthorName.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+
+        Hyperlink ghLink = new Hyperlink("github.com/guillermo-david/pildoras");
+        ghLink.setOnAction(e -> {
+            try { java.awt.Desktop.getDesktop().browse(new java.net.URI("https://github.com/guillermo-david/pildoras")); }
+            catch (Exception ignored) {}
+        });
+
+        Label lblTech = new Label(I18n.get("about.tech"));
+        lblTech.setStyle("-fx-font-size: 11px; -fx-opacity: 0.5;");
+        Label lblLicense = new Label(I18n.get("about.license"));
+        lblLicense.setStyle("-fx-font-size: 11px; -fx-opacity: 0.5;");
+
+        VBox content = new VBox(10);
+        if (logo != null) content.getChildren().add(logo);
+        content.getChildren().addAll(lblTitle, lblVersion,
+                new javafx.scene.control.Separator(),
+                lblDesc, lblAuthor, lblAuthorName, ghLink,
+                new javafx.scene.control.Separator(),
+                lblTech, lblLicense);
+        content.setPadding(new Insets(10));
+        content.setAlignment(javafx.geometry.Pos.CENTER);
+        content.setPrefWidth(420);
+
+        dlg.getDialogPane().setContent(content);
+        Dialogs.decorate(dlg, root);
+        dlg.showAndWait();
+    }
+
+    private void showHelpDialog() {
+        Alert dlg = new Alert(Alert.AlertType.INFORMATION);
+        dlg.setTitle(I18n.get("help.title"));
+        dlg.setHeaderText(null);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("━━ ").append(I18n.get("help.section.what")).append(" ━━\n");
+        sb.append(I18n.get("help.section.what.content")).append("\n\n");
+        sb.append("━━ ").append(I18n.get("help.section.features")).append(" ━━\n");
+        sb.append(I18n.get("help.section.features.content")).append("\n\n");
+        sb.append("━━ ").append(I18n.get("help.section.export")).append(" ━━\n");
+        sb.append(I18n.get("help.section.export.content")).append("\n\n");
+        sb.append("━━ ").append(I18n.get("help.section.security")).append(" ━━\n");
+        sb.append(I18n.get("help.section.security.content")).append("\n\n");
+        sb.append("━━ ").append(I18n.get("help.section.turso")).append(" ━━\n");
+        sb.append(I18n.get("help.section.turso.content")).append("\n\n");
+        sb.append("━━ ").append(I18n.get("help.section.shortcuts")).append(" ━━\n");
+        sb.append(I18n.get("help.section.shortcuts.hint"));
+
+        TextArea ta = new TextArea(sb.toString());
+        ta.setEditable(false);
+        ta.setWrapText(true);
+        ta.setPrefRowCount(20);
+        ta.setPrefColumnCount(50);
+        ta.setStyle("-fx-font-family: 'System'; -fx-font-size: 13px;");
+
+        VBox content = new VBox(ta);
+        content.setPadding(new Insets(10));
+        dlg.getDialogPane().setContent(content);
+        Dialogs.decorate(dlg, root);
+        dlg.showAndWait();
+    }
+
+    private void showStatisticsDialog() {
+        var pDao = new PildoraDao();
+        var tDao = new io.github.guillermo_david.dao.TagDao();
+
+        int total = pDao.contarTotal();
+        int prot = pDao.contarProtegidas();
+        int favs = pDao.contarFavoritas();
+        int hidden = pDao.contarOcultas();
+        int totalTags = tDao.countAll();
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        int last7 = pDao.contarCreadasDesde(now.minusDays(7));
+        int last30 = pDao.contarCreadasDesde(now.minusDays(30));
+        int lastYear = pDao.contarCreadasDesde(now.minusYears(1));
+
+        var topTags = tDao.topTagsByUsage(10);
+
+        Alert dlg = new Alert(Alert.AlertType.INFORMATION);
+        dlg.setTitle(I18n.get("stats.title"));
+        dlg.setHeaderText(null);
+
+        var gridStyle = "-fx-font-size: 13px;";
+
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(16);
+        grid.setVgap(6);
+        grid.setPadding(new Insets(10));
+
+        int row = 0;
+        grid.add(boldLabel(I18n.get("stats.total.pills")), 0, row);
+        grid.add(new Label(String.valueOf(total)), 1, row++);
+        grid.add(boldLabel(I18n.get("stats.total.protected")), 0, row);
+        grid.add(new Label(String.valueOf(prot)), 1, row++);
+        grid.add(boldLabel(I18n.get("stats.total.favorites")), 0, row);
+        grid.add(new Label(String.valueOf(favs)), 1, row++);
+        grid.add(boldLabel(I18n.get("stats.total.hidden")), 0, row);
+        grid.add(new Label(String.valueOf(hidden)), 1, row++);
+        grid.add(boldLabel(I18n.get("stats.total.tags")), 0, row);
+        grid.add(new Label(String.valueOf(totalTags)), 1, row++);
+
+        grid.add(new javafx.scene.control.Separator(), 0, row, 2, 1); row++;
+        Label freqTitle = boldLabel(I18n.get("stats.creation.frequency"));
+        grid.add(freqTitle, 0, row, 2, 1); row++;
+        grid.add(new Label("  " + I18n.get("stats.pills.last.7days")), 0, row);
+        grid.add(new Label(String.valueOf(last7)), 1, row++);
+        grid.add(new Label("  " + I18n.get("stats.pills.last.30days")), 0, row);
+        grid.add(new Label(String.valueOf(last30)), 1, row++);
+        grid.add(new Label("  " + I18n.get("stats.pills.last.year")), 0, row);
+        grid.add(new Label(String.valueOf(lastYear)), 1, row++);
+
+        if (!topTags.isEmpty()) {
+            grid.add(new javafx.scene.control.Separator(), 0, row, 2, 1); row++;
+            grid.add(boldLabel(I18n.get("stats.most.used.tags")), 0, row, 2, 1); row++;
+            for (var t : topTags) {
+                grid.add(new Label("  " + I18n.get("stats.tag.count", t[0], t[1])), 0, row, 2, 1);
+                row++;
+            }
+        }
+
+        grid.setStyle(gridStyle);
+        VBox content = new VBox(grid);
+        content.setPrefWidth(380);
+        dlg.getDialogPane().setContent(content);
+        Dialogs.decorate(dlg, root);
+        dlg.showAndWait();
+    }
+
+    private static Label boldLabel(String text) {
+        Label l = new Label(text);
+        l.setStyle("-fx-font-weight: bold;");
+        return l;
     }
 
     private MenuItem createOpenLogMenuItem() {
