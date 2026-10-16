@@ -86,6 +86,7 @@ public class ListadoPildorasController {
 
 	private final PildoraDao pildoraDao = new PildoraDao();
 	private final TagDao tagDao = new TagDao();
+	private java.util.Map<Integer, String> tagTextCache = java.util.Map.of();
 
 	private int paginaActual = 1;
 	private static final String PREF_PAGE_SIZE = "pageSize";
@@ -840,10 +841,12 @@ public class ListadoPildorasController {
 		colTitulo.setMaxWidth(200);
 		colTitulo.setCellFactory(col -> new TableCell<>() {
 			private final Label lbl = new Label();
+			private final Tooltip tt = new Tooltip();
 			{
-				lbl.setWrapText(false); // no partir en varias líneas
+				lbl.setWrapText(false);
 				lbl.setMaxWidth(Double.MAX_VALUE);
-				lbl.setTextOverrun(OverrunStyle.ELLIPSIS); // "..."
+				lbl.setTextOverrun(OverrunStyle.ELLIPSIS);
+				lbl.setTooltip(tt);
 			}
 
 			@Override
@@ -853,9 +856,7 @@ public class ListadoPildorasController {
 					setGraphic(null);
 				} else {
 					lbl.setText(value);
-					// tooltip con el texto completo solo si se corta
-					var tt = new Tooltip(value);
-					lbl.setTooltip(tt);
+					tt.setText(value);
 					setGraphic(lbl);
 				}
 			}
@@ -887,12 +888,21 @@ public class ListadoPildorasController {
 				Pildora p = (Pildora) getTableRow().getItem();
 				if (p.isProtegida()) {
 					lbl.setText("Contenido protegido");
-					lbl.setTooltip(null); // sin tooltip
-					setGraphic(wrap); // 🔒 + texto
+					lbl.setTooltip(null);
+					setGraphic(wrap);
 				} else {
 					lbl.setText(value);
-					lbl.setTooltip(value == null || value.isBlank() ? null : new Tooltip(value));
-					setGraphic(lbl); // sólo texto
+					if (value != null && !value.isBlank()) {
+						var existing = lbl.getTooltip();
+						if (existing != null) {
+							existing.setText(value);
+						} else {
+							lbl.setTooltip(new Tooltip(value));
+						}
+					} else {
+						lbl.setTooltip(null);
+					}
+					setGraphic(lbl);
 				}
 			}
 		});
@@ -900,9 +910,8 @@ public class ListadoPildorasController {
 
 	private void setColTags() {
 		colTags.setCellValueFactory(cell -> {
-			List<Tag> tags = tagDao.findByPildoraId(cell.getValue().getId());
-			String nombres = tags.stream().map(Tag::getNombre).collect(Collectors.joining(", "));
-			return new SimpleStringProperty(nombres);
+			String cached = tagTextCache.getOrDefault(cell.getValue().getId(), "");
+			return new SimpleStringProperty(cached);
 		});
 		colTags.setMaxWidth(300);
 		colTags.setSortable(false);
@@ -1292,7 +1301,14 @@ public class ListadoPildorasController {
 		List<Pildora> todas = pildoraDao.listarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, paginaActual,
 				tamanioPagina, columnaOrden, direccionOrden, mostrarOcultas);
 
-		tagDao.preloadForPildoras(todas.stream().map(Pildora::getId).collect(Collectors.toList()));
+		var ids = todas.stream().map(Pildora::getId).collect(Collectors.toList());
+		tagDao.preloadForPildoras(ids);
+		var map = new java.util.HashMap<Integer, String>(ids.size() * 2);
+		for (Pildora p : todas) {
+			List<Tag> tags = tagDao.findByPildoraId(p.getId());
+			map.put(p.getId(), tags.stream().map(Tag::getNombre).collect(Collectors.joining(", ")));
+		}
+		tagTextCache = map;
 		table.setItems(FXCollections.observableArrayList(todas));
 
 		boolean singlePage = (tamanioPagina == Integer.MAX_VALUE || totalPaginas <= 1);
