@@ -32,6 +32,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
@@ -150,21 +151,25 @@ class SettingsMenuHelper {
             miSize.getItems().add(r);
         }
 
-        // --- Tema oscuro ---
-        var miTemaOscuro = new CheckMenuItem("Tema oscuro");
-        miTemaOscuro.setSelected(ThemeManager.load() == Theme.DARK);
-        miTemaOscuro.setOnAction(e -> {
-            var scene = root.getScene();
-            if (scene == null) return;
-            boolean wantsDark = miTemaOscuro.isSelected();
-            boolean isDark = (ThemeManager.load() == Theme.DARK);
-            if (wantsDark != isDark) {
-                Theme t = ThemeManager.toggle(scene);
-                setLogoFor.accept(t);
-                StatusBus.show(t == Theme.DARK ? "Tema oscuro" : "Tema claro", StatusBus.Type.INFO,
-                        Duration.seconds(2));
-            }
-        });
+        // --- Tema (color schemes) ---
+        var miTheme = new Menu("Tema");
+        var tgTheme = new ToggleGroup();
+        String currentThemeId = ThemeManager.loadId();
+        for (var entry : ThemeManager.getThemes().values()) {
+            var r = new RadioMenuItem(entry.label());
+            r.setToggleGroup(tgTheme);
+            r.setSelected(entry.id().equals(currentThemeId));
+            final String tid = entry.id();
+            r.setOnAction(e -> {
+                var scene = root.getScene();
+                if (scene == null) return;
+                ThemeManager.apply(scene, tid);
+                ThemeManager.save(tid);
+                setLogoFor.accept(ThemeManager.load());
+                StatusBus.show("Tema: " + entry.label(), StatusBus.Type.INFO, Duration.seconds(2));
+            });
+            miTheme.getItems().add(r);
+        }
 
         // =============== Submenú Seguridad ===============
         var miSecurity = new Menu("Seguridad");
@@ -350,7 +355,7 @@ class SettingsMenuHelper {
                 miFamily,
                 miSize,
                 new SeparatorMenuItem(),
-                miTemaOscuro,
+                miTheme,
                 new SeparatorMenuItem(),
                 miDatabase,
                 new SeparatorMenuItem(),
@@ -638,42 +643,65 @@ class SettingsMenuHelper {
     private void showTursoGuideDialog() {
         Alert guide = new Alert(AlertType.INFORMATION);
         guide.setTitle("Cómo configurar Turso");
-        guide.setHeaderText("Guía rápida para sincronizar con Turso");
+        guide.setHeaderText(null);
 
-        var ta = new TextArea("""
-            1. Crear una cuenta en https://turso.tech (plan gratuito disponible)
+        var content = new javafx.scene.layout.VBox(10);
+        content.setPadding(new javafx.geometry.Insets(10));
 
-            2. Instalar la CLI de Turso:
-               curl -sSfL https://get.tur.so/install.sh | bash
+        var title = new Label("☁ Sincronización en la nube con Turso");
+        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
-            3. Iniciar sesión:
-               turso auth login
+        var intro = new Label(
+                "Píldoras guarda tus datos de forma local por defecto. "
+                + "Si quieres acceder a tus píldoras desde varios equipos, "
+                + "puedes sincronizarlas con Turso, un servicio gratuito de "
+                + "bases de datos en la nube.\n\n"
+                + "Sin Turso, la app funciona perfectamente en local. "
+                + "Turso es totalmente opcional.");
+        intro.setWrapText(true);
+        intro.setStyle("-fx-font-size: 13px;");
 
-            4. Crear una base de datos:
-               turso db create pildoras
+        var stepsTitle = new Label("Pasos para configurar Turso:");
+        stepsTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 8 0 0 0;");
 
-            5. Obtener la URL de la base de datos:
-               turso db show pildoras --url
-               (Ejemplo: libsql://pildoras-usuario.turso.io)
+        var steps = new Label(
+                "1. Crea una cuenta gratuita en turso.tech\n"
+                + "2. Instala la herramienta de Turso en tu terminal:\n"
+                + "     curl -sSfL https://get.tur.so/install.sh | bash\n"
+                + "3. Inicia sesión: turso auth login\n"
+                + "4. Crea una base de datos: turso db create pildoras\n"
+                + "5. Copia la URL: turso db show pildoras --url\n"
+                + "     (Ejemplo: libsql://pildoras-tu-usuario.turso.io)\n"
+                + "6. Genera un token: turso db tokens create pildoras\n"
+                + "7. En Píldoras: Ajustes → Base de datos → Configurar Turso\n"
+                + "     Pega la URL y el token, y pulsa Aceptar.\n"
+                + "8. (Opcional) Migra tus datos locales:\n"
+                + "     Ajustes → Base de datos → Migrar datos locales a Turso");
+        steps.setWrapText(true);
+        steps.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: 12px;");
 
-            6. Generar un token de autenticación:
-               turso db tokens create pildoras
+        var linkBox = new javafx.scene.layout.HBox(6);
+        linkBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        linkBox.setPadding(new javafx.geometry.Insets(6, 0, 0, 0));
+        var linkLabel = new Label("Más información:");
+        linkLabel.setStyle("-fx-font-size: 13px;");
+        var linkBtn = new Hyperlink("turso.tech");
+        linkBtn.setStyle("-fx-font-size: 13px;");
+        linkBtn.setOnAction(e -> {
+            try { java.awt.Desktop.getDesktop().browse(new java.net.URI("https://turso.tech")); }
+            catch (Exception ignored) {}
+        });
+        linkBox.getChildren().addAll(linkLabel, linkBtn);
 
-            7. En Píldoras: Ajustes → Base de datos → Configurar Turso
-               - Pega la URL y el token obtenidos
-               - Pulsa Aceptar para conectar
+        content.getChildren().addAll(title, intro, stepsTitle, steps, linkBox);
 
-            8. (Opcional) Migrar datos locales:
-               Ajustes → Base de datos → Migrar datos locales a Turso
-            """);
-        ta.setEditable(false);
-        ta.setWrapText(true);
-        ta.setPrefRowCount(18);
-        ta.setPrefColumnCount(50);
-        ta.setStyle("-fx-font-size: 13px;");
+        var scrollPane = new javafx.scene.control.ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefHeight(400);
+        scrollPane.setStyle("-fx-background-color: transparent;");
 
-        guide.getDialogPane().setContent(ta);
-        guide.getDialogPane().setPrefWidth(560);
+        guide.getDialogPane().setContent(scrollPane);
+        guide.getDialogPane().setPrefWidth(580);
         Dialogs.decorate(guide, root);
         guide.showAndWait();
     }

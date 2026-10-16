@@ -57,12 +57,17 @@ public class MainApp extends Application{
 	    Scene scene = new Scene(fxmlLoader.load(), 1280, 837);
 
 	    var base = MainApp.class.getResource("/css/base.css").toExternalForm();
-	    var light = MainApp.class.getResource("/css/theme-light.css").toExternalForm();
-	    var dark  = MainApp.class.getResource("/css/theme-dark.css").toExternalForm();
-
-	    ThemeManager.initStyles(base, light, dark);
-	    var current = ThemeManager.load();
-	    ThemeManager.apply(scene, current);
+	    var themes = java.util.Map.of(
+	        "light",           MainApp.class.getResource("/css/theme-light.css").toExternalForm(),
+	        "dark",            MainApp.class.getResource("/css/theme-dark.css").toExternalForm(),
+	        "nord-light",      MainApp.class.getResource("/css/theme-nord-light.css").toExternalForm(),
+	        "nord-dark",       MainApp.class.getResource("/css/theme-nord-dark.css").toExternalForm(),
+	        "dracula",         MainApp.class.getResource("/css/theme-dracula.css").toExternalForm(),
+	        "solarized-light", MainApp.class.getResource("/css/theme-solarized-light.css").toExternalForm(),
+	        "solarized-dark",  MainApp.class.getResource("/css/theme-solarized-dark.css").toExternalForm()
+	    );
+	    ThemeManager.initStyles(base, themes);
+	    ThemeManager.apply(scene, ThemeManager.loadId());
 
 	    var icons = loadIcons();
 	    if (!icons.isEmpty()) stage.getIcons().setAll(icons);

@@ -1,0 +1,56 @@
+/* Solarized Dark */
+.root {
+	-c-bg: #002b36;
+	-c-bg-subtle: #073642;
+	-c-text: #839496;
+	-c-text-muted: #586e75;
+	-c-border: #0a4a5a;
+	-c-accent: #2aa198;
+	-c-accent-soft: rgba(42, 161, 152, 0.12);
+	-c-row-hover: #053542;
+	-c-row-selected: #0a4050;
+	-c-input-bg: #073642;
+	-c-input-border: #0a4a5a;
+	-c-shadow: rgba(0, 0, 0, 0.50);
+}
+
+.root {
+	-fx-base: -c-bg;
+	-fx-background: -c-bg;
+	-fx-accent: -c-accent;
+	-fx-focus-color: rgba(42, 161, 152, 0.85);
+	-fx-faint-focus-color: rgba(42, 161, 152, 0.25);
+	-fx-text-base-color: -c-text;
+	-fx-text-inner-color: -c-text;
+	-fx-control-inner-background: -c-bg;
+	-fx-cell-hover-color: -c-row-hover;
+	-fx-box-border: -c-border;
+	-gdg-icon-color: #93a1a1;
+	-gdg-separator: rgba(255, 255, 255, 0.15);
+	-fx-placeholder-color: rgba(131, 148, 150, 0.55);
+}
+
+.root .icon-btn:hover { -fx-background-color: rgba(255, 255, 255, 0.06); }
+.table-row-cell:odd { -fx-background-color: derive(-fx-control-inner-background, 3%); }
+
+.text-input, .text-area { -fx-prompt-text-fill: -fx-placeholder-color; }
+.detail-title { -fx-font-size: 18px; -fx-font-weight: bold; }
+.detail-meta  { -fx-text-fill: #586e75; }
+.detail-tags  { -fx-text-fill: #93a1a1; -fx-font-style: italic; }
+
+.dialog-titlebar {
+  -fx-padding: 10 12; -fx-alignment: CENTER_LEFT;
+  -fx-background-color: linear-gradient(to bottom, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  -fx-border-color: -c-border; -fx-border-width: 0 0 1 0;
+}
+.dialog-title { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -fx-text-base-color; }
+.dialog-close { -fx-background-radius: 12; -fx-background-color: transparent; -fx-text-fill: -fx-text-base-color; -fx-padding: 2 10; }
+.dialog-close:hover { -fx-background-color: rgba(255,255,255,0.10); }
+.dialog-pane { -fx-background-color: -c-bg-subtle; -fx-padding: 0; -fx-border-color: -c-border; -fx-border-width: 1; -fx-background-insets: 0; }
+.dialog-pane > *.content { -fx-padding: 14 12 12 12; }
+
+.dialog-pane .button-bar .button { -fx-background-radius: 8; -fx-text-fill: -fx-text-base-color; -fx-background-color: #0a4a5a; }
+.dialog-pane .button-bar .button:hover { -fx-background-color: #0c5a6c; }
+.dialog-pane .button-bar .button:default { -fx-text-fill: #002b36; -fx-background-color: linear-gradient(derive(-fx-accent,5%), derive(-fx-accent,-6%)); }
+.dialog-pane .button-bar .button:default:hover { -fx-background-color: linear-gradient(derive(-fx-accent,15%), derive(-fx-accent,0%)); }
+.root .icon-btn.danger:hover { -fx-background-color: rgba(220, 50, 47, 0.20); }

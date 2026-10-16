@@ -1,5 +1,7 @@
 package io.github.guillermo_david.javafx;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.prefs.Preferences;
 
 import javafx.scene.Scene;
@@ -7,46 +9,77 @@ import javafx.scene.Scene;
 public final class ThemeManager {
     public enum Theme { LIGHT, DARK }
 
+    public record ThemeEntry(String id, String label, Theme base, String cssPath) {}
+
     private static final String PREF_NODE = "io.github.guillermo_david.pildoras";
     private static final String PREF_KEY  = "theme";
-    private static String BASE, LIGHT, DARK;
+    private static String BASE;
+    private static final Map<String, ThemeEntry> THEMES = new LinkedHashMap<>();
 
     private ThemeManager() {}
 
-    /** Registra las hojas de estilo (llamar una vez al arrancar). */
-    public static void initStyles(String base, String light, String dark) {
-        BASE = base; LIGHT = light; DARK = dark;
+    public static void initStyles(String baseCss, Map<String, String> themeCssPaths) {
+        BASE = baseCss;
+        THEMES.clear();
+        THEMES.put("light",          new ThemeEntry("light",          "Claro",            Theme.LIGHT, themeCssPaths.get("light")));
+        THEMES.put("dark",           new ThemeEntry("dark",           "Oscuro",           Theme.DARK,  themeCssPaths.get("dark")));
+        THEMES.put("nord-light",     new ThemeEntry("nord-light",     "Nord Light",       Theme.LIGHT, themeCssPaths.get("nord-light")));
+        THEMES.put("nord-dark",      new ThemeEntry("nord-dark",      "Nord Dark",        Theme.DARK,  themeCssPaths.get("nord-dark")));
+        THEMES.put("dracula",        new ThemeEntry("dracula",        "Dracula",          Theme.DARK,  themeCssPaths.get("dracula")));
+        THEMES.put("solarized-light", new ThemeEntry("solarized-light","Solarized Light", Theme.LIGHT, themeCssPaths.get("solarized-light")));
+        THEMES.put("solarized-dark", new ThemeEntry("solarized-dark", "Solarized Dark",   Theme.DARK,  themeCssPaths.get("solarized-dark")));
     }
 
-    /** Lee el tema guardado (por defecto LIGHT). */
+    public static Map<String, ThemeEntry> getThemes() {
+        return THEMES;
+    }
+
+    public static String loadId() {
+        var p = Preferences.userRoot().node(PREF_NODE);
+        String v = p.get(PREF_KEY, "light");
+        if ("DARK".equalsIgnoreCase(v)) return "dark";
+        if ("LIGHT".equalsIgnoreCase(v)) return "light";
+        return THEMES.containsKey(v) ? v : "light";
+    }
+
     public static Theme load() {
-        var p = Preferences.userRoot().node(PREF_NODE);
-        String v = p.get(PREF_KEY, "LIGHT");
-        return "DARK".equalsIgnoreCase(v) ? Theme.DARK : Theme.LIGHT;
+        var entry = THEMES.get(loadId());
+        return entry != null ? entry.base() : Theme.LIGHT;
     }
 
-    /** Guarda el tema. */
-    public static void save(Theme t) {
+    public static void save(String themeId) {
         var p = Preferences.userRoot().node(PREF_NODE);
-        p.put(PREF_KEY, t.name());
+        p.put(PREF_KEY, themeId);
     }
 
-    /** Aplica el tema a la escena. */
-    public static void apply(Scene scene, Theme t) {
-        if (BASE == null || LIGHT == null || DARK == null) return; // por si acaso
+    public static void apply(Scene scene, String themeId) {
+        if (BASE == null) return;
+        var entry = THEMES.get(themeId);
+        if (entry == null) entry = THEMES.get("light");
         var ss = scene.getStylesheets();
-        ss.setAll(BASE, t == Theme.DARK ? DARK : LIGHT);
-
-        // Pseudo-clase para CSS condicional, útil si quieres selectores .dark:
+        ss.setAll(BASE, entry.cssPath());
         var root = scene.getRoot();
-        root.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("dark"), t == Theme.DARK);
+        root.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("dark"), entry.base() == Theme.DARK);
     }
 
-    /** Alterna y guarda. Devuelve el nuevo tema. */
+    public static void apply(Scene scene, Theme t) {
+        apply(scene, t == Theme.DARK ? "dark" : "light");
+    }
+
     public static Theme toggle(Scene scene) {
-        Theme next = (load() == Theme.DARK) ? Theme.LIGHT : Theme.DARK;
+        String current = loadId();
+        String next = (load() == Theme.DARK) ? "light" : "dark";
         apply(scene, next);
         save(next);
-        return next;
+        return THEMES.get(next).base();
+    }
+
+    /** @deprecated Use initStyles(String, Map) instead */
+    @Deprecated
+    public static void initStyles(String base, String light, String dark) {
+        BASE = base;
+        THEMES.clear();
+        THEMES.put("light", new ThemeEntry("light", "Claro", Theme.LIGHT, light));
+        THEMES.put("dark",  new ThemeEntry("dark",  "Oscuro", Theme.DARK,  dark));
     }
 }
