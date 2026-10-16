@@ -74,7 +74,7 @@
             <!-- Panel lateral de tags (derecha) -->
             <VBox fx:id="tagSidebar" styleClass="tag-sidebar" prefWidth="200" minWidth="0" maxWidth="200">
                 <HBox alignment="CENTER_LEFT" styleClass="tag-sidebar-header">
-                    <padding><Insets top="8" right="10" bottom="8" left="10"/></padding>
+                    <padding><Insets top="4" right="10" bottom="4" left="10"/></padding>
                     <Label text="Tags" styleClass="tag-sidebar-title"/>
                     <Pane HBox.hgrow="ALWAYS"/>
                     <Button fx:id="btnToggleSidebar" text="▶" styleClass="icon-btn sidebar-toggle"/>

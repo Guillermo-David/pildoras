@@ -154,9 +154,30 @@
 	-fx-border-color: #f6b800;
 }
 
-.icon-btn.btn-big .ikonli-font-icon {
-	-fx-icon-size: 24px;
-	-fx-padding: 0 25 0 0 !important;
+/* ---------- Botón primario accent ---------- */
+.btn-accent {
+	-fx-background-color: -c-accent;
+	-fx-text-fill: white;
+	-fx-font-size: 12px;
+	-fx-font-weight: 600;
+	-fx-padding: 6 14 6 10;
+	-fx-background-radius: 8;
+	-fx-border-radius: 8;
+	-fx-border-color: transparent;
+	-fx-cursor: hand;
+	-fx-graphic-text-gap: 6;
+	-fx-content-display: LEFT;
+	-fx-effect: dropshadow(gaussian, -c-shadow, 3, 0.15, 0, 1);
+}
+.btn-accent:hover {
+	-fx-background-color: derive(-c-accent, -12%);
+}
+.btn-accent:pressed {
+	-fx-background-color: derive(-c-accent, -20%);
+	-fx-effect: none;
+}
+.btn-accent .ikonli-font-icon {
+	-fx-icon-color: white;
 }
 
 .toggle-button.toggle-btn:selected .ikonli-font-icon,
@@ -494,10 +515,11 @@
     -fx-background-color: transparent;
     -fx-text-fill: -c-text;
     -fx-font-size: 12px;
-    -fx-padding: 6 12;
+    -fx-padding: 6 12 6 10;
     -fx-alignment: CENTER_LEFT;
     -fx-background-radius: 0;
-    -fx-border-width: 0;
+    -fx-border-width: 0 0 0 3;
+    -fx-border-color: transparent;
     -fx-cursor: hand;
 }
 .tag-sidebar-item:hover {
@@ -505,11 +527,14 @@
 }
 
 .tag-sidebar-selected {
-    -fx-background-color: -c-row-selected;
+    -fx-background-color: -c-accent-soft;
+    -fx-border-color: -c-accent;
+    -fx-border-width: 0 0 0 3;
     -fx-font-weight: bold;
+    -fx-text-fill: -c-accent;
 }
 .tag-sidebar-selected:hover {
-    -fx-background-color: derive(-c-row-selected, -5%);
+    -fx-background-color: derive(-c-accent-soft, -5%);
 }
 
 /* Iconos de exportación, heredan color del tema */
@@ -592,10 +617,11 @@
 	-fx-alignment: CENTER;
 }
 
-/* Neutraliza el “selected” por defecto de ToggleButton para icon-btn */
+/* ToggleButton icon-btn seleccionado: acento sutil */
 .toggle-button.icon-btn:selected {
-	-fx-background-color: transparent;
-	-fx-border-color: transparent;
+	-fx-background-color: -c-accent-soft;
+	-fx-border-color: -c-accent;
+	-fx-border-width: 1;
 }
 
 /* Hover consistente (ya lo tienes, lo recalco para toggle) */
@@ -611,10 +637,9 @@
 }
 
 /* ====== Comportamiento específico ====== */
-/* AND/OR: nunca dorado al seleccionar */
+/* AND/OR: icono accent al seleccionar */
 .andor-btn:selected .ikonli-font-icon {
-	-fx-icon-color: -fx-text-base-color;
-	/* se queda neutro */
+	-fx-icon-color: -c-accent;
 }
 
 /* Favoritas: si quieres mantener dorado al seleccionar, activa esto */
@@ -623,11 +648,8 @@
 }
 
 /* Si NO quieres dorado tampoco en favoritas, comenta el bloque de arriba. */
-.andor-btn:selected,
 .andor-btn:selected .ikonli-font-icon {
-	-fx-background-color: transparent;
-	-fx-border-color: transparent;
-	-fx-icon-color: -fx-text-base-color;
+	-fx-icon-color: -c-accent;
 }
 
 /* Botón redondo con solo icono dentro */
@@ -667,20 +689,24 @@
 	/* ajusta a 12–14 si lo quieres aún más pequeño */
 }
 
-/* Que al seleccionar NO cambie a “dorado” ni nada raro */
+/* Al seleccionar: acento sutil */
 .round-toggle:selected {
-	-fx-background-color: transparent;
-	-fx-border-color: -fx-box-border;
+	-fx-background-color: -c-accent-soft;
+	-fx-border-color: -c-accent;
 }
 
-/* Favoritas: icono dorado cuando está activo */
+/* Favoritas: fondo dorado suave + icono dorado */
+.fav-toggle:selected {
+	-fx-background-color: rgba(246, 184, 0, 0.12);
+	-fx-border-color: #f6b800;
+}
 .fav-toggle:selected .ikonli-font-icon {
 	-fx-icon-color: #f6b800;
 }
 
-/* AND/OR: al seleccionar, NO cambies de color (mantenlo neutro) */
+/* AND/OR: al seleccionar, icono accent */
 .andor-toggle:selected .ikonli-font-icon {
-	-fx-icon-color: -fx-text-base-color;
+	-fx-icon-color: -c-accent;
 }
 
 .muted-icon {
@@ -734,5 +760,57 @@
 }
 .context-menu .menu-item .ikonli-font-icon {
   -fx-icon-size: 14;
+}
+
+/* ---------- Botones de paginación ---------- */
+.btn-pagination {
+    -fx-background-color: -c-bg;
+    -fx-border-color: -c-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 4 12;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-text-fill: -c-text;
+}
+.btn-pagination:hover {
+    -fx-background-color: -c-accent-soft;
+    -fx-border-color: -c-accent;
+    -fx-text-fill: -c-accent;
+}
+.btn-pagination:disabled {
+    -fx-opacity: 0.4;
+}
+
+/* ---------- Fila seleccionada con acento ---------- */
+.table-row-cell:filled:selected,
+.table-row-cell:filled:selected:hover {
+    -fx-background-color: -c-accent-soft;
+}
+
+/* ---------- Cabecera tag-sidebar compacta ---------- */
+.tag-sidebar-header {
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
+}
+
+/* ---------- MenuButton borradores ---------- */
+.menu-button.icon-btn {
+    -fx-border-color: -c-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+/* ---------- Round-toggle con acento activo ---------- */
+.round-toggle:selected {
+    -fx-border-color: -c-accent;
+    -fx-background-color: -c-accent-soft;
+}
+
+/* Eye toggle (ocultas) */
+.eye-toggle:selected .ikonli-font-icon {
+    -fx-icon-color: -c-accent;
 }
 

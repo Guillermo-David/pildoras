@@ -5,11 +5,11 @@
 	-c-text: #e6edf3;
 	-c-text-muted: #9ea7b3;
 	-c-border: #2d333b;
-	-c-accent: #8ab4f8;
-	-c-row-hover: #1a1f27;
-	-c-row-selected: #0b2942;
+	-c-accent: #7b93f5;
+	-c-accent-soft: rgba(123, 147, 245, 0.12);
+	-c-row-hover: #1a1f2d;
+	-c-row-selected: #1b254a;
 	-c-input-bg: #141922;
-	/* NO negro puro; legible */
 	-c-input-border: #2b3038;
 	-c-shadow: rgba(0, 0, 0, 0.55);
 }
@@ -100,10 +100,9 @@
 
 /* Botón por defecto (Aceptar) – que destaque */
 .root {
-  /* si no tienes ya un accent definido en el dark */
-  -fx-accent: #3b82f6;                        /* azul accesible */
-  -fx-focus-color: rgba(59,130,246,0.9);
-  -fx-faint-focus-color: rgba(59,130,246,0.25);
+  -fx-accent: -c-accent;
+  -fx-focus-color: rgba(123, 147, 245, 0.9);
+  -fx-faint-focus-color: rgba(123, 147, 245, 0.25);
 }
 .dialog-pane .button-bar .button:default {
   -fx-text-fill: white;

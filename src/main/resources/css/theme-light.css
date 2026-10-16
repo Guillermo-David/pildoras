@@ -1,13 +1,14 @@
 /* Paleta */
 .root {
 	-c-bg: #ffffff;
-	-c-bg-subtle: #f7f7f7;
+	-c-bg-subtle: #f8f9fb;
 	-c-text: #1f2328;
 	-c-text-muted: #6e7781;
 	-c-border: #d0d7de;
-	-c-accent: #0b57d0;
-	-c-row-hover: #f0f3f6;
-	-c-row-selected: #e8f0fe;
+	-c-accent: #4f6bed;
+	-c-accent-soft: rgba(79, 107, 237, 0.08);
+	-c-row-hover: #f0f4ff;
+	-c-row-selected: #e6ecfd;
 	-c-input-bg: #ffffff;
 	-c-input-border: #c9d1d9;
 	-c-shadow: rgba(0, 0, 0, 0.10);
@@ -18,10 +19,11 @@
 	-fx-base: -c-bg;
 	-fx-background: -c-bg;
 	-fx-accent: -c-accent;
+	-fx-focus-color: rgba(79, 107, 237, 0.85);
+	-fx-faint-focus-color: rgba(79, 107, 237, 0.2);
 	-fx-text-base-color: -c-text;
 	-fx-text-inner-color: -c-text;
 	-fx-control-inner-background: -c-bg;
-	/* fondo filas table */
 	-fx-cell-hover-color: -c-row-hover;
 	-fx-box-border: -c-border;
 	-gdg-icon-color: #1f2328;

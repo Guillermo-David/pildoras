@@ -788,14 +788,15 @@ public class ListadoPildorasController {
 			}
 		}
 
-		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.FOLDER_PLUS);
+		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.PLUS);
+		nuevaIcon.setIconSize(14);
 		btnNueva.setGraphic(nuevaIcon);
-		btnNueva.setText("");
-		btnNueva.setTooltip(new Tooltip("Nueva (Ctrl+N)"));
+		btnNueva.setText("Nueva");
+		btnNueva.setTooltip(new Tooltip("Nueva píldora (Ctrl+N)"));
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
-		btnNueva.getStyleClass().add("icon-btn");
-		btnNueva.getStyleClass().add("btn-big");
+		btnNueva.getStyleClass().add("btn-accent");
 
+		btnAnterior.getStyleClass().add("btn-pagination");
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
 		btnAnterior.setOnAction(e -> {
 			if (paginaActual > 1) {
@@ -804,6 +805,7 @@ public class ListadoPildorasController {
 			}
 		});
 
+		btnSiguiente.getStyleClass().add("btn-pagination");
 		btnSiguiente.setTooltip(new Tooltip("Página siguiente (Ctrl+→ / PageDown)"));
 		btnSiguiente.setOnAction(e -> {
 			if (paginaActual < totalPaginas) {
