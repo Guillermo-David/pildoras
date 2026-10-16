@@ -1,6 +1,7 @@
 package io.github.guillermo_david.controller;
 
 import java.util.function.BooleanSupplier;
+import java.util.prefs.Preferences;
 
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -13,23 +14,28 @@ import javafx.scene.layout.VBox;
 
 class TagSidebarHelper {
 
+    private static final String PREF_SIDEBAR_COLLAPSED = "sidebarCollapsed";
+
     private final VBox tagSidebar;
     private final VBox tagListBox;
     private final Button btnToggleSidebar;
     private final Runnable resetPageAndRefresh;
     private final BooleanSupplier includeHidden;
+    private final Preferences prefs;
 
     private Button allBtn;
     private boolean sidebarCollapsed = false;
     private String selectedSidebarTag = null;
 
     TagSidebarHelper(VBox tagSidebar, VBox tagListBox, Button btnToggleSidebar,
-                     Runnable resetPageAndRefresh, BooleanSupplier includeHidden) {
+                     Runnable resetPageAndRefresh, BooleanSupplier includeHidden,
+                     Preferences prefs) {
         this.tagSidebar = tagSidebar;
         this.tagListBox = tagListBox;
         this.btnToggleSidebar = btnToggleSidebar;
         this.resetPageAndRefresh = resetPageAndRefresh;
         this.includeHidden = includeHidden;
+        this.prefs = prefs;
     }
 
     String getSelectedTag() {
@@ -57,6 +63,10 @@ class TagSidebarHelper {
         tagSidebar.getChildren().add(1, allBtn);
 
         refresh();
+
+        if (prefs.getBoolean(PREF_SIDEBAR_COLLAPSED, false)) {
+            toggleSidebar();
+        }
     }
 
     void refresh() {
@@ -91,6 +101,7 @@ class TagSidebarHelper {
 
     private void toggleSidebar() {
         sidebarCollapsed = !sidebarCollapsed;
+        prefs.putBoolean(PREF_SIDEBAR_COLLAPSED, sidebarCollapsed);
         Node header = tagSidebar.getChildren().get(0);
         if (sidebarCollapsed) {
             header.setVisible(false);

@@ -6,11 +6,24 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.github.guillermo_david.db.DatabaseHelper;
 import io.github.guillermo_david.model.Tag;
 
 public class TagDao {
+
+    private static final long CACHE_TTL_MS = 5_000;
+    private static volatile long cacheTimestamp;
+    private static volatile List<String[]> cachedCounts;
+    private static volatile Map<Integer, List<Tag>> cachedByPildora = new ConcurrentHashMap<>();
+
+    public static void invalidateCache() {
+        cacheTimestamp = 0;
+        cachedCounts = null;
+        cachedByPildora.clear();
+    }
 
 	public Tag findOrCreate(String input) {
 	    String nombre = normalize(input);
@@ -90,6 +103,9 @@ public class TagDao {
 	}
 
     public List<Tag> findByPildoraId(int pildoraId) {
+        List<Tag> cached = cachedByPildora.get(pildoraId);
+        if (cached != null && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS) return cached;
+
         List<Tag> lista = new ArrayList<>();
         String sql = """
             SELECT t.id, t.nombre
@@ -109,6 +125,7 @@ public class TagDao {
             e.printStackTrace();
         }
 
+        cachedByPildora.put(pildoraId, lista);
         return lista;
     }
 
@@ -134,6 +151,8 @@ public class TagDao {
     }
 
     public List<String[]> listAllWithCount(boolean includeHidden) {
+        if (cachedCounts != null && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS) return cachedCounts;
+
         List<String[]> list = new ArrayList<>();
         String sql;
         if (includeHidden) {
@@ -163,6 +182,8 @@ public class TagDao {
                 list.add(new String[]{ rs.getString("nombre"), String.valueOf(rs.getInt("cnt")) });
             }
         } catch (SQLException e) { e.printStackTrace(); }
+        cachedCounts = list;
+        cacheTimestamp = System.currentTimeMillis();
         return list;
     }
 

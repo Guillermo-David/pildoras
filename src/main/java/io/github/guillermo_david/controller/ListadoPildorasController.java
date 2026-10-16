@@ -113,6 +113,8 @@ public class ListadoPildorasController {
 	private static final Preferences PREFS = Preferences.userNodeForPackage(ListadoPildorasController.class);
 	private static final String PREF_SOLO_FAV = "soloFavoritas";
 	private static final String PREF_AND_OR = "filtroAndOr";
+	private static final String PREF_SHOW_HIDDEN = "mostrarOcultas";
+	private static final String PREF_SIDEBAR_COLLAPSED = "sidebarCollapsed";
 
 	private static final String PREF_FONT_FAMILY = "uiFontFamily";
 	private static final String PREF_FONT_SIZE = "uiFontSize"; // "small" | "normal" | "large"
@@ -166,6 +168,11 @@ public class ListadoPildorasController {
 		setColAcciones();
 		setBotones();
 
+		// Restore saved toggle states
+		btnSoloFav.setSelected(PREFS.getBoolean(PREF_SOLO_FAV, false));
+		btnAndOr.setSelected(PREFS.getBoolean(PREF_AND_OR, false));
+		mostrarOcultas = PREFS.getBoolean(PREF_SHOW_HIDDEN, false);
+
 		settingsHelper = new SettingsMenuHelper(root, security, btnSettings, PREFS,
 				PREF_FONT_FAMILY, PREF_FONT_SIZE, DEF_FONT_FAMILY, DEF_FONT_SIZE,
 				this::ensureUnlockedWithRetries, this::refrescarTabla,
@@ -184,7 +191,7 @@ public class ListadoPildorasController {
 		// Panel lateral de tags
 		tagSidebarHelper = new TagSidebarHelper(tagSidebar, tagListBox, btnToggleSidebar,
 				() -> { paginaActual = 1; refrescarTabla(); },
-				() -> mostrarOcultas);
+				() -> mostrarOcultas, PREFS);
 		tagSidebarHelper.init();
 
 		// Barra de título custom
@@ -752,8 +759,11 @@ public class ListadoPildorasController {
 		btnOcultas.setGraphic(eyeIcon);
 		btnOcultas.setText(null);
 		btnOcultas.setTooltip(new Tooltip("Mostrar/ocultar archivadas"));
+		btnOcultas.setSelected(mostrarOcultas);
+		eyeIcon.setIconCode(mostrarOcultas ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH);
 		btnOcultas.selectedProperty().addListener((obs, old, sel) -> {
 			mostrarOcultas = sel;
+			PREFS.putBoolean(PREF_SHOW_HIDDEN, sel);
 			eyeIcon.setIconCode(sel ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH);
 			paginaActual = 1;
 			refrescarTabla();
@@ -1311,6 +1321,7 @@ public class ListadoPildorasController {
 	private boolean refreshingSidebar = false;
 
 	private void refrescarTabla() {
+		TagDao.invalidateCache();
 		String texto = txtFiltroTexto.getText().trim();
 		String tags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTag() : null;
 

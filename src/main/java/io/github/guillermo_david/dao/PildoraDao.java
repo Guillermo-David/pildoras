@@ -312,8 +312,7 @@ public class PildoraDao {
             LIMIT ?
             """;
         List<Pildora> out = new java.util.ArrayList<>();
-        try (var cx = DatabaseHelper.getInstance().getConnection();
-             var ps = cx.prepareStatement(sql)) {
+        try (var ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
             String like = (q == null || q.isBlank()) ? "" : "%" + q.trim() + "%";
             ps.setString(1, q);
             ps.setString(2, q);
