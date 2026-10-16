@@ -66,7 +66,7 @@ public class MainApp extends Application{
 	    ThemeManager.initStyles(base, themes);
 
 	    FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("/fxml/listado-pildoras.fxml"));
-	    Scene scene = new Scene(fxmlLoader.load(), 1280, 837);
+	    Scene scene = new Scene(fxmlLoader.load(), 1280, 850);
 
 	    ThemeManager.apply(scene, ThemeManager.loadId());
 

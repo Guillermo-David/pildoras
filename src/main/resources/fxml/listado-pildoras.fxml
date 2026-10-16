@@ -83,11 +83,11 @@
 	</center>
 
 	<bottom>
-	    <VBox spacing="6">
+	    <VBox spacing="2">
 	        <!-- Paginación -->
 	        <HBox fx:id="paginationBox" alignment="CENTER" spacing="6">
 	            <padding>
-	                <Insets top="8" right="10" bottom="0" left="10"/>
+	                <Insets top="4" right="10" bottom="0" left="10"/>
 	            </padding>
 	            <Button fx:id="btnAnterior"/>
 	            <Label fx:id="lblPagina" styleClass="pagination-label"/>
@@ -97,7 +97,7 @@
 	        <!-- Barra de estado -->
 	        <HBox fx:id="statusBar" alignment="CENTER" spacing="8" styleClass="status-bar">
 	            <padding>
-	                <Insets top="10" right="12" bottom="12" left="12"/>
+	                <Insets top="6" right="12" bottom="8" left="12"/>
 	            </padding>
 	            <Label fx:id="lblStatus" id="lblStatus" text="" maxWidth="Infinity"/>
 	        </HBox>
