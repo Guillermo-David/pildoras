@@ -1311,20 +1311,15 @@ public class ListadoPildorasController {
 		tagTextCache = map;
 		table.setItems(FXCollections.observableArrayList(todas));
 
-		int rowCount = todas.size();
-		double cellHeight = table.getFixedCellSize();
 		javafx.application.Platform.runLater(() -> {
-			double headerH = 0;
-			var headerNode = table.lookup(".column-header-background");
-			if (headerNode != null) {
-				headerH = headerNode.getBoundsInLocal().getHeight();
+			var vbar = table.lookup(".scroll-bar:vertical");
+			if (vbar instanceof javafx.scene.control.ScrollBar sb) {
+				boolean needsScroll = sb.getMax() > 0 && sb.getVisibleAmount() < sb.getMax();
+				sb.setDisable(!needsScroll);
+				if (!needsScroll) {
+					sb.setValue(0);
+				}
 			}
-			if (headerH <= 0) headerH = 30;
-			var insets = table.getInsets();
-			double insetsV = (insets != null) ? insets.getTop() + insets.getBottom() : 0;
-			double exact = headerH + rowCount * cellHeight + insetsV;
-			table.setMaxHeight(exact);
-			table.setPrefHeight(exact);
 		});
 
 		boolean singlePage = (tamanioPagina == Integer.MAX_VALUE || totalPaginas <= 1);
