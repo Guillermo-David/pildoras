@@ -14,6 +14,7 @@ import java.util.List;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import io.github.guillermo_david.dao.SqlHelper;
 import io.github.guillermo_david.db.DatabaseHelper;
 
 public class BackupService {
@@ -194,26 +195,17 @@ public class BackupService {
 
     private static String esc(String val) {
         if (val == null || val.isEmpty()) return "NULL";
-        return "'" + val.replace("'", "''") + "'";
+        return SqlHelper.esc(val);
     }
 
     private static String hexToBase64(String hex) {
-        if (hex == null || hex.isBlank()) return null;
-        int len = hex.length();
-        byte[] bytes = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            bytes[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
-                    + Character.digit(hex.charAt(i + 1), 16));
-        }
+        byte[] bytes = SqlHelper.hexToBytes(hex);
+        if (bytes == null) return null;
         return Base64.getEncoder().encodeToString(bytes);
     }
 
     private static String base64ToEscBlob(String b64) {
         if (b64 == null) return "NULL";
-        byte[] bytes = Base64.getDecoder().decode(b64);
-        StringBuilder sb = new StringBuilder("X'");
-        for (byte b : bytes) sb.append(String.format("%02x", b));
-        sb.append('\'');
-        return sb.toString();
+        return SqlHelper.escBlob(Base64.getDecoder().decode(b64));
     }
 }

@@ -86,8 +86,7 @@ public class TagDao {
 	}
 
 	private static String esc(String val) {
-	    if (val == null) return "NULL";
-	    return "'" + val.replace("'", "''") + "'";
+	    return SqlHelper.esc(val);
 	}
 
     public List<Tag> findByPildoraId(int pildoraId) {

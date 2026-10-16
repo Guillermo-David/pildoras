@@ -4,8 +4,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import static io.github.guillermo_david.dao.SqlHelper.*;
+
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,8 +16,6 @@ import io.github.guillermo_david.db.DatabaseHelper;
 import io.github.guillermo_david.model.Pildora;
 
 public class PildoraDao {
-
-	private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 	public void insertar(Pildora p) {
 		if (DatabaseHelper.getInstance().isUsingTurso()) {
@@ -363,7 +362,7 @@ public class PildoraDao {
 			else
 				ps.setString(2, p.getDescripcion());
 
-			ps.setString(3, LocalDateTime.now().format(FORMATTER));
+			ps.setString(3, LocalDateTime.now().format(DATETIME_FMT));
 			ps.setInt(4, p.isFavorita() ? 1 : 0);
 			ps.setInt(5, p.isPinned() ? 1 : 0);
 
@@ -389,7 +388,7 @@ public class PildoraDao {
 		String desc = p.isProtegida() ? "NULL" : esc(p.getDescripcion());
 		String cipher = p.isProtegida() ? escBlob(p.getDescripcionCipher()) : "NULL";
 		String iv = p.isProtegida() ? escBlob(p.getDescripcionIv()) : "NULL";
-		String ts = LocalDateTime.now().format(FORMATTER);
+		String ts = LocalDateTime.now().format(DATETIME_FMT);
 		String sql = "UPDATE pildoras SET titulo=" + esc(p.getTitulo())
 				+ ", descripcion=" + desc
 				+ ", fecha_actualizacion=" + esc(ts)
@@ -448,39 +447,6 @@ public class PildoraDao {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-	}
-
-	private static LocalDateTime parseDateTime(String s) {
-		if (s == null || s.isBlank()) return null;
-		try {
-			return LocalDateTime.parse(s, FORMATTER);
-		} catch (Exception e) {
-			return null;
-		}
-	}
-
-	private static byte[] hexToBytes(String hex) {
-		if (hex == null || hex.isBlank()) return null;
-		int len = hex.length();
-		byte[] out = new byte[len / 2];
-		for (int i = 0; i < len; i += 2) {
-			out[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
-					+ Character.digit(hex.charAt(i + 1), 16));
-		}
-		return out;
-	}
-
-	private static String esc(String val) {
-		if (val == null) return "NULL";
-		return "'" + val.replace("'", "''") + "'";
-	}
-
-	private static String escBlob(byte[] val) {
-		if (val == null) return "NULL";
-		StringBuilder sb = new StringBuilder("X'");
-		for (byte b : val) sb.append(String.format("%02x", b));
-		sb.append('\'');
-		return sb.toString();
 	}
 
 }

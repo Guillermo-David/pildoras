@@ -4,8 +4,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import static io.github.guillermo_david.dao.SqlHelper.*;
+
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,7 +14,6 @@ import io.github.guillermo_david.db.DatabaseHelper;
 import io.github.guillermo_david.model.Draft;
 
 public class DraftDao {
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public void insertar(Draft d) {
         if (DatabaseHelper.getInstance().isUsingTurso()) {
@@ -94,7 +94,7 @@ public class DraftDao {
                 ps.setNull(4, java.sql.Types.BLOB);
             }
             ps.setInt(5, d.isProtegida() ? 1 : 0);
-            ps.setString(6, LocalDateTime.now().format(FMT));
+            ps.setString(6, LocalDateTime.now().format(DATETIME_FMT));
             ps.setInt(7, d.getId());
 
             ps.execute();
@@ -107,7 +107,7 @@ public class DraftDao {
         String contenido = d.isProtegida() ? "NULL" : esc(d.getContenido());
         String cipher = d.isProtegida() ? escBlob(d.getContenidoCipher()) : "NULL";
         String iv = d.isProtegida() ? escBlob(d.getContenidoIv()) : "NULL";
-        String ts = LocalDateTime.now().format(FMT);
+        String ts = LocalDateTime.now().format(DATETIME_FMT);
         String sql = "UPDATE drafts SET titulo=" + esc(d.getTitulo())
                 + ", contenido=" + contenido
                 + ", contenido_cipher=" + cipher
@@ -180,19 +180,6 @@ public class DraftDao {
         }
     }
 
-    private static String esc(String val) {
-        if (val == null) return "NULL";
-        return "'" + val.replace("'", "''") + "'";
-    }
-
-    private static String escBlob(byte[] val) {
-        if (val == null) return "NULL";
-        StringBuilder sb = new StringBuilder("X'");
-        for (byte b : val) sb.append(String.format("%02x", b));
-        sb.append('\'');
-        return sb.toString();
-    }
-
     private static Draft map(ResultSet rs) throws SQLException {
         return new Draft(
             rs.getInt("id"),
@@ -206,23 +193,4 @@ public class DraftDao {
         );
     }
 
-    private static LocalDateTime parseDateTime(String s) {
-        if (s == null || s.isBlank()) return null;
-        try {
-            return LocalDateTime.parse(s.replace('T', ' '), FMT);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static byte[] hexToBytes(String hex) {
-        if (hex == null || hex.isBlank()) return null;
-        int len = hex.length();
-        byte[] out = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            out[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
-                    + Character.digit(hex.charAt(i + 1), 16));
-        }
-        return out;
-    }
 }
