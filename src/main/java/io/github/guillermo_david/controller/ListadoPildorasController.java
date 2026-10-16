@@ -1313,10 +1313,20 @@ public class ListadoPildorasController {
 
 		int rowCount = todas.size();
 		double cellHeight = table.getFixedCellSize();
-		double exactHeight = 28 + rowCount * cellHeight + 2;
-		table.setPrefHeight(exactHeight);
-		table.setMinHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
-		table.setMaxHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+		javafx.application.Platform.runLater(() -> {
+			double headerH = 0;
+			var headerNode = table.lookup(".column-header-background");
+			if (headerNode != null) {
+				headerH = headerNode.getBoundsInLocal().getHeight();
+			}
+			if (headerH <= 0) headerH = 30;
+			var insets = table.getInsets();
+			double insetsV = (insets != null) ? insets.getTop() + insets.getBottom() : 0;
+			double exact = headerH + rowCount * cellHeight + insetsV;
+			table.setPrefHeight(exact);
+			table.setMinHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+			table.setMaxHeight(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+		});
 
 		boolean singlePage = (tamanioPagina == Integer.MAX_VALUE || totalPaginas <= 1);
 		if (total == 0) {
