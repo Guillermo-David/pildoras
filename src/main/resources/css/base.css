@@ -180,6 +180,25 @@
 	-fx-icon-color: white;
 }
 
+/* SplitMenuButton accent: flecha integrada */
+.split-menu-button.btn-accent > .arrow-button {
+	-fx-background-color: derive(-c-accent, -8%);
+	-fx-background-radius: 0 8 8 0;
+	-fx-padding: 6 8;
+	-fx-border-color: transparent;
+	-fx-border-width: 0 0 0 1;
+}
+.split-menu-button.btn-accent > .arrow-button > .arrow {
+	-fx-background-color: white;
+	-fx-shape: "M 0 0 L 4 4 L 8 0 Z";
+}
+.split-menu-button.btn-accent > .arrow-button:hover {
+	-fx-background-color: derive(-c-accent, -18%);
+}
+.split-menu-button.btn-accent > .label {
+	-fx-background-radius: 8 0 0 8;
+}
+
 .toggle-button.toggle-btn:selected .ikonli-font-icon,
 .toggle-button.toggle-btn .star-icon.star-fav {
 	-fx-icon-color: #f6b800;

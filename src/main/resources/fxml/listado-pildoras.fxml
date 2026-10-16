@@ -49,8 +49,7 @@
 		    <!--<Pane HBox.hgrow="ALWAYS"/>-->
 		
 			<HBox spacing="10" alignment="CENTER_RIGHT">
-				<MenuButton fx:id="btnBorradores" popupSide="BOTTOM" styleClass="icon-btn"/>
-			    <Button fx:id="btnNueva"/>
+			    <SplitMenuButton fx:id="btnNueva"/>
 		    </HBox>
 		
 		    <Separator orientation="VERTICAL" styleClass="v-sep"/>

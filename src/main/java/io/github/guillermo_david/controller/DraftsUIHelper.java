@@ -11,11 +11,10 @@ import io.github.guillermo_david.security.SecurityService;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.Tooltip;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
@@ -27,52 +26,50 @@ class DraftsUIHelper {
 
     private final BorderPane root;
     private final SecurityService security;
-    private final MenuButton btnBorradores;
+    private final SplitMenuButton splitBtn;
     private final Runnable refrescarTabla;
     private final Supplier<Node> centerBackup;
+    private final Runnable nuevaPildora;
 
     private Label draftsBadge;
-    private StackPane draftsIconStack;
 
-    DraftsUIHelper(BorderPane root, SecurityService security, MenuButton btnBorradores,
-                   Runnable refrescarTabla, Supplier<Node> centerBackup) {
+    DraftsUIHelper(BorderPane root, SecurityService security, SplitMenuButton splitBtn,
+                   Runnable refrescarTabla, Supplier<Node> centerBackup, Runnable nuevaPildora) {
         this.root = root;
         this.security = security;
-        this.btnBorradores = btnBorradores;
+        this.splitBtn = splitBtn;
         this.refrescarTabla = refrescarTabla;
         this.centerBackup = centerBackup;
+        this.nuevaPildora = nuevaPildora;
     }
 
     void init() {
-        if (btnBorradores == null) return;
-
-        var eraser = new FontIcon(FontAwesomeSolid.ERASER);
-        eraser.setIconSize(16);
+        if (splitBtn == null) return;
 
         draftsBadge = new Label();
         draftsBadge.getStyleClass().add("badge");
         draftsBadge.setVisible(false);
         draftsBadge.setManaged(false);
 
-        draftsIconStack = new StackPane(eraser, draftsBadge);
-        draftsIconStack.setMinSize(24, 24);
-        draftsIconStack.setPrefSize(24, 24);
-        draftsIconStack.setMaxSize(24, 24);
-
-        StackPane.setAlignment(eraser, Pos.CENTER);
+        // Overlay badge on the existing graphic
+        Node originalGraphic = splitBtn.getGraphic();
+        var stack = new StackPane(originalGraphic, draftsBadge);
+        stack.setMinSize(20, 20);
+        stack.setPrefSize(20, 20);
+        StackPane.setAlignment(originalGraphic, Pos.CENTER);
         StackPane.setAlignment(draftsBadge, Pos.TOP_RIGHT);
         draftsBadge.setTranslateX(8);
         draftsBadge.setTranslateY(-8);
         draftsBadge.setMaxSize(16, 16);
+        splitBtn.setGraphic(stack);
 
-        btnBorradores.setText(null);
-        btnBorradores.setGraphic(draftsIconStack);
-        btnBorradores.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        btnBorradores.setTooltip(new Tooltip("Borradores"));
-        btnBorradores.getStyleClass().addAll("icon-btn");
+        var miNuevaPildora = new MenuItem("Nueva píldora");
+        miNuevaPildora.setGraphic(new FontIcon(FontAwesomeSolid.FILE_MEDICAL));
+        miNuevaPildora.setOnAction(e -> nuevaPildora.run());
 
-        var miNuevo = new MenuItem("Nuevo borrador…");
-        miNuevo.setOnAction(e -> {
+        var miNuevoBorrador = new MenuItem("Nuevo borrador...");
+        miNuevoBorrador.setGraphic(new FontIcon(FontAwesomeSolid.EDIT));
+        miNuevoBorrador.setOnAction(e -> {
             var res = DraftDialogs.showQuickDraftDialog(root, null, null, false);
             if (res == null) return;
 
@@ -91,7 +88,8 @@ class DraftsUIHelper {
             }
         });
 
-        var miBandeja = new MenuItem("Bandeja de borradores…");
+        var miBandeja = new MenuItem("Bandeja de borradores...");
+        miBandeja.setGraphic(new FontIcon(FontAwesomeSolid.INBOX));
         miBandeja.setOnAction(e -> {
             DraftDialogs.showDraftsTray(root,
                     dft -> {
@@ -132,13 +130,17 @@ class DraftsUIHelper {
             refreshBadge();
         });
 
-        btnBorradores.getItems().setAll(miNuevo, miBandeja);
+        splitBtn.getItems().setAll(
+                miNuevaPildora,
+                miNuevoBorrador,
+                new SeparatorMenuItem(),
+                miBandeja);
+
         refreshBadge();
     }
 
     void refreshBadge() {
         int count = new DraftDao().contar();
-        btnBorradores.setTooltip(new Tooltip("Borradores (" + count + ")"));
 
         if (draftsBadge != null) {
             if (count > 0) {

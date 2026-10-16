@@ -48,6 +48,7 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -133,9 +134,10 @@ public class ListadoPildorasController {
 	private Node centerBackup;
 
 	@FXML private BorderPane root;
-	@FXML private Button btnNueva, btnAnterior, btnSiguiente, btnClose;
+	@FXML private SplitMenuButton btnNueva;
+	@FXML private Button btnAnterior, btnSiguiente, btnClose;
 	@FXML private ToggleButton btnAndOr, btnSoloFav;
-	@FXML private MenuButton btnSettings, btnBorradores;
+	@FXML private MenuButton btnSettings;
 	@FXML private HBox paginationBox, statusBar, titleBar, appHeader;
 	@FXML private Label lblPagina, lblStatus;
 	@FXML private TableView<Pildora> table;
@@ -796,6 +798,10 @@ public class ListadoPildorasController {
 		btnNueva.setOnAction(e -> abrirFormularioNueva());
 		btnNueva.getStyleClass().add("btn-accent");
 
+		draftsHelper = new DraftsUIHelper(root, security, btnNueva,
+				this::refrescarTabla, () -> table, this::abrirFormularioNueva);
+		draftsHelper.init();
+
 		btnAnterior.getStyleClass().add("btn-pagination");
 		btnAnterior.setTooltip(new Tooltip("Página anterior (Ctrl+← / PageUp)"));
 		btnAnterior.setOnAction(e -> {
@@ -813,12 +819,6 @@ public class ListadoPildorasController {
 				refrescarTabla();
 			}
 		});
-
-		if (btnBorradores != null) {
-			draftsHelper = new DraftsUIHelper(root, security, btnBorradores,
-					this::refrescarTabla, () -> table);
-			draftsHelper.init();
-		}
 	}
 
 	private void setColTitulo() {
