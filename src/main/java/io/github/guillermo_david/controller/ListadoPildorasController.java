@@ -417,6 +417,7 @@ public class ListadoPildorasController {
 			});
 
 			ContextMenu ctx = new ContextMenu();
+			ctx.getItems().add(new MenuItem("..."));
 
 			ctx.setOnShowing(e -> {
 				ctx.getItems().clear();
