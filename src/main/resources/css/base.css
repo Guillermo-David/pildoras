@@ -891,6 +891,12 @@
     -fx-background-color: -c-accent;
 }
 
+/* ---------- Barra inferior (paginación + estado) ---------- */
+.bottom-bar {
+    -fx-border-color: -c-border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
 /* ---------- Ocultar scrollbar de la tabla ---------- */
 .table-view .scroll-bar:vertical,
 .table-view .scroll-bar:horizontal {

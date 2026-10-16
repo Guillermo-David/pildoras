@@ -83,7 +83,7 @@
 	</center>
 
 	<bottom>
-	    <VBox spacing="2">
+	    <VBox spacing="2" styleClass="bottom-bar">
 	        <!-- Paginación -->
 	        <HBox fx:id="paginationBox" alignment="CENTER" spacing="6">
 	            <padding>
