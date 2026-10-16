@@ -182,6 +182,82 @@ BorderPane (root)
   - DetallePildoraController: lógica de exportación, barra de búsqueda Ctrl+F, renderizado WebView con temas
   - SettingsMenuHelper: diálogos (About, Help, Statistics) a clases propias, configuración de tipografía, gestión de BD/Turso
 
+## Posibles mejoras/cambios
+
+### BUG / FIX
+
+- **Turso SQL injection**: `PildoraDao` (insertarTurso, actualizarTurso), `TagDao.findOrCreateTurso()`, `BackupService.importFromFile()` usan concatenación de strings para construir SQL. Aunque `SqlHelper.esc()` escapa valores, es más seguro migrar a queries parametrizadas.
+- **BackupService import duplica código local/Turso**: Las ramas `if (!turso)` y `else` en `importFromFile()` ejecutan exactamente el mismo SQL de DELETE — código muerto.
+- **EditorPildoraController.mdClearHeading()** llama a `textFormatController.mdH3()` en vez de a un método que elimine headings. Probablemente un bug de copiar/pegar.
+- **EditorPildoraController preview doble-wrapping HTML**: `renderPreviewNow()` genera un HTML completo y luego lo mete dentro de otro `<!doctype html>` con `loadContent(formatted)`. El body se renderiza dos veces anidado.
+- **TagSidebarHelper instancia `new TagDao()` en cada `refresh()`** — debería reutilizar instancia.
+- **PildoraExporter duplica configuración flexmark**: `MarkdownEngine` y `PildoraExporter` tienen cada uno su propia configuración de Parser/HtmlRenderer con extensiones ligeramente distintas (PildoraExporter no incluye TypographicExtension). Deberían compartir una instancia.
+- **ThemeManager.toggle()** solo alterna entre "light" y "dark" aunque hay 7 temas; si el usuario está en "dracula", toggle lo pone en "light" sin pasar por los intermedios.
+
+### CODE QUALITY / REFACTORING
+
+- **Código duplicado `unlockWithFeedback()`**: Existe tanto en `ListadoPildorasController` como en `DetallePildoraController`. Extraer a una clase utilitaria `SecurityUiHelper`.
+- **Código duplicado `humanize()`**: Misma situación: duplicado en `ListadoPildorasController` y `DetallePildoraController`.
+- **Lógica de confirmación de borrado triplicada**: En `ListadoPildorasController` aparece en el menú contextual, en la columna acciones, y en el handler de tecla DELETE. Unificar en un solo método `confirmAndDelete(Pildora)`.
+- **Métodos de exportación duplicados en DetallePildoraController**: `exportMarkdown()`, `exportHtml()`, `exportPdf()` tienen bloques try/catch casi idénticos para selección de fichero, invocación y manejo de error. Extraer a un método genérico `exportWith(extension, exporter)`.
+- **PildoraDao.listarFiltradas()/contarFiltradas()** duplican la construcción de la cláusula WHERE. Extraer a un método privado `buildWhereClause(...)`.
+- **`new TagDao()` creado múltiples veces** en DetallePildoraController en distintos métodos — reutilizar una instancia de campo.
+- **SettingsMenuHelper constructor con 11 parámetros** — considerar un builder o un record de configuración.
+- **DatabaseHelper.initializeDatabase()** es un método de ~190 líneas con migraciones entrelazadas — extraer cada migración a su propio método.
+- **EditorPildoraController** tiene ~30 métodos FXML que solo delegan a `textFormatController` (`mdBold`, `mdItalic`, etc.) — considerar enlazar directamente en FXML con un `TextFormatController` instanciado en FXML o usar un solo método dispatcher.
+
+### UX
+
+- **Búsqueda global / full-text search**: Actualmente solo se filtra por título o contenido con LIKE. Implementar FTS5 de SQLite para búsquedas más rápidas y con ranking de relevancia.
+- **Drag-and-drop de imágenes en el editor**: Permitir arrastrar imágenes al TextArea y convertirlas automáticamente a markdown con base64 o ruta relativa.
+- **Múltiples ventanas / tabs**: Abrir más de una píldora a la vez (en pestañas o ventanas independientes).
+- **Historial de versiones**: Guardar versiones anteriores de las píldoras para poder comparar o restaurar.
+- **Ordenación de tags en sidebar**: Permitir ordenar por nombre o por cantidad de uso.
+- **Filtro por múltiples tags (AND/OR)**: Actualmente el sidebar permite seleccionar múltiples tags pero el filtro parece ser OR. Ofrecer opción AND.
+- **Autocompletado de enlaces internos**: Al escribir `pildora:` en el editor, mostrar sugerencias de píldoras existentes (ya existe `Ctrl+Shift+K` pero podría ser inline).
+- **Indicador visual de píldoras enlazadas**: En la tabla de listado, indicar cuántos backlinks tiene cada píldora.
+- **Preview en tiempo real mejorada**: El SplitPane del editor podría recordar su posición entre sesiones.
+- **Modo "focus" / zen mode**: Ocultar todo excepto el editor para escribir sin distracciones.
+- **Atajos de teclado personalizables via UI**: Actualmente los atajos están hardcodeados. Permitir configurarlos desde Settings.
+- **Contador de palabras/caracteres en editor**: Mostrar estadísticas del texto mientras se escribe.
+- **Papelera de reciclaje**: En vez de borrado definitivo, marcar como eliminada con posibilidad de restaurar.
+
+### FEATURE
+
+- **Importación masiva de markdown**: Importar múltiples ficheros .md de una carpeta, creando una píldora por cada uno.
+- **Exportación masiva**: Exportar todas las píldoras (o las filtradas) a un directorio como .md o HTML.
+- **Grafo de conocimiento**: Visualizar las relaciones entre píldoras (pildora:links) como un grafo interactivo.
+- **Plantillas de píldoras**: Permitir crear templates (ej: "Bug report", "Tutorial", "Cheatsheet") para iniciar una nueva píldora con estructura predefinida.
+- **Sistema de notificaciones/recordatorios**: Asociar recordatorios a píldoras para revisarlas periódicamente (spaced repetition).
+- **Soporte para adjuntos**: Asociar ficheros (PDF, imágenes, etc.) a una píldora.
+- **Compartir via enlace / exportar a gist**: Publicar una píldora como gist de GitHub o enlace temporal.
+- **Sincronización bidireccional Turso mejorada**: Actualmente las variantes Turso son métodos separados; unificar la capa de datos para que el cambio local↔remoto sea transparente.
+- **Soporte LaTeX completo**: La extensión MathJax está comentada en `MarkdownEngine`. Activar y asegurar renderizado en preview y exports.
+- **Modo presentación**: Convertir una píldora (con headings) en slides simples navegables.
+
+### PERFORMANCE
+
+- **Cache de tags con TTL fijo de 5s** (`TagDao.CACHE_TTL_MS`): Podría ser configurable. Además, `listAllWithCount()` no diferencia la cache entre los modos `includeHidden=true` y `includeHidden=false` — puede devolver datos incorrectos.
+- **`preloadForPildoras()` concatena IDs sin PreparedStatement**: Para listas grandes podría ser un problema. Usar parámetros o batches.
+- **MarkdownEngine se instancia repetidamente**: `EditorPildoraController` crea `new MarkdownEngine()` en campo. Podría ser un singleton o compartido si es thread-safe (flexmark parsers son reutilizables).
+- **Paginación**: `contarFiltradas()` ejecuta un COUNT que recorre la misma query que `listarFiltradas()` — en tablas grandes podría beneficiarse de caching del total mientras los filtros no cambien.
+- **DatabaseHelper.reconnect()** cierra y destruye la instancia singleton sin sincronización fina — si otros hilos están usando la conexión anterior podría dar errores.
+
+### SECURITY
+
+- **SecurityService lockout no es escalable a ataques sostenidos**: El exponential backoff crece (`30s * 2^cycles`) pero `lock_cycles` se resetea con un acierto. Considerar añadir un máximo de ciclos o wipe tras N ciclos.
+- **Pregunta de seguridad almacena texto en claro**: `K_Q_TEXT` guarda la pregunta en Preferences sin cifrar. Un atacante con acceso al registro del sistema puede ver las preguntas (aunque no las respuestas).
+- **PBKDF2 200K iteraciones**: Está bien para 2024, pero conviene tener en cuenta Argon2 como alternativa futura para mayor resistencia.
+- **Backup JSON expone cipher blobs en base64**: Si un backup es interceptado, contiene los datos cifrados. Considerar cifrar el fichero de backup completo.
+- **`askPin6()` en EditorPildoraController** usa `TextInputDialog` sin Dialogs.decorate() — no hereda el tema.
+
+### ACCESSIBILITY
+
+- **Sin soporte de accesibilidad declarado**: Los nodos JavaFX no tienen `accessibleText` o `accessibleRole` configurados explícitamente.
+- **Navegación por teclado incompleta**: Algunos flujos (sidebar tags, selector de columnas) podrían no ser navegables solo con teclado.
+- **Contraste de colores**: Los chips de tags generados por `ColorUtil.colorForTag()` no verifican ratio de contraste WCAG.
+- **Tamaño de fuente mínimo**: La configuración de tipografía permite reducir mucho el tamaño sin mínimo.
+
 ## Git
 
 - Rama de desarrollo: `claude/optimistic-fermi-wnwnr9`
