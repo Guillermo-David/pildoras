@@ -1,6 +1,5 @@
 package io.github.guillermo_david.controller;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -14,21 +13,15 @@ import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import io.github.guillermo_david.MainApp;
-import io.github.guillermo_david.dao.DraftDao;
 import io.github.guillermo_david.dao.PildoraDao;
 import io.github.guillermo_david.dao.TagDao;
-import io.github.guillermo_david.importer.MarkdownImportService;
-import io.github.guillermo_david.db.DatabaseHelper;
-import io.github.guillermo_david.db.TursoConfig;
 import io.github.guillermo_david.javafx.Dialogs;
-import io.github.guillermo_david.javafx.DraftDialogs;
 import io.github.guillermo_david.javafx.PinDialogs;
 import io.github.guillermo_david.javafx.StatusBus;
 import io.github.guillermo_david.javafx.ThemeManager;
 import io.github.guillermo_david.javafx.ThemeManager.Theme;
 import io.github.guillermo_david.model.Pildora;
 import io.github.guillermo_david.model.Tag;
-import io.github.guillermo_david.db.TursoMigrationService;
 import io.github.guillermo_david.security.SecurityService;
 import io.github.guillermo_david.util.AppVersion;
 import javafx.animation.PauseTransition;
@@ -36,13 +29,11 @@ import javafx.application.Platform;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -50,32 +41,22 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.CheckMenuItem;
-import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.PasswordField;
-import javafx.scene.control.RadioMenuItem;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -87,7 +68,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -137,8 +117,9 @@ public class ListadoPildorasController {
 
 	private double dragOffsetX, dragOffsetY;
 	
-	private Label draftsBadge;
-	private StackPane draftsIconStack;
+	private SettingsMenuHelper settingsHelper;
+	private TagSidebarHelper tagSidebarHelper;
+	private DraftsUIHelper draftsHelper;
 
 
 	String base = null;
@@ -160,8 +141,6 @@ public class ListadoPildorasController {
 	@FXML private ImageView imgLogo;
 	@FXML private VBox tagSidebar, tagListBox;
 	@FXML private Button btnToggleSidebar;
-	private boolean sidebarCollapsed = false;
-	private String selectedSidebarTag = null;
 	private boolean mostrarOcultas = false;
 
 	@FXML
@@ -180,8 +159,13 @@ public class ListadoPildorasController {
 		setColTags();
 		setColAcciones();
 		setBotones();
-		initSettingsMenu();
-		applyTypographyNow();
+
+		settingsHelper = new SettingsMenuHelper(root, security, btnSettings, PREFS,
+				PREF_FONT_FAMILY, PREF_FONT_SIZE, DEF_FONT_FAMILY, DEF_FONT_SIZE,
+				this::ensureUnlockedWithRetries, this::refrescarTabla,
+				this::setLogoFor, p -> paginaActual = p);
+		settingsHelper.initSettingsMenu();
+		settingsHelper.applyTypographyNow();
 		instalarWheelPagination();
 		cargarTabla(null, null);
 		setLogoFor(ThemeManager.load());
@@ -192,7 +176,9 @@ public class ListadoPildorasController {
 //	    hookLogoToTheme();
 
 		// Panel lateral de tags
-		initTagSidebar();
+		tagSidebarHelper = new TagSidebarHelper(tagSidebar, tagListBox, btnToggleSidebar,
+				txtFiltroTags, () -> { paginaActual = 1; refrescarTabla(); });
+		tagSidebarHelper.init();
 
 		// Barra de título custom
 		initCustomTitleBar();
@@ -734,7 +720,11 @@ public class ListadoPildorasController {
 			}
 		});
 
-		if (btnBorradores != null) initDraftsUI();
+		if (btnBorradores != null) {
+			draftsHelper = new DraftsUIHelper(root, security, btnBorradores,
+					this::refrescarTabla, () -> table);
+			draftsHelper.init();
+		}
 	}
 
 	private void setColTitulo() {
@@ -1257,9 +1247,9 @@ public class ListadoPildorasController {
 		String tags = txtFiltroTags.getText().trim();
 
 		cargarTabla(texto.isEmpty() ? null : texto, tags.isEmpty() ? null : tags);
-		if (tagListBox != null && !refreshingSidebar) {
+		if (tagSidebarHelper != null && !refreshingSidebar) {
 			refreshingSidebar = true;
-			try { refreshTagSidebar(); } finally { refreshingSidebar = false; }
+			try { tagSidebarHelper.refresh(); } finally { refreshingSidebar = false; }
 		}
 	}
 	
@@ -1420,1057 +1410,6 @@ public class ListadoPildorasController {
 		};
 		tf.textProperty().addListener((o, a, b) -> update.run());
 		update.run();
-	}
-	
-	private void initSettingsMenu() {
-		// Limpia y configura el botón (icono engranaje)
-		btnSettings.getItems().clear();
-
-		var gear = new FontIcon(FontAwesomeSolid.COG);
-		btnSettings.setText(null);
-		btnSettings.setGraphic(gear);
-		btnSettings.setTooltip(new Tooltip("Ajustes"));
-		btnSettings.getStyleClass().addAll("icon-btn", "primary");
-
-		// --- Importar (.md) ---
-		var miImport = new MenuItem("Importar (.md)…");
-		miImport.setOnAction(e -> handleImportMarkdown());
-		
-		// --- Tipografías ---
-		record Family(String label, String css) {
-		}
-		var families = List.of(new Family("System", "System"), new Family("Sans (Arial)", "Arial"),
-				new Family("Serif", "Serif"), new Family("Monospace", "Consolas"));
-		var miFamily = new Menu("Tipografía");
-		var tgFamily = new ToggleGroup();
-		String currentFamily = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
-		for (var f : families) {
-			var r = new RadioMenuItem(f.label());
-			r.setToggleGroup(tgFamily);
-			r.setSelected(f.css().equalsIgnoreCase(currentFamily));
-			r.setOnAction(e -> {
-				PREFS.put(PREF_FONT_FAMILY, f.css());
-				applyTypographyNow();
-			});
-			miFamily.getItems().add(r);
-		}
-
-		// --- Tamaño letra ---
-		var miSize = new Menu("Tamaño");
-		var tgSize = new ToggleGroup();
-		var sizes = List.of(new Family("Muy grande", "vlarge"), new Family("Grande", "large"),
-				new Family("Normal", "normal"), new Family("Pequeño", "small"));
-		String currentSize = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
-		for (var item : sizes) {
-			var r = new RadioMenuItem(item.label);
-			r.setToggleGroup(tgSize);
-			r.setSelected(item.css.equalsIgnoreCase(currentSize));
-			r.setOnAction(e -> {
-				PREFS.put(PREF_FONT_SIZE, item.css);
-				applyTypographyNow();
-			});
-			miSize.getItems().add(r);
-		}
-
-		// --- Tema oscuro ---
-		var miTemaOscuro = new CheckMenuItem("Tema oscuro");
-		miTemaOscuro.setSelected(ThemeManager.load() == Theme.DARK);
-		miTemaOscuro.setOnAction(e -> {
-			var scene = root.getScene();
-			if (scene == null)
-				return;
-			boolean wantsDark = miTemaOscuro.isSelected();
-			boolean isDark = (ThemeManager.load() == Theme.DARK);
-			if (wantsDark != isDark) {
-				Theme t = ThemeManager.toggle(scene);
-				setLogoFor(t);
-				StatusBus.show(t == Theme.DARK ? "Tema oscuro" : "Tema claro", StatusBus.Type.INFO,
-						javafx.util.Duration.seconds(2));
-			}
-		});
-
-		// =============== Submenú Seguridad ===============
-		var miSecurity = new Menu("Seguridad");
-
-		// Crear/Cambiar PIN (texto dinámico)
-		var miChangePin = new MenuItem(security.hasPin() ? "Cambiar PIN…" : "Crear PIN…");
-		miChangePin.setOnAction(e -> {
-			try {
-				if (!security.hasPin()) {
-					char[] np = PinDialogs.promptNewPin6(root);
-					if (np == null)
-						return;
-					try {
-						security.setupPin(np);
-						StatusBus.show("PIN creado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-						// refresca el menú para que el ítem pase a "Cambiar PIN…"
-						initSettingsMenu();
-					} finally {
-						Arrays.fill(np, '\0');
-					}
-				} else {
-					if (!ensureUnlockedWithRetries())
-						return;
-					char[] np = PinDialogs.promptNewPin6(root);
-					if (np == null)
-						return;
-					try {
-						security.changePin(null, np);
-						StatusBus.show("PIN cambiado.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-					} finally {
-						Arrays.fill(np, '\0');
-					}
-				}
-			} catch (Exception ex) {
-				StatusBus.show("No se pudo " + (security.hasPin() ? "cambiar" : "crear") + " el PIN.",
-						StatusBus.Type.ERROR, Duration.seconds(4));
-			}
-		});
-
-		// Configurar pregunta de seguridad…
-		var miSetQuestion = new MenuItem("Configurar pregunta de seguridad…");
-		miSetQuestion.setOnAction(e -> {
-			try {
-				if (!security.hasPin()) {
-					StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
-					return;
-				}
-				if (!ensureUnlockedWithRetries())
-					return;
-				showSetupSecurityQuestion(); // tu helper ya temado
-			} catch (Exception ex) {
-				StatusBus.show("No se pudo guardar la pregunta.", StatusBus.Type.ERROR, Duration.seconds(4));
-			}
-		});
-
-		// Restablecer PIN con respuesta…
-		var miResetByAnswer = new MenuItem("Restablecer PIN con respuesta…");
-		miResetByAnswer.setOnAction(e -> {
-			try {
-				if (!security.hasSecurityQuestion()) {
-					StatusBus.show("No hay pregunta de seguridad configurada.", StatusBus.Type.WARN,
-							Duration.seconds(3));
-					return;
-				}
-				if (security.isLockedOut()) {
-					showLockoutModalFromListado();
-					return;
-				}
-
-				String q = security.getSecurityQuestion();
-				char[] ans = PinDialogs.promptAnswer(root, q);
-				if (ans == null)
-					return;
-				char[] np = PinDialogs.promptNewPin6(root);
-				if (np == null) {
-					Arrays.fill(ans, '\0');
-					return;
-				}
-
-				boolean ok;
-				try {
-					ok = security.resetPinWithAnswer(ans, np);
-				} finally {
-					Arrays.fill(ans, '\0');
-					Arrays.fill(np, '\0');
-				}
-
-				if (ok) {
-					StatusBus.show("PIN restablecido.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-					initSettingsMenu(); // por si cambia el estado del menú
-				} else if (security.isLockedOut()) {
-					showLockoutModalFromListado();
-				} else {
-					StatusBus.show("Respuesta incorrecta.", StatusBus.Type.ERROR, Duration.seconds(3));
-				}
-			} catch (Exception ex) {
-				StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
-			}
-		});
-
-		// Generar código de recuperación…
-		var miGenRecovery = new MenuItem("Generar código de recuperación…");
-		miGenRecovery.setOnAction(e -> {
-			try {
-				if (!security.hasPin()) {
-					StatusBus.show("Primero crea un PIN.", StatusBus.Type.WARN, Duration.seconds(3));
-					return;
-				}
-				if (!ensureUnlockedWithRetries())
-					return;
-				showGenerateRecoveryCode(); // ya te muestra el código temado
-			} catch (Exception ex) {
-				StatusBus.show("No se pudo generar el código.", StatusBus.Type.ERROR, Duration.seconds(4));
-			}
-		});
-
-		// Restablecer PIN con código de recuperación…
-		var miResetByCode = new MenuItem("Restablecer PIN con código…");
-		miResetByCode.setOnAction(e -> {
-			try {
-				if (!security.hasRecoveryCode()) {
-					StatusBus.show("No hay código de recuperación activo.", StatusBus.Type.WARN, Duration.seconds(3));
-					return;
-				}
-				if (security.isLockedOut()) {
-					showLockoutModalFromListado();
-					return;
-				}
-
-				String code = PinDialogs.promptRecoveryCode(root);
-				if (code == null || code.isBlank())
-					return;
-				char[] np = PinDialogs.promptNewPin6(root);
-				if (np == null)
-					return;
-
-				boolean ok;
-				try {
-					ok = security.resetPinWithRecoveryCode(code, np);
-				} finally {
-					Arrays.fill(np, '\0');
-				}
-
-				if (ok) {
-					StatusBus.show("PIN restablecido con código.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-					initSettingsMenu();
-				} else if (security.isLockedOut()) {
-					showLockoutModalFromListado();
-				} else {
-					StatusBus.show("Código incorrecto o expirado.", StatusBus.Type.ERROR, Duration.seconds(3));
-				}
-			} catch (Exception ex) {
-				StatusBus.show("No se pudo restablecer el PIN.", StatusBus.Type.ERROR, Duration.seconds(4));
-			}
-		});
-
-		// Bloquear ahora
-		var miLock = new MenuItem("Bloquear ahora");
-		miLock.setOnAction(e -> {
-			security.lockNow();
-			StatusBus.show("Sesión bloqueada. Se pedirá PIN al acceder a contenido protegido.", StatusBus.Type.INFO,
-					Duration.seconds(3));
-		});
-
-		miSecurity.getItems().addAll(miChangePin, new SeparatorMenuItem(), miSetQuestion, miResetByAnswer,
-				new SeparatorMenuItem(), miGenRecovery, miResetByCode, new SeparatorMenuItem(), miLock);
-
-		// =============== Submenú Base de datos ===============
-		var miDatabase = new Menu("Base de datos");
-
-		var miTurso = new MenuItem(TursoConfig.isConfigured() ? "Turso: conectado" : "Configurar Turso…");
-		miTurso.setOnAction(e -> showTursoDialog(miTurso));
-
-		var miMigrate = new MenuItem("Migrar datos locales a Turso…");
-		miMigrate.setOnAction(e -> handleMigrateToTurso());
-
-		var miTursoGuide = new MenuItem("Cómo configurar Turso…");
-		miTursoGuide.setOnAction(e -> showTursoGuideDialog());
-
-		var miBackup = new MenuItem("Exportar backup…");
-		miBackup.setOnAction(e -> handleExportBackup());
-
-		var miRestore = new MenuItem("Importar backup…");
-		miRestore.setOnAction(e -> handleImportBackup());
-
-		miDatabase.getItems().addAll(miTurso, miMigrate, new SeparatorMenuItem(),
-				miBackup, miRestore, new SeparatorMenuItem(), miTursoGuide);
-
-		// =============== Submenú Debug ===============
-		var miDebug = new Menu("Debug");
-		miDebug.getItems().add(createOpenLogMenuItem());
-
-		// --- Atajos ---
-		var miShortcuts = new MenuItem("Atajos de teclado…");
-		miShortcuts.setOnAction(e -> showShortcutsDialog());
-
-		// Menú final
-		btnSettings.getItems().setAll(
-				miImport,
-				new SeparatorMenuItem(),
-				miFamily,
-				miSize,
-				new SeparatorMenuItem(),
-				miTemaOscuro,
-				new SeparatorMenuItem(),
-				miDatabase,
-				new SeparatorMenuItem(),
-				miSecurity,
-				new SeparatorMenuItem(),
-				miShortcuts,
-				new SeparatorMenuItem(),
-				miDebug);
-	}
-
-	// Modal de lockout igual que en editor, pero desde listado
-	private void showLockoutModalFromListado() {
-
-		long secs = Math.max(0L, (security.lockoutRemainingMillis() + 999) / 1000);
-		Alert a = new Alert(Alert.AlertType.WARNING);
-		a.setTitle("Intentos agotados");
-		a.setHeaderText("Has excedido los intentos del PIN");
-		a.setContentText("Podrás volver a intentarlo en " + secs + " segundo" + (secs == 1 ? "" : "s") + ".");
-		Dialogs.decorate(a, root);
-		a.showAndWait();
-	}
-
-	private void showSetupSecurityQuestion() {
-		// Requiere sesión desbloqueada (necesitamos CMK en memoria)
-		if (!ensureUnlockedWithRetries())
-			return;
-
-		Dialog<ButtonType> dlg = new Dialog<>();
-		dlg.setTitle("Pregunta de seguridad");
-		dlg.setHeaderText("Configura una pregunta y su respuesta para recuperar el PIN");
-		Dialogs.decorate(dlg, root); // 👈 tu decorador para tema
-
-		TextField txtQ = new TextField();
-		txtQ.setPromptText("Ej: Nombre de tu primera mascota");
-
-		PasswordField pfA = new PasswordField();
-		pfA.setPromptText("Respuesta");
-
-		PasswordField pfA2 = new PasswordField();
-		pfA2.setPromptText("Repite la respuesta");
-
-		VBox content = new VBox(8, new Label("Pregunta:"), txtQ, new Label("Respuesta:"), pfA,
-				new Label("Confirmar respuesta:"), pfA2);
-		content.setPrefWidth(420);
-		dlg.getDialogPane().setContent(content);
-
-		ButtonType OK = new ButtonType("Guardar", ButtonBar.ButtonData.OK_DONE);
-		ButtonType CANCEL = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
-		dlg.getDialogPane().getButtonTypes().setAll(OK, CANCEL);
-
-		// Validación básica
-		Node okBtn = dlg.getDialogPane().lookupButton(OK);
-		okBtn.setDisable(true);
-		Runnable validate = () -> {
-			boolean valid = !txtQ.getText().isBlank() && !pfA.getText().isBlank()
-					&& pfA.getText().equals(pfA2.getText());
-			okBtn.setDisable(!valid);
-		};
-		txtQ.textProperty().addListener((o, a, b) -> validate.run());
-		pfA.textProperty().addListener((o, a, b) -> validate.run());
-		pfA2.textProperty().addListener((o, a, b) -> validate.run());
-		Platform.runLater(txtQ::requestFocus);
-
-		dlg.setResultConverter(bt -> bt);
-
-		var res = dlg.showAndWait();
-		if (res.isEmpty() || res.get() != OK)
-			return;
-
-		char[] ans = pfA.getText().toCharArray();
-		try {
-			security.setSecurityQuestion(txtQ.getText().trim(), ans);
-			StatusBus.show("Pregunta de seguridad guardada.", StatusBus.Type.SUCCESS, Duration.seconds(3));
-		} catch (Exception ex) {
-			StatusBus.show("No se pudo guardar la pregunta: " + ex.getMessage(), StatusBus.Type.ERROR,
-					Duration.seconds(4));
-		} finally {
-			Arrays.fill(ans, '\0');
-			// No podemos vaciar los PasswordField internamente de forma segura, pero está
-			// en memoria UI
-		}
-	}
-
-	private void showGenerateRecoveryCode() {
-		// Requiere sesión desbloqueada
-		if (!ensureUnlockedWithRetries())
-			return;
-
-		String code;
-		try {
-			code = security.generateRecoveryCode();
-		} catch (Exception ex) {
-			StatusBus.show("No se pudo generar el código: " + ex.getMessage(), StatusBus.Type.ERROR,
-					Duration.seconds(4));
-			return;
-		}
-
-		// Muestra el código y opción de copiar
-		Dialog<ButtonType> dlg = new Dialog<>();
-		dlg.setTitle("Código de recuperación");
-		dlg.setHeaderText("Guarda este código en un lugar seguro.\nTe permitirá restablecer el PIN si lo olvidas.");
-		Dialogs.decorate(dlg, root);
-
-		TextField txt = new TextField(code);
-		txt.setEditable(false);
-		txt.setStyle("-fx-font-family: 'Consolas', 'Menlo', 'Courier New', monospace; -fx-font-size: 14px;");
-		Button btnCopy = new Button("Copiar");
-		btnCopy.setOnAction(ev -> {
-			ClipboardContent cc = new ClipboardContent();
-			cc.putString(code);
-			Clipboard.getSystemClipboard().setContent(cc);
-			StatusBus.show("Código copiado al portapapeles.", StatusBus.Type.INFO, Duration.seconds(2));
-		});
-
-		VBox box = new VBox(12, new Label("Código de recuperación (mostrado una sola vez):"), new HBox(8, txt, btnCopy),
-				new Label("⚠ Si lo pierdes y olvidas el PIN, no podrás recuperar el acceso."));
-		box.setPrefWidth(480);
-		dlg.getDialogPane().setContent(box);
-
-		dlg.getDialogPane().getButtonTypes().setAll(new ButtonType("Entendido", ButtonBar.ButtonData.OK_DONE));
-		dlg.showAndWait();
-	}
-
-	/** Aplica familia + tamaño guardados a toda la escena */
-	private void applyTypographyNow() {
-		Runnable apply = () -> {
-			var scene = root.getScene();
-			if (scene == null) {
-				Platform.runLater(this::applyTypographyNow);
-				return;
-			}
-
-			String family = PREFS.get(PREF_FONT_FAMILY, DEF_FONT_FAMILY);
-			String sizeKey = PREFS.get(PREF_FONT_SIZE, DEF_FONT_SIZE);
-
-			double px = switch (sizeKey) {
-			case "small" -> 10.0;
-			case "large" -> 18.0;
-			case "vlarge" -> 22.0;
-			default -> 14.0; // normal
-			};
-
-			// Aplica estilo inline al root de la escena (se hereda a todos los nodos)
-			scene.getRoot().setStyle("""
-					    -fx-font-family: '%s';
-					    -fx-font-size: %spx;
-					""".formatted(family.replace("'", "\\'"), px));
-		};
-		apply.run();
-	}
-
-	private void showTursoDialog(MenuItem miTurso) {
-	    if (TursoConfig.isConfigured()) {
-	        // Ya conectado: mostrar estado y opción de desconectar
-	        Alert info = new Alert(Alert.AlertType.CONFIRMATION);
-	        info.setTitle("Turso");
-	        info.setHeaderText("Conexión activa");
-	        info.setContentText("URL: " + TursoConfig.getUrl()
-	            + "\n\nPulsa Aceptar para desconectar y volver a SQLite local.");
-	        Dialogs.decorate(info, root);
-	        info.showAndWait().ifPresent(res -> {
-	            if (res.getButtonData().isDefaultButton()) {
-	                TursoConfig.clear();
-	                DatabaseHelper.reconnect();
-	                miTurso.setText("Configurar Turso…");
-	                refrescarTabla();
-	                StatusBus.show("Desconectado de Turso. Usando BD local.",
-	                    StatusBus.Type.INFO, Duration.seconds(3));
-	            }
-	        });
-	        return;
-	    }
-
-	    // Formulario de conexión
-	    var dlg = new Alert(Alert.AlertType.NONE);
-	    dlg.setTitle("Configurar Turso");
-
-	    var lblUrl = new Label("URL de la base de datos:");
-	    var txtUrl = new javafx.scene.control.TextField();
-	    txtUrl.setPromptText("libsql://mi-db.turso.io");
-	    txtUrl.setPrefWidth(420);
-
-	    var lblToken = new Label("Token de autenticación:");
-	    var txtToken = new javafx.scene.control.TextField();
-	    txtToken.setPromptText("eyJhbGciOi...");
-	    txtToken.setPrefWidth(420);
-
-	    var content = new javafx.scene.layout.VBox(8, lblUrl, txtUrl, lblToken, txtToken);
-	    content.setPadding(new Insets(10));
-	    dlg.getDialogPane().setContent(content);
-	    dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-	    dlg.getDialogPane().setPrefWidth(480);
-
-	    Dialogs.decorate(dlg, root);
-
-	    dlg.showAndWait().ifPresent(res -> {
-	        if (res == ButtonType.OK) {
-	            String url = txtUrl.getText().trim();
-	            String token = txtToken.getText().trim();
-	            if (url.isEmpty() || token.isEmpty()) {
-	                StatusBus.show("URL y token son obligatorios.",
-	                    StatusBus.Type.WARN, Duration.seconds(3));
-	                return;
-	            }
-
-	            // Probar conexión antes de guardar
-	            try {
-	                String jdbcUrl = TursoConfig.toJdbcUrl(url);
-	                try (var conn = java.sql.DriverManager.getConnection(jdbcUrl, null, token);
-	                     var stmt = conn.createStatement();
-	                     var rs = stmt.executeQuery("SELECT 1")) {
-	                    // conexión OK
-	                }
-	            } catch (Exception ex) {
-	                StatusBus.show("Error de conexión: " + ex.getMessage(),
-	                    StatusBus.Type.ERROR, Duration.seconds(5));
-	                ex.printStackTrace();
-	                return;
-	            }
-
-	            TursoConfig.save(url, token);
-	            DatabaseHelper.reconnect();
-	            miTurso.setText("Turso: conectado");
-	            refrescarTabla();
-	            StatusBus.show("Conectado a Turso correctamente.",
-	                StatusBus.Type.SUCCESS, Duration.seconds(3));
-	        }
-	    });
-	}
-
-	/** Diálogo con los atajos principales */
-	private void showShortcutsDialog() {
-	    var sb = new StringBuilder();
-
-	    sb.append("LISTADO\n")
-	      .append("───────\n")
-	      .append("Rueda ratón                – Página anterior / siguiente\n")
-	      .append("PageUp / Ctrl+←            – Página anterior\n")
-	      .append("PageDown / Ctrl+→          – Página siguiente\n")
-	      .append("Ctrl+F                     – Foco en filtro de texto\n")
-	      .append("Ctrl+T                     – Foco en filtro de tags\n")
-	      .append("Ctrl+N                     – Nueva píldora\n")
-	      .append("Ctrl+O                     – Abrir detalle de la fila seleccionada\n")
-	      .append("Ctrl+E                     – Editar la fila seleccionada\n")
-	      .append("Supr                       – Eliminar la fila seleccionada\n")
-	      .append("M                          – (Tabla enfocada) Alternar favorita\n")
-	      .append("Ctrl+Shift+F               – Mostrar solo favoritas (toggle)\n")
-	      .append("Ctrl+Shift+O               – Cambiar OR/AND para filtro de tags\n")
-	      .append("Esc                        – Limpiar filtros (si hay foco en filtros) / Volver\n")
-	      .append("Doble clic fila            – Abrir detalle\n\n")
-
-	      .append("DETALLE\n")
-	      .append("───────\n")
-	      .append("Ctrl+E                     – Editar\n")
-	      .append("Supr                       – Eliminar\n")
-	      .append("Esc                        – Volver al listado\n")
-	      .append("Click en tag               – Filtrar listado por ese tag\n\n")
-
-	      .append("EDITOR\n")
-	      .append("──────\n")
-	      .append("Ctrl+S / Ctrl+Enter       – Guardar\n")
-	      .append("Esc                       – Cancelar y volver\n")
-	      .append("Ctrl+B                    – Insertar **negrita**\n")
-	      .append("Ctrl+I                    – Insertar *cursiva*\n")
-	      .append("Ctrl+K                    – Insertar [enlace](https://)\n")
-	      .append("Ctrl+E                    – Insertar `código`\n")
-	      .append("Tab / Shift+Tab           – Indentar / desindentar líneas (listas)\n")
-	      .append("Vista previa              – Conmutador en la barra de herramientas\n")
-	      .append("Enter / ','               – Confirmar tag en el campo de tags\n")
-	      .append("Backspace (tags)          – Con input vacío, borrar el último tag\n\n")
-
-	      .append("BORRADORES\n")
-	      .append("──────────\n")
-	      .append("Desde Ajustes → Borradores\n")
-	      .append("  Nuevo borrador…         – Diálogo rápido\n")
-	      .append("  Bandeja de borradores…  – Lista de borradores\n")
-	      .append("Bandeja\n")
-	      .append("  Doble clic fila         – Editar borrador\n")
-	      .append("  Supr                    – Eliminar borrador seleccionado\n")
-	      .append("Diálogo rápido de borrador\n")
-	      .append("  Ctrl+S / Ctrl+Enter     – Guardar\n");
-
-
-	    var alert = new Alert(Alert.AlertType.INFORMATION);
-	    alert.setTitle("Atajos de teclado");
-	    alert.setHeaderText(null);
-
-	    var ta = new TextArea(sb.toString());
-	    ta.setEditable(false);
-	    ta.setWrapText(false);
-	    ta.setFocusTraversable(false);
-	    ta.setPrefColumnCount(56);
-	    ta.setPrefRowCount(28);
-	    ta.setStyle("-fx-font-family: 'Consolas','Monospaced'; -fx-font-size: 13px;");
-
-	    alert.getDialogPane().setContent(ta);
-	    alert.getDialogPane().setPrefWidth(620);
-
-	    Dialogs.decorate(alert, root);
-	    alert.showAndWait();
-	}
-
-
-	// DRAFTS:
-	private void initDraftsUI() {
-		if (btnBorradores == null) return;
-
-	    // Icono
-	    var eraser = new FontIcon(FontAwesomeSolid.ERASER);
-	    eraser.setIconSize(16);
-
-	    // Badge
-	    draftsBadge = new Label();
-	    draftsBadge.getStyleClass().add("badge");
-	    draftsBadge.setVisible(false);
-	    draftsBadge.setManaged(false); // no ocupa sitio cuando está oculto
-
-	    // Wrapper 24x24 para que no recorte el badge
-	    draftsIconStack = new StackPane(eraser, draftsBadge);
-	    draftsIconStack.setMinSize(24, 24);
-	    draftsIconStack.setPrefSize(24, 24);
-	    draftsIconStack.setMaxSize(24, 24);
-
-	    StackPane.setAlignment(eraser, Pos.CENTER);
-	    StackPane.setAlignment(draftsBadge, Pos.TOP_RIGHT);
-	    // SIN translate fuera del wrapper: mantenlo dentro
-	    // Si quieres un pequeño ajuste interno:
-	    draftsBadge.setTranslateX(8); // hacia dentro
-	    draftsBadge.setTranslateY(-8);  // hacia abajo
-	    draftsBadge.setMaxSize(16, 16);
-
-	    btnBorradores.setText(null);
-	    btnBorradores.setGraphic(draftsIconStack);
-	    btnBorradores.setContentDisplay(ContentDisplay.GRAPHIC_ONLY); // asegura solo gráfico
-	    btnBorradores.setTooltip(new Tooltip("Borradores"));
-	    btnBorradores.getStyleClass().addAll("icon-btn");
-
-		// Menú
-		var miNuevo = new MenuItem("Nuevo borrador…");
-		miNuevo.setOnAction(e -> {
-			var res = DraftDialogs.showQuickDraftDialog(root, null, null, false);
-			if (res == null)
-				return;
-
-			switch (res.action) {
-			case SAVE -> {
-				new DraftDao().insertar(res.draft);
-				StatusBus.show("Borrador guardado.", StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(2));
-				refreshDraftBadge();
-			}
-			case CONVERT -> {
-				// Convertir: abrir editor con prefill (y NO guardamos el borrador)
-				openEditorPrefilled(res.draft.getTitulo(),
-						// si viene protegido, ya pedimos PIN y desciframos antes de crear el borrador;
-						// aquí res.draft.contenido está en claro si no es protegido (para diálogo
-						// rápido)
-						res.draft.isProtegida() ? tryDecryptDraftToString(res.draft) // seguridad
-								: res.draft.getContenido(),
-						res.draft.isProtegida());
-			}
-			default -> {
-			}
-			}
-		});
-
-		var miBandeja = new MenuItem("Bandeja de borradores…");
-		miBandeja.setOnAction(e -> {
-			DraftDialogs.showDraftsTray(root,
-					// onEdit
-					dft -> {
-						// abre diálogo pre-rellenado y actualiza/convierte
-						var plain = dft.isProtegida() ? tryDecryptDraftToString(dft) : dft.getContenido();
-						var res = DraftDialogs.showQuickDraftDialog(root,
-								dft.getTitulo(), plain, dft.isProtegida());
-						if (res == null)
-							return;
-
-						switch (res.action) {
-						case SAVE -> {
-							// actualizar borrador existente (ojo: si cambio de protegido->no protegido y
-							// viceversa)
-							dft.setTitulo(res.draft.getTitulo());
-							dft.setProtegida(res.draft.isProtegida());
-							dft.setContenido(res.draft.getContenido());
-							dft.setContenidoCipher(res.draft.getContenidoCipher());
-							dft.setContenidoIv(res.draft.getContenidoIv());
-							new DraftDao().actualizar(dft);
-							StatusBus.show("Borrador actualizado.", StatusBus.Type.SUCCESS,
-									javafx.util.Duration.seconds(2));
-						}
-						case CONVERT -> {
-							openEditorPrefilled(res.draft.getTitulo(),
-									res.draft.isProtegida() ? tryDecryptDraftToString(res.draft)
-											: res.draft.getContenido(),
-									res.draft.isProtegida());
-							// elimina tras convertir
-							new DraftDao().eliminar(dft.getId());
-						}
-						default -> {
-						}
-						}
-						refreshDraftBadge();
-					},
-					// onConvert directo (desde la bandeja)
-					dft -> {
-						openEditorPrefilled(dft.getTitulo(),
-								dft.isProtegida() ? tryDecryptDraftToString(dft) : dft.getContenido(),
-								dft.isProtegida());
-						refreshDraftBadge();
-					},
-					// onDelete (ya elimina por dentro, aquí solo feedback/extra lógica)
-					dft -> StatusBus.show("Borrador eliminado.", StatusBus.Type.INFO, javafx.util.Duration.seconds(2)));
-			refreshDraftBadge();
-		});
-
-		btnBorradores.getItems().setAll(miNuevo, miBandeja);
-
-		// badge inicial
-		refreshDraftBadge();
-	}
-
-	private String tryDecryptDraftToString(io.github.guillermo_david.model.Draft dft) {
-		try {
-			if (dft == null || !dft.isProtegida())
-				return dft == null ? "" : (dft.getContenido() == null ? "" : dft.getContenido());
-			if (!security.isUnlocked()) {
-				if (!security
-						.ensureUnlocked(() -> PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10)))) {
-					return "";
-				}
-			}
-			return security.decrypt(dft.getContenidoCipher(), dft.getContenidoIv());
-		} catch (Exception ex) {
-			return "";
-		}
-	}
-
-	private void refreshDraftBadge() {
-	    int count = new DraftDao().contar();
-
-	    btnBorradores.setTooltip(new Tooltip("Borradores (" + count + ")"));
-
-	    if (draftsBadge != null) {
-	        if (count > 0) {
-	            draftsBadge.setText(count > 99 ? "99+" : String.valueOf(count));
-	            draftsBadge.setVisible(true);
-	            draftsBadge.setManaged(true);
-	        } else {
-	            draftsBadge.setVisible(false);
-	            draftsBadge.setManaged(false);
-	        }
-	    }
-	}
-
-	/**
-	 * Abre el editor en modo NUEVA con datos precargados (título/cuerpo/proteger).
-	 */
-	private void openEditorPrefilled(String titulo, String cuerpo, boolean proteger) {
-		try {
-			var loader = new FXMLLoader(getClass().getResource("/fxml/editor-pildora.fxml"));
-			Node rootEditor = loader.load();
-			EditorPildoraController ctrl = loader.getController();
-
-			// método nuevo en tu EditorPildoraController
-			ctrl.setPrefill(titulo, cuerpo, proteger);
-
-			ctrl.setOnClose(() -> {
-				// al cerrar, volvemos al listado
-				root.setCenter(table); // o restaurar como ya haces en tus flujos
-				refrescarTabla();
-			});
-
-			root.setCenter(rootEditor);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			StatusBus.show("No se pudo abrir el editor.", StatusBus.Type.ERROR, javafx.util.Duration.seconds(3));
-		}
-	}
-	
-	private void handleImportMarkdown() {
-	    var scene = root.getScene();
-	    if (scene == null) return;
-
-	    FileChooser fc = new FileChooser();
-	    fc.setTitle("Importar (.md)...");
-	    fc.getExtensionFilters().addAll(
-	        new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"),
-	        new FileChooser.ExtensionFilter("Todos los archivos", "*.*")
-	    );
-
-	    List<File> files = fc.showOpenMultipleDialog(scene.getWindow());
-	    if (files == null || files.isEmpty()) return;
-
-	    Task<Void> task = new Task<>() {
-	        @Override protected Void call() {
-	            var svc = new MarkdownImportService();
-	            int ok = 0, fail = 0;
-
-	            for (int i = 0; i < files.size(); i++) {
-	                try {
-	                    svc.importFile(files.get(i));
-	                    ok++;
-	                } catch (Exception ex) {
-	                    fail++;
-	                }
-	                updateProgress(i + 1, files.size());
-	            }
-
-	            // 👇 Copias finales para usarlas en el lambda
-	            final int okCount = ok;
-	            final int failCount = fail;
-	            final int totalCount = okCount + failCount;
-
-	            javafx.application.Platform.runLater(() -> {
-	                paginaActual = 1;
-	                refrescarTabla();
-	                StatusBus.show(
-	                    (failCount == 0
-	                        ? ("Importadas " + okCount + " píldoras.")
-	                        : ("Importadas " + okCount + " de " + totalCount + " (" + failCount + " con error).")),
-	                    (failCount == 0 ? StatusBus.Type.SUCCESS : StatusBus.Type.WARN),
-	                    javafx.util.Duration.seconds(5)
-	                );
-	            });
-	            return null;
-	        }
-	    };
-
-	    task.setOnRunning(e -> root.setDisable(true));
-	    task.setOnSucceeded(e -> root.setDisable(false));
-	    task.setOnFailed(e -> {
-	        root.setDisable(false);
-	        StatusBus.show("Error inesperado en importación.", StatusBus.Type.ERROR, javafx.util.Duration.seconds(5));
-	    });
-
-	    new Thread(task, "ImportMarkdown").start();
-	}
-	
-	private void showTursoGuideDialog() {
-		Alert guide = new Alert(AlertType.INFORMATION);
-		guide.setTitle("Cómo configurar Turso");
-		guide.setHeaderText("Guía rápida para sincronizar con Turso");
-
-		var ta = new TextArea("""
-			1. Crear una cuenta en https://turso.tech (plan gratuito disponible)
-
-			2. Instalar la CLI de Turso:
-			   curl -sSfL https://get.tur.so/install.sh | bash
-
-			3. Iniciar sesión:
-			   turso auth login
-
-			4. Crear una base de datos:
-			   turso db create pildoras
-
-			5. Obtener la URL de la base de datos:
-			   turso db show pildoras --url
-			   (Ejemplo: libsql://pildoras-usuario.turso.io)
-
-			6. Generar un token de autenticación:
-			   turso db tokens create pildoras
-
-			7. En Píldoras: Ajustes → Base de datos → Configurar Turso
-			   - Pega la URL y el token obtenidos
-			   - Pulsa Aceptar para conectar
-
-			8. (Opcional) Migrar datos locales:
-			   Ajustes → Base de datos → Migrar datos locales a Turso
-			""");
-		ta.setEditable(false);
-		ta.setWrapText(true);
-		ta.setPrefRowCount(18);
-		ta.setPrefColumnCount(50);
-		ta.setStyle("-fx-font-size: 13px;");
-
-		guide.getDialogPane().setContent(ta);
-		guide.getDialogPane().setPrefWidth(560);
-		Dialogs.decorate(guide, root);
-		guide.showAndWait();
-	}
-
-	private void handleExportBackup() {
-		var fc = new javafx.stage.FileChooser();
-		fc.setTitle("Exportar backup");
-		fc.setInitialFileName("pildoras-backup.json");
-		fc.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("JSON", "*.json"));
-		var file = fc.showSaveDialog(root.getScene().getWindow());
-		if (file == null) return;
-		try {
-			io.github.guillermo_david.export.BackupService.exportToFile(file);
-			StatusBus.show("Backup exportado correctamente.", StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(4));
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			StatusBus.show("Error exportando: " + ex.getMessage(), StatusBus.Type.ERROR, javafx.util.Duration.seconds(5));
-		}
-	}
-
-	private void handleImportBackup() {
-		var confirm = new Alert(AlertType.WARNING);
-		confirm.setTitle("Importar backup");
-		confirm.setHeaderText("¿Estás seguro?");
-		confirm.setContentText("Se eliminarán TODOS los datos actuales y se reemplazarán con el backup.");
-		confirm.getButtonTypes().setAll(javafx.scene.control.ButtonType.OK, javafx.scene.control.ButtonType.CANCEL);
-		Dialogs.decorate(confirm, root);
-		var res = confirm.showAndWait();
-		if (res.isEmpty() || res.get() != javafx.scene.control.ButtonType.OK) return;
-
-		var fc = new javafx.stage.FileChooser();
-		fc.setTitle("Importar backup");
-		fc.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("JSON", "*.json"));
-		var file = fc.showOpenDialog(root.getScene().getWindow());
-		if (file == null) return;
-		try {
-			int[] counts = io.github.guillermo_david.export.BackupService.importFromFile(file);
-			refrescarTabla();
-			StatusBus.show("Importado: " + counts[0] + " píldoras, " + counts[1] + " tags, "
-					+ counts[2] + " borradores.", StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(5));
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			StatusBus.show("Error importando: " + ex.getMessage(), StatusBus.Type.ERROR, javafx.util.Duration.seconds(5));
-		}
-	}
-
-	private void handleMigrateToTurso() {
-	    if (!TursoConfig.isConfigured()) {
-	        var alert = new Alert(AlertType.WARNING);
-	        alert.setTitle("Turso no configurado");
-	        alert.setHeaderText(null);
-	        alert.setContentText("Configura la conexion a Turso antes de migrar.");
-	        Dialogs.decorate(alert, root);
-	        alert.showAndWait();
-	        return;
-	    }
-
-	    var confirm = new Alert(AlertType.CONFIRMATION);
-	    confirm.setTitle("Migrar datos locales a Turso");
-	    confirm.setHeaderText("Importar todos los datos locales a Turso?");
-	    confirm.setContentText("Se copiaran pildoras, tags, borradores y enlaces "
-	        + "desde la base de datos local a Turso (INSERT OR REPLACE).\n\n"
-	        + "Los datos existentes en Turso con el mismo ID seran sobrescritos.");
-	    Dialogs.decorate(confirm, root);
-	    var choice = confirm.showAndWait();
-	    if (choice.isEmpty() || choice.get() != ButtonType.OK) return;
-
-	    Task<TursoMigrationService.Result> task = new Task<>() {
-	        @Override protected TursoMigrationService.Result call() throws Exception {
-	            return TursoMigrationService.migrateLocalToTurso();
-	        }
-	    };
-
-	    task.setOnRunning(e -> root.setDisable(true));
-	    task.setOnSucceeded(e -> {
-	        root.setDisable(false);
-	        TursoMigrationService.Result r = task.getValue();
-	        paginaActual = 1;
-	        refrescarTabla();
-	        StatusBus.show(
-	            "Migracion completada: " + r.total() + " registros "
-	                + "(pildoras=" + r.pildoras + ", tags=" + r.tags
-	                + ", relaciones=" + r.pildoraTag
-	                + ", borradores=" + r.drafts + ", enlaces=" + r.pildoraLink + ")",
-	            StatusBus.Type.SUCCESS, Duration.seconds(8));
-	    });
-	    task.setOnFailed(e -> {
-	        root.setDisable(false);
-	        Throwable ex = task.getException();
-	        if (ex != null) ex.printStackTrace();
-	        String detail = "desconocido";
-	        if (ex != null) {
-	            detail = ex.getClass().getSimpleName();
-	            if (ex.getMessage() != null) detail += ": " + ex.getMessage();
-	            if (ex.getCause() != null) {
-	                detail += " [causa: " + ex.getCause().getClass().getSimpleName();
-	                if (ex.getCause().getMessage() != null) detail += ": " + ex.getCause().getMessage();
-	                detail += "]";
-	            }
-	        }
-	        StatusBus.show("Error en migracion: " + detail,
-	            StatusBus.Type.ERROR, Duration.seconds(15));
-	    });
-
-	    new Thread(task, "MigrateToTurso").start();
-	}
-
-	private void initTagSidebar() {
-	    btnToggleSidebar.setOnAction(e -> toggleSidebar());
-	    refreshTagSidebar();
-	}
-
-	private void toggleSidebar() {
-	    sidebarCollapsed = !sidebarCollapsed;
-	    Node header = tagSidebar.getChildren().get(0);
-	    if (sidebarCollapsed) {
-	        header.setVisible(false);
-	        header.setManaged(false);
-	        tagListBox.setVisible(false);
-	        tagListBox.setManaged(false);
-	        for (Node n : tagSidebar.getChildren()) {
-	            if (n instanceof ScrollPane) { n.setVisible(false); n.setManaged(false); }
-	        }
-	        tagSidebar.setPrefWidth(28);
-	        tagSidebar.setMinWidth(28);
-	        tagSidebar.setMaxWidth(28);
-	        var expandBtn = new Button();
-	        expandBtn.setId("sidebarExpandBtn");
-	        expandBtn.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_LEFT));
-	        expandBtn.getStyleClass().add("sidebar-expand-btn");
-	        expandBtn.setMaxWidth(Double.MAX_VALUE);
-	        expandBtn.setOnAction(ev -> toggleSidebar());
-	        tagSidebar.getChildren().add(0, expandBtn);
-	    } else {
-	        tagSidebar.getChildren().removeIf(n -> "sidebarExpandBtn".equals(n.getId()));
-	        header = tagSidebar.getChildren().get(0);
-	        header.setVisible(true);
-	        header.setManaged(true);
-	        for (Node n : tagSidebar.getChildren()) {
-	            if (n instanceof ScrollPane) { n.setVisible(true); n.setManaged(true); }
-	        }
-	        tagListBox.setVisible(true);
-	        tagListBox.setManaged(true);
-	        tagSidebar.setPrefWidth(200);
-	        tagSidebar.setMinWidth(0);
-	        tagSidebar.setMaxWidth(200);
-	        btnToggleSidebar.setText("▶");
-	    }
-	}
-
-	void refreshTagSidebar() {
-	    tagListBox.getChildren().clear();
-
-	    var allBtn = new Button("Todas");
-	    allBtn.getStyleClass().add("tag-sidebar-item");
-	    allBtn.setMaxWidth(Double.MAX_VALUE);
-	    if (selectedSidebarTag == null) allBtn.getStyleClass().add("tag-sidebar-selected");
-	    allBtn.setOnAction(e -> {
-	        selectedSidebarTag = null;
-	        txtFiltroTags.clear();
-	        paginaActual = 1;
-	        refrescarTabla();
-	        refreshTagSidebar();
-	    });
-	    tagListBox.getChildren().add(allBtn);
-
-	    var tagsWithCount = new TagDao().listAllWithCount();
-	    for (String[] tc : tagsWithCount) {
-	        String nombre = tc[0];
-	        String count = tc[1];
-	        var btn = new Button(nombre + "  (" + count + ")");
-	        btn.getStyleClass().add("tag-sidebar-item");
-	        btn.setMaxWidth(Double.MAX_VALUE);
-	        if (nombre.equals(selectedSidebarTag)) btn.getStyleClass().add("tag-sidebar-selected");
-	        btn.setOnAction(e -> {
-	            selectedSidebarTag = nombre;
-	            txtFiltroTags.setText(nombre);
-	            paginaActual = 1;
-	            refrescarTabla();
-	            refreshTagSidebar();
-	        });
-	        tagListBox.getChildren().add(btn);
-	    }
-	}
-
-	private MenuItem createOpenLogMenuItem() {
-	    var mi = new MenuItem("Abrir log...");
-	    mi.setOnAction(e -> {
-	        var logPath = io.github.guillermo_david.util.AppLogger.getLogPath();
-	        if (java.nio.file.Files.exists(logPath)) {
-	            try {
-	                java.awt.Desktop.getDesktop().open(logPath.toFile());
-	            } catch (Exception ex) {
-	                StatusBus.show("No se pudo abrir: " + logPath,
-	                    StatusBus.Type.ERROR, Duration.seconds(5));
-	            }
-	        } else {
-	            StatusBus.show("Log no encontrado: " + logPath,
-	                StatusBus.Type.WARN, Duration.seconds(5));
-	        }
-	    });
-	    return mi;
 	}
 
 }
