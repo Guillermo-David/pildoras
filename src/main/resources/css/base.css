@@ -180,13 +180,26 @@
 	-fx-icon-color: white;
 }
 
-/* SplitMenuButton accent: flecha integrada */
+/* SplitMenuButton accent: label + arrow con fondos explícitos */
+.split-menu-button.btn-accent {
+	-fx-background-color: transparent;
+	-fx-background-insets: 0;
+}
+.split-menu-button.btn-accent > .label {
+	-fx-background-color: -c-accent;
+	-fx-background-radius: 8 0 0 8;
+	-fx-padding: 6 14 6 10;
+	-fx-text-fill: white;
+}
+.split-menu-button.btn-accent:hover > .label {
+	-fx-background-color: derive(-c-accent, -12%);
+}
 .split-menu-button.btn-accent > .arrow-button {
 	-fx-background-color: derive(-c-accent, -8%);
 	-fx-background-radius: 0 8 8 0;
 	-fx-padding: 6 8;
 	-fx-border-color: transparent;
-	-fx-border-width: 0 0 0 1;
+	-fx-border-width: 0;
 }
 .split-menu-button.btn-accent > .arrow-button > .arrow {
 	-fx-background-color: white;
@@ -194,9 +207,6 @@
 }
 .split-menu-button.btn-accent > .arrow-button:hover {
 	-fx-background-color: derive(-c-accent, -18%);
-}
-.split-menu-button.btn-accent > .label {
-	-fx-background-radius: 8 0 0 8;
 }
 
 .toggle-button.toggle-btn:selected .ikonli-font-icon,
