@@ -41,6 +41,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
@@ -404,13 +407,100 @@ public class ListadoPildorasController {
 					Pildora p = row.getItem();
 					if (p.isProtegida() && !security.isUnlocked()) {
 						if (!ensureUnlockedWithRetries()) {
-							// Mensajes ya dados dentro; abortar navegación
 							return;
 						}
 					}
 					abrirDetallePildora(p);
 				}
 			});
+
+			ContextMenu ctx = new ContextMenu();
+			row.setContextMenu(ctx);
+
+			ctx.setOnShowing(e -> {
+				ctx.getItems().clear();
+				Pildora p = row.getItem();
+				if (p == null) return;
+
+				var miAbrir = new MenuItem("Abrir");
+				miAbrir.setGraphic(new FontIcon(FontAwesomeSolid.EYE));
+				miAbrir.setOnAction(ev -> {
+					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
+					abrirDetallePildora(p);
+				});
+
+				var miEditar = new MenuItem("Editar");
+				miEditar.setGraphic(new FontIcon(FontAwesomeRegular.EDIT));
+				miEditar.setOnAction(ev -> {
+					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
+					abrirFormularioEditar(p);
+				});
+
+				var miFav = new MenuItem(p.isFavorita() ? "Quitar de favoritas" : "Añadir a favoritas");
+				miFav.setGraphic(new FontIcon(p.isFavorita() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR));
+				miFav.setOnAction(ev -> {
+					boolean nueva = !p.isFavorita();
+					pildoraDao.marcarFavorita(p.getId(), nueva);
+					p.setFavorita(nueva);
+					StatusBus.show(nueva ? "Añadida a favoritas" : "Quitada de favoritas",
+							StatusBus.Type.INFO, Duration.seconds(2));
+					table.refresh();
+					if (btnSoloFav.isSelected()) refrescarTabla();
+				});
+
+				var miPin = new MenuItem(p.isPinned() ? "Desfijar" : "Fijar arriba");
+				miPin.setGraphic(new FontIcon(FontAwesomeSolid.THUMBTACK));
+				miPin.setOnAction(ev -> {
+					boolean nuevo = !p.isPinned();
+					pildoraDao.marcarPinned(p.getId(), nuevo);
+					p.setPinned(nuevo);
+					StatusBus.show(nuevo ? "Píldora anclada" : "Píldora desanclada",
+							StatusBus.Type.INFO, Duration.seconds(2));
+					refrescarTabla();
+				});
+
+				var miOcultar = new MenuItem(p.isOculta() ? "Mostrar" : "Ocultar");
+				miOcultar.setGraphic(new FontIcon(p.isOculta() ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH));
+				miOcultar.setOnAction(ev -> {
+					boolean nuevo = !p.isOculta();
+					pildoraDao.marcarOculta(p.getId(), nuevo);
+					p.setOculta(nuevo);
+					StatusBus.show(nuevo ? "Píldora oculta" : "Píldora visible",
+							StatusBus.Type.INFO, Duration.seconds(2));
+					refrescarTabla();
+				});
+
+				var miEliminar = new MenuItem("Eliminar");
+				miEliminar.setGraphic(new FontIcon(FontAwesomeSolid.TRASH));
+				miEliminar.getStyleClass().add("danger");
+				miEliminar.setOnAction(ev -> {
+					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
+					Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+							"¿Seguro que quieres eliminar la píldora \"" + p.getTitulo() + "\"?");
+					Dialogs.decorate(confirm, root);
+					confirm.showAndWait().ifPresent(res -> {
+						if (res.getButtonData().isDefaultButton()) {
+							pildoraDao.eliminar(p.getId());
+							StatusBus.show("Píldora eliminada.", StatusBus.Type.INFO, Duration.seconds(3));
+							refrescarTabla();
+						}
+					});
+				});
+
+				ctx.getItems().addAll(
+						miAbrir, miEditar,
+						new SeparatorMenuItem(),
+						miFav, miPin,
+						new SeparatorMenuItem(),
+						miOcultar,
+						new SeparatorMenuItem(),
+						miEliminar);
+			});
+
+			row.emptyProperty().addListener((obs, wasEmpty, isEmpty) -> {
+				row.setContextMenu(isEmpty ? null : ctx);
+			});
+
 			return row;
 		});
 

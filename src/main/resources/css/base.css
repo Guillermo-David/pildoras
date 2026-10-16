@@ -406,13 +406,13 @@
 }
 
 .tag-chip>.label {
-	-fx-text-fill: -fx-tag-fg;
+	-fx-text-fill: -chip-fg;
 	-fx-font-size: 11px;
 }
 
 .tag-chip .chip-close {
 	-fx-background-color: transparent;
-	-fx-text-fill: -fx-tag-fg;
+	-fx-text-fill: -chip-fg;
 	-fx-padding: 0 0 0 4;
 	-fx-cursor: hand;
 }
@@ -722,7 +722,17 @@
 
 .version-badge {
   -fx-font-size: 11px;
-  -fx-text-fill: -fx-text-background-color; /* hereda tema */
+  -fx-text-fill: -fx-text-background-color;
   -fx-opacity: 0.8;
+}
+
+.context-menu .menu-item.danger .label {
+  -fx-text-fill: #e53935;
+}
+.context-menu .menu-item.danger .ikonli-font-icon {
+  -fx-icon-color: #e53935;
+}
+.context-menu .menu-item .ikonli-font-icon {
+  -fx-icon-size: 14;
 }
 
