@@ -69,8 +69,12 @@ public class MainApp extends Application{
 
 	    stage.setTitle("Pildoras");
 	    stage.initStyle(javafx.stage.StageStyle.UNDECORATED);
-	    stage.setResizable(false);
+	    stage.setResizable(true);
+	    stage.setMinWidth(900);
+	    stage.setMinHeight(600);
 	    stage.setScene(scene);
+
+	    io.github.guillermo_david.javafx.ResizeHelper.install(stage);
 
 	    stage.setOnCloseRequest(e -> {
 	        DatabaseHelper.getInstance().close();
