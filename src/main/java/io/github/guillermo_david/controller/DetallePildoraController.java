@@ -597,23 +597,15 @@ public class DetallePildoraController {
 	    }
 	}
 
+	private static final java.util.regex.Pattern P_PILDORA_HREF =
+	    java.util.regex.Pattern.compile("href=\"[pP]ildora:(\\d+)\"");
+
 	private String wrapHtmlWithCss(String bodyHtml, String css, boolean mathjax, boolean interceptLinks) {
-	    String intercept = !interceptLinks ? "" : """
-	      <script>
-	      document.addEventListener('click', function(e){
-	        const a = e.target.closest('a');
-	        if(!a) return;
-	        const href = a.getAttribute('href') || '';
-	        if(href.startsWith('pildora:')){
-	          e.preventDefault();
-	          var id = parseInt(href.substring(8), 10);
-	          if(!isNaN(id) && window.app){
-	            try { window.app.openPildora(id); } catch(ex){}
-	          }
-	        }
-	      });
-	      </script>
-	    """;
+	    if (interceptLinks) {
+	        bodyHtml = P_PILDORA_HREF.matcher(bodyHtml).replaceAll(
+	            "href=\"#\" onclick=\"if(window.app)try{window.app.openPildora($1)}catch(e){};return false;\"");
+	    }
+	    String intercept = "";
 
 	    String mj = !mathjax ? "" : """
 	      <script>
