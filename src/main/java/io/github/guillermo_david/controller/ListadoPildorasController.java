@@ -766,7 +766,7 @@ public class ListadoPildorasController {
 			eyeIcon.setIconCode(sel ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH);
 			paginaActual = 1;
 			refrescarTabla();
-			StatusBus.show(sel ? "Mostrando todas (incluidas ocultas)" : "Ocultando archivadas",
+			StatusBus.show(sel ? "Mostrando ocultas: activado" : "Mostrando ocultas: desactivado",
 					StatusBus.Type.INFO, Duration.seconds(2));
 		});
 		// Insert toggle into header after btnSoloFav
