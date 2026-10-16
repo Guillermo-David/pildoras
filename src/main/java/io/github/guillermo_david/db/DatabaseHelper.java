@@ -194,7 +194,8 @@ public class DatabaseHelper {
                     pinned   INTEGER NOT NULL DEFAULT 0,
                     descripcion_cipher BLOB,
                     descripcion_iv     BLOB,
-                    protegida INTEGER NOT NULL DEFAULT 0
+                    protegida INTEGER NOT NULL DEFAULT 0,
+                    oculta    INTEGER NOT NULL DEFAULT 0
                 )
             """);
 
@@ -244,6 +245,7 @@ public class DatabaseHelper {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_favorita ON pildoras(favorita)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_oculta ON pildoras(oculta)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_drafts_fecha ON drafts(fecha_creacion DESC)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildora_link_from ON pildora_link(from_id, kind)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_pildora_link_to ON pildora_link(to_id, kind)");
@@ -273,6 +275,9 @@ public class DatabaseHelper {
             if (!columnExists("pildoras", "descripcion_iv")) {
                 s.execute("ALTER TABLE pildoras ADD COLUMN descripcion_iv BLOB");
             }
+            if (!columnExists("pildoras", "oculta")) {
+                s.execute("ALTER TABLE pildoras ADD COLUMN oculta INTEGER NOT NULL DEFAULT 0");
+            }
         }
 
         if (isColumnNotNull("pildoras", "descripcion")) {
@@ -290,7 +295,8 @@ public class DatabaseHelper {
                         pinned   INTEGER NOT NULL DEFAULT 0,
                         descripcion_cipher BLOB,
                         descripcion_iv     BLOB,
-                        protegida INTEGER NOT NULL DEFAULT 0
+                        protegida INTEGER NOT NULL DEFAULT 0,
+                        oculta    INTEGER NOT NULL DEFAULT 0
                     )
                 """);
 

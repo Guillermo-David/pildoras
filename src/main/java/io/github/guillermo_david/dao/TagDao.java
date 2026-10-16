@@ -16,6 +16,10 @@ public class TagDao {
 	    String nombre = normalize(input);
 	    if (nombre.isEmpty()) return null;
 
+	    if (DatabaseHelper.getInstance().isUsingTurso()) {
+	        return findOrCreateTurso(nombre);
+	    }
+
 	    var conn = DatabaseHelper.getInstance().getConnection();
 
 	    String select = "SELECT id, nombre FROM tags WHERE lower(nombre) = ?";
@@ -33,10 +37,9 @@ public class TagDao {
 	        ps.setString(1, nombre);
 	        ps.execute();
 	        try (ResultSet rs = ps.getGeneratedKeys()) {
-	            if (rs.next()) return new Tag(rs.getInt(1), nombre); // devuelve normalizado
+	            if (rs.next()) return new Tag(rs.getInt(1), nombre);
 	        }
 	    } catch (SQLException e) {
-	        // posible carrera: re-lee
 	        try (PreparedStatement ps2 = conn.prepareStatement(select)) {
 	            ps2.setString(1, nombre);
 	            try (ResultSet rs2 = ps2.executeQuery()) {
@@ -49,10 +52,43 @@ public class TagDao {
 	    return null;
 	}
 
+	private Tag findOrCreateTurso(String nombre) {
+	    var conn = DatabaseHelper.getInstance().getConnection();
+
+	    String selectSql = "SELECT id, nombre FROM tags WHERE lower(nombre) = " + esc(nombre);
+	    try (Statement st = conn.createStatement();
+	         ResultSet rs = st.executeQuery(selectSql)) {
+	        if (rs.next()) return new Tag(rs.getInt("id"), rs.getString("nombre"));
+	    } catch (SQLException e) {
+	        throw new RuntimeException("Error buscando tag", e);
+	    }
+
+	    String insertSql = "INSERT INTO tags (nombre) VALUES (" + esc(nombre) + ")";
+	    try (Statement st = conn.createStatement()) {
+	        st.execute(insertSql);
+	        try (ResultSet rs = st.executeQuery("SELECT last_insert_rowid()")) {
+	            if (rs.next()) return new Tag(rs.getInt(1), nombre);
+	        }
+	    } catch (SQLException e) {
+	        // race condition: re-read
+	        try (Statement st2 = conn.createStatement();
+	             ResultSet rs2 = st2.executeQuery(selectSql)) {
+	            if (rs2.next()) return new Tag(rs2.getInt("id"), rs2.getString("nombre"));
+	        } catch (SQLException ignore) {}
+	        throw new RuntimeException("Error insertando tag", e);
+	    }
+
+	    return null;
+	}
+
 	private static String normalize(String s) {
 	    return s == null ? "" : s.trim().toLowerCase(java.util.Locale.ROOT);
 	}
 
+	private static String esc(String val) {
+	    if (val == null) return "NULL";
+	    return "'" + val.replace("'", "''") + "'";
+	}
 
     public List<Tag> findByPildoraId(int pildoraId) {
         List<Tag> lista = new ArrayList<>();
@@ -93,7 +129,7 @@ public class TagDao {
         }
         return lista;
     }
-    
+
     public List<String[]> listAllWithCount() {
         List<String[]> list = new ArrayList<>();
         String sql = """

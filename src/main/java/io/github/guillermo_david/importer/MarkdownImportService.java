@@ -74,14 +74,16 @@ public class MarkdownImportService {
 
         // --- Persistencia atómica (misma conexión)
         Connection cx = DatabaseHelper.getInstance().getConnection();
-        boolean oldAuto = cx.getAutoCommit();
-        cx.setAutoCommit(false);
+        boolean useTurso = DatabaseHelper.getInstance().isUsingTurso();
+        boolean oldAuto = true;
+        if (!useTurso) {
+            oldAuto = cx.getAutoCommit();
+            cx.setAutoCommit(false);
+        }
         try {
-            // NO protegida: en claro
             Pildora p = new Pildora(titulo, cuerpo, /*protegida*/ false, /*cipher*/ null, /*iv*/ null);
-            pildoraDao.insertar(p); // asigna id
+            pildoraDao.insertar(p);
 
-            // Tags
             pildoraTagDao.removeAllTagsFromPildora(p.getId());
             for (String t : tags) {
                 Tag tag = tagDao.findOrCreate(t);
@@ -90,21 +92,19 @@ public class MarkdownImportService {
                 }
             }
 
-            // Enlaces internos "pildora:<id>" detectados en el cuerpo
             try {
                 var ids = extractLinkedIds(cuerpo);
                 pildoraLinkDao.replaceRefs(p.getId(), ids);
             } catch (Exception ignore) {
-                // no bloquea la importación si falla la sincronización de referencias
             }
 
-            cx.commit();
+            if (!useTurso) cx.commit();
             return new Result(p.getId(), titulo, tags);
         } catch (Exception ex) {
-            try { cx.rollback(); } catch (Exception ignore) {}
+            if (!useTurso) { try { cx.rollback(); } catch (Exception ignore) {} }
             throw ex;
         } finally {
-            try { cx.setAutoCommit(oldAuto); } catch (Exception ignore) {}
+            if (!useTurso) { try { cx.setAutoCommit(oldAuto); } catch (Exception ignore) {} }
         }
     }
 

@@ -155,13 +155,14 @@ public class ListadoPildorasController {
 	@FXML private Label lblPagina, lblStatus;
 	@FXML private TableView<Pildora> table;
 	@FXML private TableColumn<Pildora, String> colTitulo, colDescripcion, colTags;
-	@FXML private TableColumn<Pildora, Void> colFav, colAcciones, colPinned;
+	@FXML private TableColumn<Pildora, Void> colFav, colAcciones;
 	@FXML private CustomTextField txtFiltroTexto, txtFiltroTags;
 	@FXML private ImageView imgLogo;
 	@FXML private VBox tagSidebar, tagListBox;
 	@FXML private Button btnToggleSidebar;
 	private boolean sidebarCollapsed = false;
 	private String selectedSidebarTag = null;
+	private boolean mostrarOcultas = false;
 
 	@FXML
 	public void initialize() {
@@ -174,7 +175,6 @@ public class ListadoPildorasController {
 		addVersionBadge();
 		setTableProperties();
 		setColFav();
-		setColPinned();
 		setColTitulo();
 		setColDescripcion();
 		setColTags();
@@ -321,7 +321,6 @@ public class ListadoPildorasController {
 		colDescripcion.setSortable(true);
 		colTags.setSortable(false);
 		colFav.setSortable(false);
-		colPinned.setSortable(false);
 		colAcciones.setSortable(false);
 
 		table.setSortPolicy(tv -> {
@@ -429,15 +428,9 @@ public class ListadoPildorasController {
 			return row;
 		});
 
-		// Columnas fijas para pin y fav
-		colPinned.setMinWidth(45);
-		colPinned.setPrefWidth(45);
-		colPinned.setMaxWidth(45);
-		colPinned.setResizable(false);
-
-		colFav.setMinWidth(45);
-		colFav.setPrefWidth(45);
-		colFav.setMaxWidth(45);
+		colFav.setMinWidth(80);
+		colFav.setPrefWidth(80);
+		colFav.setMaxWidth(80);
 		colFav.setResizable(false);
 
 	}
@@ -605,88 +598,48 @@ public class ListadoPildorasController {
 
 				Pildora p = (Pildora) getTableRow().getItem();
 
-				Button star = new Button();
-				star.getStyleClass().add("star"); // 👈 para .button.star del CSS
-
-				FontIcon icon = new FontIcon(p.isFavorita() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
-				icon.getStyleClass().add("star-icon"); // base para tamaño/color
-				icon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
-				if (p.isFavorita()) {
-					icon.getStyleClass().add("star-fav"); // 👈 color dorado
-				}
-
-				star.setGraphic(icon);
-				star.setOnAction(e -> {
-					boolean nueva = !p.isFavorita();
-					pildoraDao.marcarFavorita(p.getId(), nueva);
-					p.setFavorita(nueva);
-
-					// Actualiza icono y clases
-					icon.setIconCode(nueva ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
-					icon.getStyleClass().remove("star-fav");
-					if (nueva)
-						icon.getStyleClass().add("star-fav");
-
-					StatusBus.show(nueva ? "Añadida a favoritas" : "Quitada de favoritas", StatusBus.Type.INFO,
-							Duration.seconds(2));
-					if (btnSoloFav.isSelected())
-						refrescarTabla();
-				});
-
-				HBox box = new HBox(star);
-				box.setStyle("-fx-alignment: CENTER;");
-				box.setTranslateX(-4);
-				setGraphic(box);
-			}
-		});
-	}
-
-	private void setColPinned() {
-		colPinned.setSortable(false);
-		colPinned.setCellFactory(col -> new TableCell<>() {
-			@Override
-			protected void updateItem(Void item, boolean empty) {
-				super.updateItem(item, empty);
-				if (empty || getTableRow() == null || getTableRow().getItem() == null) {
-					setGraphic(null);
-					return;
-				}
-
-				Pildora p = (Pildora) getTableRow().getItem();
-
+				// Pin button
 				Button pinBtn = new Button();
 				pinBtn.getStyleClass().add("pin");
-
-				// 👇 siempre Solid
-				FontIcon icon = new FontIcon(FontAwesomeSolid.THUMBTACK);
-				icon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
-				icon.getStyleClass().add("pin-icon");
-				if (p.isPinned())
-					icon.getStyleClass().add("pin-active");
-				icon.setRotate(p.isPinned() ? -20 : 0); // opcional: efecto clavada
-
-				pinBtn.setGraphic(icon);
+				FontIcon pinIcon = new FontIcon(FontAwesomeSolid.THUMBTACK);
+				pinIcon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
+				pinIcon.getStyleClass().add("pin-icon");
+				if (p.isPinned()) pinIcon.getStyleClass().add("pin-active");
+				pinIcon.setRotate(p.isPinned() ? -20 : 0);
+				pinBtn.setGraphic(pinIcon);
 				pinBtn.setTooltip(new Tooltip(p.isPinned() ? "Desfijar" : "Fijar"));
-
 				pinBtn.setOnAction(e -> {
 					boolean nuevo = !p.isPinned();
 					pildoraDao.marcarPinned(p.getId(), nuevo);
 					p.setPinned(nuevo);
-
-					icon.getStyleClass().remove("pin-active");
-					if (nuevo)
-						icon.getStyleClass().add("pin-active");
-					icon.setRotate(nuevo ? -20 : 0);
+					pinIcon.getStyleClass().remove("pin-active");
+					if (nuevo) pinIcon.getStyleClass().add("pin-active");
+					pinIcon.setRotate(nuevo ? -20 : 0);
 					pinBtn.setTooltip(new Tooltip(nuevo ? "Desfijar" : "Fijar"));
-
-					StatusBus.show(nuevo ? "Píldora anclada" : "Píldora desanclada", StatusBus.Type.INFO,
-							Duration.seconds(2));
-
-					// si el ORDER BY usa pinned DESC, recarga la tabla para recolocar
+					StatusBus.show(nuevo ? "Píldora anclada" : "Píldora desanclada", StatusBus.Type.INFO, Duration.seconds(2));
 					ListadoPildorasController.this.refrescarTabla();
 				});
 
-				HBox box = new HBox(pinBtn);
+				// Star button
+				Button star = new Button();
+				star.getStyleClass().add("star");
+				FontIcon starIcon = new FontIcon(p.isFavorita() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
+				starIcon.getStyleClass().add("star-icon");
+				starIcon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
+				if (p.isFavorita()) starIcon.getStyleClass().add("star-fav");
+				star.setGraphic(starIcon);
+				star.setOnAction(e -> {
+					boolean nueva = !p.isFavorita();
+					pildoraDao.marcarFavorita(p.getId(), nueva);
+					p.setFavorita(nueva);
+					starIcon.setIconCode(nueva ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR);
+					starIcon.getStyleClass().remove("star-fav");
+					if (nueva) starIcon.getStyleClass().add("star-fav");
+					StatusBus.show(nueva ? "Añadida a favoritas" : "Quitada de favoritas", StatusBus.Type.INFO, Duration.seconds(2));
+					if (btnSoloFav.isSelected()) refrescarTabla();
+				});
+
+				HBox box = new HBox(4, pinBtn, star);
 				box.setStyle("-fx-alignment: CENTER;");
 				setGraphic(box);
 			}
@@ -732,6 +685,30 @@ public class ListadoPildorasController {
 			StatusBus.show(sel ? "Filtro de tags: contiene todas" : "Filtro de tags: contiene al menos una",
 					StatusBus.Type.INFO, Duration.seconds(2));
 		});
+
+		// --- MOSTRAR/OCULTAR ARCHIVADAS ---
+		var btnOcultas = new ToggleButton();
+		FontIcon eyeIcon = new FontIcon(FontAwesomeSolid.EYE_SLASH);
+		eyeIcon.setIconSize(DEFAULT_SMALL_ICON_SIZE);
+		btnOcultas.getStyleClass().setAll("round-toggle", "eye-toggle");
+		btnOcultas.setGraphic(eyeIcon);
+		btnOcultas.setText(null);
+		btnOcultas.setTooltip(new Tooltip("Mostrar/ocultar archivadas"));
+		btnOcultas.selectedProperty().addListener((obs, old, sel) -> {
+			mostrarOcultas = sel;
+			eyeIcon.setIconCode(sel ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH);
+			paginaActual = 1;
+			refrescarTabla();
+			StatusBus.show(sel ? "Mostrando todas (incluidas ocultas)" : "Ocultando archivadas",
+					StatusBus.Type.INFO, Duration.seconds(2));
+		});
+		// Insert toggle into header after btnSoloFav
+		if (appHeader != null) {
+			int favIdx = appHeader.getChildren().indexOf(btnSoloFav);
+			if (favIdx >= 0) {
+				appHeader.getChildren().add(favIdx + 1, btnOcultas);
+			}
+		}
 
 		FontIcon nuevaIcon = new FontIcon(FontAwesomeSolid.FOLDER_PLUS);
 		btnNueva.setGraphic(nuevaIcon);
@@ -1003,7 +980,7 @@ public class ListadoPildorasController {
 						int total = pildoraDao.contarFiltradas(
 								txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
 								txtFiltroTags.getText().isBlank() ? null : txtFiltroTags.getText().trim(),
-								btnAndOr.isSelected(), btnSoloFav.isSelected());
+								btnAndOr.isSelected(), btnSoloFav.isSelected(), mostrarOcultas);
 						totalPaginas = Math.max(1, (int) Math.ceil((double) total / TAMANIO_PAGINA));
 						paginaActual = Math.min(paginaActual, totalPaginas);
 						refrescarTabla();
@@ -1215,7 +1192,7 @@ public class ListadoPildorasController {
 		boolean andMode = btnAndOr.isSelected();
 
 		boolean soloFavoritas = btnSoloFav.isSelected();
-		int total = pildoraDao.contarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas);
+		int total = pildoraDao.contarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, mostrarOcultas);
 		totalPaginas = Math.max(1, (int) Math.ceil((double) total / TAMANIO_PAGINA));
 
 		// Ajusta paginaActual si se ha quedado fuera de rango
@@ -1226,7 +1203,7 @@ public class ListadoPildorasController {
 		}
 
 		List<Pildora> todas = pildoraDao.listarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, paginaActual,
-				TAMANIO_PAGINA, columnaOrden, direccionOrden);
+				TAMANIO_PAGINA, columnaOrden, direccionOrden, mostrarOcultas);
 
 		table.setItems(FXCollections.observableArrayList(todas));
 		
@@ -1678,12 +1655,23 @@ public class ListadoPildorasController {
 		miSecurity.getItems().addAll(miChangePin, new SeparatorMenuItem(), miSetQuestion, miResetByAnswer,
 				new SeparatorMenuItem(), miGenRecovery, miResetByCode, new SeparatorMenuItem(), miLock);
 
-		// --- Turso (sincronización) ---
+		// =============== Submenú Base de datos ===============
+		var miDatabase = new Menu("Base de datos");
+
 		var miTurso = new MenuItem(TursoConfig.isConfigured() ? "Turso: conectado" : "Configurar Turso…");
 		miTurso.setOnAction(e -> showTursoDialog(miTurso));
 
 		var miMigrate = new MenuItem("Migrar datos locales a Turso…");
 		miMigrate.setOnAction(e -> handleMigrateToTurso());
+
+		var miTursoGuide = new MenuItem("Cómo configurar Turso…");
+		miTursoGuide.setOnAction(e -> showTursoGuideDialog());
+
+		miDatabase.getItems().addAll(miTurso, miMigrate, new SeparatorMenuItem(), miTursoGuide);
+
+		// =============== Submenú Debug ===============
+		var miDebug = new Menu("Debug");
+		miDebug.getItems().add(createOpenLogMenuItem());
 
 		// --- Atajos ---
 		var miShortcuts = new MenuItem("Atajos de teclado…");
@@ -1698,14 +1686,13 @@ public class ListadoPildorasController {
 				new SeparatorMenuItem(),
 				miTemaOscuro,
 				new SeparatorMenuItem(),
-				miTurso,
-				miMigrate,
+				miDatabase,
 				new SeparatorMenuItem(),
 				miSecurity,
 				new SeparatorMenuItem(),
 				miShortcuts,
 				new SeparatorMenuItem(),
-				createOpenLogMenuItem());
+				miDebug);
 	}
 
 	// Modal de lockout igual que en editor, pero desde listado
@@ -2236,6 +2223,49 @@ public class ListadoPildorasController {
 	    new Thread(task, "ImportMarkdown").start();
 	}
 	
+	private void showTursoGuideDialog() {
+		Alert guide = new Alert(AlertType.INFORMATION);
+		guide.setTitle("Cómo configurar Turso");
+		guide.setHeaderText("Guía rápida para sincronizar con Turso");
+
+		var ta = new TextArea("""
+			1. Crear una cuenta en https://turso.tech (plan gratuito disponible)
+
+			2. Instalar la CLI de Turso:
+			   curl -sSfL https://get.tur.so/install.sh | bash
+
+			3. Iniciar sesión:
+			   turso auth login
+
+			4. Crear una base de datos:
+			   turso db create pildoras
+
+			5. Obtener la URL de la base de datos:
+			   turso db show pildoras --url
+			   (Ejemplo: libsql://pildoras-usuario.turso.io)
+
+			6. Generar un token de autenticación:
+			   turso db tokens create pildoras
+
+			7. En Píldoras: Ajustes → Base de datos → Configurar Turso
+			   - Pega la URL y el token obtenidos
+			   - Pulsa Aceptar para conectar
+
+			8. (Opcional) Migrar datos locales:
+			   Ajustes → Base de datos → Migrar datos locales a Turso
+			""");
+		ta.setEditable(false);
+		ta.setWrapText(true);
+		ta.setPrefRowCount(18);
+		ta.setPrefColumnCount(50);
+		ta.setStyle("-fx-font-size: 13px;");
+
+		guide.getDialogPane().setContent(ta);
+		guide.getDialogPane().setPrefWidth(560);
+		Dialogs.decorate(guide, root);
+		guide.showAndWait();
+	}
+
 	private void handleMigrateToTurso() {
 	    if (!TursoConfig.isConfigured()) {
 	        var alert = new Alert(AlertType.WARNING);
@@ -2318,7 +2348,7 @@ public class ListadoPildorasController {
 	        tagSidebar.setMaxWidth(28);
 	        var expandBtn = new Button();
 	        expandBtn.setId("sidebarExpandBtn");
-	        expandBtn.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_RIGHT));
+	        expandBtn.setGraphic(new FontIcon(FontAwesomeSolid.CHEVRON_LEFT));
 	        expandBtn.getStyleClass().add("sidebar-expand-btn");
 	        expandBtn.setMaxWidth(Double.MAX_VALUE);
 	        expandBtn.setOnAction(ev -> toggleSidebar());
@@ -2336,7 +2366,7 @@ public class ListadoPildorasController {
 	        tagSidebar.setPrefWidth(200);
 	        tagSidebar.setMinWidth(0);
 	        tagSidebar.setMaxWidth(200);
-	        btnToggleSidebar.setText("◀");
+	        btnToggleSidebar.setText("▶");
 	    }
 	}
 

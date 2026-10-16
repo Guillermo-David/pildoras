@@ -26,8 +26,8 @@ public class PildoraDao {
 		String sql = """
 				    INSERT INTO pildoras
 				      (titulo, descripcion, fecha_creacion, fecha_actualizacion,
-				       favorita, pinned, descripcion_cipher, descripcion_iv, protegida)
-				    VALUES (?, ?, CURRENT_TIMESTAMP, NULL, 0, 0, ?, ?, ?)
+				       favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta)
+				    VALUES (?, ?, CURRENT_TIMESTAMP, NULL, 0, 0, ?, ?, ?, ?)
 				""";
 		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql,
 				Statement.RETURN_GENERATED_KEYS)) {
@@ -45,6 +45,7 @@ public class PildoraDao {
 			else
 				ps.setNull(4, java.sql.Types.BLOB);
 			ps.setInt(5, p.isProtegida() ? 1 : 0);
+			ps.setInt(6, p.isOculta() ? 1 : 0);
 
 			ps.execute();
 			try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -61,9 +62,10 @@ public class PildoraDao {
 		String cipher = p.isProtegida() ? escBlob(p.getDescripcionCipher()) : "NULL";
 		String iv = p.isProtegida() ? escBlob(p.getDescripcionIv()) : "NULL";
 		String sql = "INSERT INTO pildoras (titulo, descripcion, fecha_creacion, fecha_actualizacion,"
-				+ " favorita, pinned, descripcion_cipher, descripcion_iv, protegida)"
+				+ " favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta)"
 				+ " VALUES (" + esc(p.getTitulo()) + ", " + desc + ", CURRENT_TIMESTAMP, NULL, 0, 0, "
-				+ cipher + ", " + iv + ", " + (p.isProtegida() ? 1 : 0) + ")";
+				+ cipher + ", " + iv + ", " + (p.isProtegida() ? 1 : 0)
+				+ ", " + (p.isOculta() ? 1 : 0) + ")";
 		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement()) {
 			st.execute(sql);
 			try (ResultSet rs = st.executeQuery("SELECT last_insert_rowid()")) {
@@ -75,7 +77,7 @@ public class PildoraDao {
 	}
 
 	public List<Pildora> listarFiltradas(String tituloFiltro, String tagsFiltro, boolean andMode, boolean soloFavoritas,
-			int page, int pageSize, String columnaOrden, String direccionOrden) {
+			int page, int pageSize, String columnaOrden, String direccionOrden, boolean mostrarOcultas) {
 
 // Whitelist para ORDER BY
 		String colOrden = switch (columnaOrden) {
@@ -99,7 +101,8 @@ public class PildoraDao {
 				  p.pinned,
 				  p.protegida,
 				  p.descripcion_cipher,
-				  p.descripcion_iv
+				  p.descripcion_iv,
+				  p.oculta
 				FROM pildoras p
 				""");
 
@@ -137,6 +140,10 @@ public class PildoraDao {
 
 		if (soloFavoritas) {
 			sql.append("AND p.favorita = 1 ");
+		}
+
+		if (!mostrarOcultas) {
+			sql.append("AND p.oculta = 0 ");
 		}
 
 		sql.append(" ORDER BY p.pinned DESC ");
@@ -182,18 +189,20 @@ public class PildoraDao {
 					if (rs.getInt("protegida") == 1) {
 						descripcion = "Contenido protegido";
 					}
-					lista.add(new Pildora(rs.getInt("id"), rs.getString("titulo"), descripcion,
+					Pildora pil = new Pildora(rs.getInt("id"), rs.getString("titulo"), descripcion,
 							rs.getTimestamp("fecha_creacion") != null
 									? rs.getTimestamp("fecha_creacion").toLocalDateTime()
 									: null,
 							rs.getTimestamp("fecha_actualizacion") != null
 									? rs.getTimestamp("fecha_actualizacion").toLocalDateTime()
 									: null,
-							rs.getInt("favorita") == 1, 
-							rs.getInt("pinned") == 1, 
+							rs.getInt("favorita") == 1,
+							rs.getInt("pinned") == 1,
 							rs.getInt("protegida") == 1,
-							rs.getBytes("descripcion_cipher"), 
-							rs.getBytes("descripcion_iv")));
+							rs.getBytes("descripcion_cipher"),
+							rs.getBytes("descripcion_iv"),
+							rs.getInt("oculta") == 1);
+					lista.add(pil);
 				}
 			}
 		} catch (SQLException e) {
@@ -202,7 +211,7 @@ public class PildoraDao {
 		return lista;
 	}
 
-	public int contarFiltradas(String tituloFiltro, String tagsFiltro, boolean andMode, boolean soloFavoritas) {
+	public int contarFiltradas(String tituloFiltro, String tagsFiltro, boolean andMode, boolean soloFavoritas, boolean mostrarOcultas) {
 		StringBuilder sql = new StringBuilder("SELECT COUNT(DISTINCT p.id) AS total " + "FROM pildoras p ");
 
 		boolean joinTags = tagsFiltro != null && !tagsFiltro.isBlank() && !andMode; // OR necesita JOIN
@@ -241,6 +250,10 @@ public class PildoraDao {
 			sql.append("AND p.favorita = 1 ");
 		}
 
+		if (!mostrarOcultas) {
+			sql.append("AND p.oculta = 0 ");
+		}
+
 		try (PreparedStatement stmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql.toString())) {
 			int idx = 1;
 			if (tituloFiltro != null && !tituloFiltro.isBlank()) {
@@ -263,19 +276,20 @@ public class PildoraDao {
 	}
 
 	public Pildora buscarPorId(int id) {
-		String sql = 
+		String sql =
 				"""
-				SELECT 
-					id, 
-					titulo, 
-					descripcion, 
-					fecha_creacion, 
-					fecha_actualizacion, 
-					favorita, 
-					pinned, 
-					protegida, 
-					descripcion_cipher, 
-					descripcion_iv 
+				SELECT
+					id,
+					titulo,
+					descripcion,
+					fecha_creacion,
+					fecha_actualizacion,
+					favorita,
+					pinned,
+					protegida,
+					descripcion_cipher,
+					descripcion_iv,
+					oculta
 					FROM pildoras WHERE id = ?
 					""";
 		try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
@@ -283,16 +297,18 @@ public class PildoraDao {
 			pstmt.setInt(1, id);
 			try (ResultSet rs = pstmt.executeQuery()) {
 				if (rs.next()) {
-					return new Pildora(rs.getInt("id"), rs.getString("titulo"), rs.getString("descripcion"),
+					Pildora p = new Pildora(rs.getInt("id"), rs.getString("titulo"), rs.getString("descripcion"),
 							rs.getString("fecha_creacion") != null
 									? LocalDateTime.parse(rs.getString("fecha_creacion"), FORMATTER)
 									: null,
 							rs.getString("fecha_actualizacion") != null
 									? LocalDateTime.parse(rs.getString("fecha_actualizacion"), FORMATTER)
 									: null,
-							rs.getInt("favorita") == 1 ? true : false, rs.getInt("pinned") == 1 ? true : false,
-							rs.getInt("protegida") == 1 ? true : false, rs.getBytes("descripcion_cipher"),
-							rs.getBytes("descripcion_iv"));
+							rs.getInt("favorita") == 1, rs.getInt("pinned") == 1,
+							rs.getInt("protegida") == 1, rs.getBytes("descripcion_cipher"),
+							rs.getBytes("descripcion_iv"),
+							rs.getInt("oculta") == 1);
+					return p;
 				}
 			}
 
@@ -351,7 +367,8 @@ public class PildoraDao {
 				        fecha_actualizacion = ?,
 				        favorita = ?, pinned = ?,
 				        descripcion_cipher = ?, descripcion_iv = ?,
-				        protegida = ?
+				        protegida = ?,
+				        oculta = ?
 				    WHERE id = ?
 				""";
 		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
@@ -375,7 +392,8 @@ public class PildoraDao {
 			}
 
 			ps.setInt(8, p.isProtegida() ? 1 : 0);
-			ps.setInt(9, p.getId());
+			ps.setInt(9, p.isOculta() ? 1 : 0);
+			ps.setInt(10, p.getId());
 
 			ps.execute();
 		} catch (SQLException e) {
@@ -396,6 +414,7 @@ public class PildoraDao {
 				+ ", descripcion_cipher=" + cipher
 				+ ", descripcion_iv=" + iv
 				+ ", protegida=" + (p.isProtegida() ? 1 : 0)
+				+ ", oculta=" + (p.isOculta() ? 1 : 0)
 				+ " WHERE id=" + p.getId();
 		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement()) {
 			st.execute(sql);
@@ -429,6 +448,17 @@ public class PildoraDao {
 		String sql = "UPDATE pildoras SET pinned = ? WHERE id = ?";
 		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			ps.setInt(1, pinned ? 1 : 0);
+			ps.setLong(2, id);
+			ps.execute();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void marcarOculta(long id, boolean oculta) {
+		String sql = "UPDATE pildoras SET oculta = ? WHERE id = ?";
+		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+			ps.setInt(1, oculta ? 1 : 0);
 			ps.setLong(2, id);
 			ps.execute();
 		} catch (SQLException e) {

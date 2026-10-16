@@ -20,13 +20,14 @@ public class Pildora {
     private boolean protegida;
     private byte[] descripcionCipher;
     private byte[] descripcionIv;
+    private boolean oculta;
 
 
     public Pildora(
-    		String titulo, 
-    		String descripcion, 
-    		boolean protegida, 
-    		byte[] descripcionCipher, 
+    		String titulo,
+    		String descripcion,
+    		boolean protegida,
+    		byte[] descripcionCipher,
     		byte[] descripcionIv) {
         this.id = null;
         this.titulo = titulo;
@@ -38,6 +39,7 @@ public class Pildora {
         this.protegida = protegida;
         this.descripcionCipher = descripcionCipher;
         this.descripcionIv = descripcionIv;
+        this.oculta = false;
     }
 
     @Override

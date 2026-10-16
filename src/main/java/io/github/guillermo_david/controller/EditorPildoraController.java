@@ -55,7 +55,7 @@ public class EditorPildoraController {
 
 	@FXML private TextField txtTagInput, txtTitulo;
 	@FXML private TextArea txtDescripcion;
-	@FXML private ToggleSwitch switchProteger, switchPreview;
+	@FXML private ToggleSwitch switchProteger, switchPreview, switchOcultar;
 	@FXML private Button btnGuardar, btnCancelar;
 	@FXML private FlowPane tagsBox;
 	@FXML private VBox root;
@@ -154,6 +154,10 @@ public class EditorPildoraController {
 				}
 			});
 		});
+
+		if (switchOcultar != null) {
+			switchOcultar.setTooltip(new Tooltip("Ocultar esta píldora del listado principal"));
+		}
 
 		if (switchProteger != null) {
 			switchProteger.setTooltip(new Tooltip("Proteger con PIN (cifra el contenido)"));
@@ -289,10 +293,13 @@ public class EditorPildoraController {
 				descripcionPlano = null; // BD: NULL cuando está protegida
 			}
 
+			boolean ocultar = switchOcultar != null && switchOcultar.isSelected();
+
 			Pildora nueva = new Pildora();
 			// --- Guardado en BD ---
 			if (pildoraEnEdicion == null) {
 				nueva = new Pildora(titulo, descripcionPlano, proteger, cipher, iv);
+				nueva.setOculta(ocultar);
 				pildoraDao.insertar(nueva);
 				persistTags(nueva.getId());
 			} else {
@@ -301,6 +308,7 @@ public class EditorPildoraController {
 				pildoraEnEdicion.setDescripcion(descripcionPlano);
 				pildoraEnEdicion.setDescripcionCipher(cipher);
 				pildoraEnEdicion.setDescripcionIv(iv);
+				pildoraEnEdicion.setOculta(ocultar);
 
 				pildoraDao.actualizar(pildoraEnEdicion);
 				persistTags(pildoraEnEdicion.getId());
@@ -387,9 +395,12 @@ public class EditorPildoraController {
 
 	public void cargarPildora(Pildora p) {
 		this.pildoraEnEdicion = p;
+		this.originalProtegida = p.isProtegida();
 		txtTitulo.setText(p.getTitulo());
 		if (switchProteger != null)
 			switchProteger.setSelected(p.isProtegida());
+		if (switchOcultar != null)
+			switchOcultar.setSelected(p.isOculta());
 
 		if (p.isProtegida()) {
 			if (security.isUnlocked()) {

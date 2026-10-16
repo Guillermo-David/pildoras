@@ -14,7 +14,10 @@
         <Insets top="15" right="15" bottom="15" left="15"/>
     </padding>
 
-    <ToggleSwitch fx:id="switchProteger" text="Proteger contenido"/>
+    <HBox spacing="20" alignment="CENTER_LEFT">
+        <ToggleSwitch fx:id="switchProteger" text="Proteger contenido"/>
+        <ToggleSwitch fx:id="switchOcultar" text="Ocultar píldora"/>
+    </HBox>
     <Label text="Título:"/>
     <TextField fx:id="txtTitulo"/>
 
