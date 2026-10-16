@@ -74,6 +74,11 @@ public final class PildoraPickerDialogs {
         Runnable doSearch = () -> {
             String q = tfFilter.getText() == null ? "" : tfFilter.getText().trim();
             List<Pildora> rows = dao.buscarPorTitulo(q, 100);
+            rows.sort((a, b) -> {
+                String ta = a.getTitulo() == null ? "" : a.getTitulo().toLowerCase();
+                String tb = b.getTitulo() == null ? "" : b.getTitulo().toLowerCase();
+                return ta.compareTo(tb);
+            });
             data.setAll(rows);
             if (!rows.isEmpty()) table.getSelectionModel().selectFirst();
         };
