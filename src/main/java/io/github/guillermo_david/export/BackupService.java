@@ -1,8 +1,9 @@
 package io.github.guillermo_david.export;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.security.SecureRandom;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDateTime;
@@ -11,8 +12,16 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
+import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import io.github.guillermo_david.dao.SqlHelper;
 import io.github.guillermo_david.db.DatabaseHelper;
@@ -44,7 +53,68 @@ public class BackupService {
             String fechaCreacion, String fechaActualizacion) {}
     public record PildoraLinkRow(int fromId, int toId, String kind) {}
 
+    private static final String ENC_FORMAT = "pildoras-enc-1";
+    private static final int PBKDF2_ITER = 200_000;
+
+    public static class WrongPasswordException extends Exception {
+        public WrongPasswordException() { super("Contraseña incorrecta o fichero dañado"); }
+    }
+
+    public static boolean isEncrypted(File file) {
+        try {
+            var el = JsonParser.parseString(Files.readString(file.toPath(), StandardCharsets.UTF_8));
+            return el.isJsonObject() && ENC_FORMAT.equals(
+                    el.getAsJsonObject().has("format") ? el.getAsJsonObject().get("format").getAsString() : null);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static SecretKeySpec deriveKey(char[] password, byte[] salt) throws Exception {
+        var spec = new PBEKeySpec(password, salt, PBKDF2_ITER, 256);
+        try {
+            return new SecretKeySpec(SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec)
+                    .getEncoded(), "AES");
+        } finally {
+            spec.clearPassword();
+        }
+    }
+
+    static String encrypt(String json, char[] password) throws Exception {
+        var rnd = new SecureRandom();
+        byte[] salt = new byte[16], iv = new byte[12];
+        rnd.nextBytes(salt);
+        rnd.nextBytes(iv);
+        var c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, deriveKey(password, salt), new GCMParameterSpec(128, iv));
+        byte[] data = c.doFinal(json.getBytes(StandardCharsets.UTF_8));
+        var o = new JsonObject();
+        o.addProperty("format", ENC_FORMAT);
+        o.addProperty("salt", Base64.getEncoder().encodeToString(salt));
+        o.addProperty("iv", Base64.getEncoder().encodeToString(iv));
+        o.addProperty("data", Base64.getEncoder().encodeToString(data));
+        return GSON.toJson(o);
+    }
+
+    static String decrypt(String envelope, char[] password) throws Exception {
+        var o = JsonParser.parseString(envelope).getAsJsonObject();
+        byte[] salt = Base64.getDecoder().decode(o.get("salt").getAsString());
+        byte[] iv = Base64.getDecoder().decode(o.get("iv").getAsString());
+        byte[] data = Base64.getDecoder().decode(o.get("data").getAsString());
+        try {
+            var c = Cipher.getInstance("AES/GCM/NoPadding");
+            c.init(Cipher.DECRYPT_MODE, deriveKey(password, salt), new GCMParameterSpec(128, iv));
+            return new String(c.doFinal(data), StandardCharsets.UTF_8);
+        } catch (javax.crypto.AEADBadTagException e) {
+            throw new WrongPasswordException();
+        }
+    }
+
     public static void exportToFile(File file) throws Exception {
+        exportToFile(file, null);
+    }
+
+    public static void exportToFile(File file, char[] password) throws Exception {
         var conn = DatabaseHelper.getInstance().getConnection();
 
         List<PildoraRow> pildoras = new ArrayList<>();
@@ -109,19 +179,28 @@ public class BackupService {
             pildoras, tags, pildoraTags, drafts, links
         );
 
-        try (FileWriter fw = new FileWriter(file)) {
-            GSON.toJson(backup, fw);
-        }
+        String json = GSON.toJson(backup);
+        if (password != null && password.length > 0)
+            json = encrypt(json, password);
+        Files.writeString(file.toPath(), json, StandardCharsets.UTF_8);
     }
 
-    public static BackupData readBackup(File file) throws Exception {
-        try (FileReader fr = new FileReader(file)) {
-            return GSON.fromJson(fr, BackupData.class);
+    public static BackupData readBackup(File file, char[] password) throws Exception {
+        String text = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+        if (isEncrypted(file)) {
+            if (password == null || password.length == 0)
+                throw new WrongPasswordException();
+            text = decrypt(text, password);
         }
+        return GSON.fromJson(text, BackupData.class);
     }
 
     public static int[] importFromFile(File file) throws Exception {
-        BackupData data = readBackup(file);
+        return importFromFile(file, null);
+    }
+
+    public static int[] importFromFile(File file, char[] password) throws Exception {
+        BackupData data = readBackup(file, password);
         var conn = DatabaseHelper.getInstance().getConnection();
 
         int pCount = 0, tCount = 0, dCount = 0;

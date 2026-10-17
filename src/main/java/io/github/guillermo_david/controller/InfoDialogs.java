@@ -263,4 +263,31 @@ final class InfoDialogs {
         l.setStyle("-fx-font-weight: bold;");
         return l;
     }
+
+    /** Devuelve la contraseña (vacía = sin cifrar al exportar) o null si se cancela. */
+    static char[] promptBackupPassword(Parent root, boolean forExport) {
+        var dlg = new javafx.scene.control.Dialog<char[]>();
+        dlg.setTitle(I18n.get("backup.password.title"));
+        dlg.setHeaderText(I18n.get(forExport ? "backup.password.export.header" : "backup.password.import.header"));
+        var pf = new javafx.scene.control.PasswordField();
+        var pf2 = new javafx.scene.control.PasswordField();
+        var box = new VBox(8, new Label(I18n.get("backup.password.label")), pf);
+        if (forExport) box.getChildren().addAll(new Label(I18n.get("backup.password.confirm")), pf2);
+        box.setPadding(new Insets(10));
+        dlg.getDialogPane().setContent(box);
+        var ok = new javafx.scene.control.ButtonType(I18n.get("button.accept"),
+                javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+        var cancel = new javafx.scene.control.ButtonType(I18n.get("button.cancel"),
+                javafx.scene.control.ButtonBar.ButtonData.CANCEL_CLOSE);
+        dlg.getDialogPane().getButtonTypes().setAll(ok, cancel);
+        var okNode = dlg.getDialogPane().lookupButton(ok);
+        Runnable validate = () -> okNode.setDisable(forExport ? !pf.getText().equals(pf2.getText())
+                : pf.getText().isEmpty());
+        pf.textProperty().addListener((o, a, b) -> validate.run());
+        pf2.textProperty().addListener((o, a, b) -> validate.run());
+        validate.run();
+        dlg.setResultConverter(bt -> bt == ok ? pf.getText().toCharArray() : null);
+        Dialogs.decorate(dlg, root);
+        return dlg.showAndWait().orElse(null);
+    }
 }

@@ -631,12 +631,16 @@ class SettingsMenuHelper {
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON", "*.json"));
         var file = fc.showSaveDialog(root.getScene().getWindow());
         if (file == null) return;
+        char[] pwd = InfoDialogs.promptBackupPassword(root, true);
+        if (pwd == null) return;
         try {
-            io.github.guillermo_david.export.BackupService.exportToFile(file);
+            io.github.guillermo_david.export.BackupService.exportToFile(file, pwd);
             StatusBus.show(I18n.get("status.backup.exported"), StatusBus.Type.SUCCESS, Duration.seconds(4));
         } catch (Exception ex) {
             ex.printStackTrace();
             StatusBus.show(I18n.get("status.backup.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(5));
+        } finally {
+            java.util.Arrays.fill(pwd, '\0');
         }
     }
 
@@ -655,14 +659,23 @@ class SettingsMenuHelper {
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON", "*.json"));
         var file = fc.showOpenDialog(root.getScene().getWindow());
         if (file == null) return;
+        char[] pwd = null;
+        if (io.github.guillermo_david.export.BackupService.isEncrypted(file)) {
+            pwd = InfoDialogs.promptBackupPassword(root, false);
+            if (pwd == null) return;
+        }
         try {
-            int[] counts = io.github.guillermo_david.export.BackupService.importFromFile(file);
+            int[] counts = io.github.guillermo_david.export.BackupService.importFromFile(file, pwd);
             refrescarTabla.run();
             StatusBus.show(I18n.get("status.backup.imported", counts[0], counts[1], counts[2]),
                     StatusBus.Type.SUCCESS, Duration.seconds(5));
+        } catch (io.github.guillermo_david.export.BackupService.WrongPasswordException ex) {
+            StatusBus.show(I18n.get("status.backup.wrong.password"), StatusBus.Type.ERROR, Duration.seconds(5));
         } catch (Exception ex) {
             ex.printStackTrace();
             StatusBus.show(I18n.get("status.backup.import.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(5));
+        } finally {
+            if (pwd != null) java.util.Arrays.fill(pwd, '\0');
         }
     }
 
