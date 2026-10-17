@@ -111,7 +111,13 @@ public final class SecurityService {
 	
 	// === Getters ligeros para UI de recuperación ===
 	public String getSecurityQuestion() {
-	    return PREFS.get(K_Q_TEXT, null);
+	    String stored = PREFS.get(K_Q_TEXT, null);
+	    String plain = DeviceProtector.unprotect(stored);
+	    if (plain != null && stored != null && !stored.startsWith(DeviceProtector.PREFIX)) {
+	        String prot = DeviceProtector.protect(plain);
+	        if (!prot.equals(plain)) PREFS.put(K_Q_TEXT, prot);
+	    }
+	    return plain;
 	}
 	public boolean hasSecurityQuestion() {
 	    return PREFS.get(K_Q_TEXT, null) != null
@@ -307,7 +313,7 @@ public final class SecurityService {
 			byte[] iv = randomBytes(GCM_IV_LEN);
 			byte[] wrap = aesGcmEncrypt(kekQ, this.cmk, iv);
 
-			PREFS.put(K_Q_TEXT, question);
+			PREFS.put(K_Q_TEXT, DeviceProtector.protect(question));
 			PREFS.putByteArray(K_Q_SALT, salt);
 			PREFS.putByteArray(K_Q_WRAP, wrap);
 			PREFS.putByteArray(K_Q_WRAP_IV, iv);
