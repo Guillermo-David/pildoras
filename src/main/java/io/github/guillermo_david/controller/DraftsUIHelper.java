@@ -71,7 +71,6 @@ class DraftsUIHelper {
         var miNuevoBorrador = new MenuItem(I18n.get("menu.new.draft"));
         miNuevoBorrador.setGraphic(new FontIcon(FontAwesomeSolid.EDIT));
         miNuevoBorrador.setOnAction(e -> {
-            if (OfflineGuard.blocked()) return;
             var res = DraftDialogs.showQuickDraftDialog(root, null, null, false);
             if (res == null) return;
 

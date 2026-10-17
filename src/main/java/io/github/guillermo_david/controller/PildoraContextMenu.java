@@ -43,7 +43,6 @@ class PildoraContextMenu {
             var miFav = new MenuItem(I18n.get(p.isFavorita() ? "menu.favorites.remove" : "menu.favorites.add"));
             miFav.setGraphic(new FontIcon(p.isFavorita() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR));
             miFav.setOnAction(ev -> {
-                if (OfflineGuard.blocked()) return;
                 boolean nueva = !p.isFavorita();
                 dao.marcarFavorita(p.getId(), nueva);
                 p.setFavorita(nueva);
@@ -55,7 +54,6 @@ class PildoraContextMenu {
             var miPin = new MenuItem(I18n.get(p.isPinned() ? "menu.unpin" : "menu.pin"));
             miPin.setGraphic(new FontIcon(FontAwesomeSolid.THUMBTACK));
             miPin.setOnAction(ev -> {
-                if (OfflineGuard.blocked()) return;
                 boolean nuevo = !p.isPinned();
                 dao.marcarPinned(p.getId(), nuevo);
                 p.setPinned(nuevo);
@@ -66,7 +64,6 @@ class PildoraContextMenu {
             var miOcultar = new MenuItem(I18n.get(p.isOculta() ? "menu.show" : "menu.hide"));
             miOcultar.setGraphic(new FontIcon(p.isOculta() ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH));
             miOcultar.setOnAction(ev -> {
-                if (OfflineGuard.blocked()) return;
                 boolean nuevo = !p.isOculta();
                 dao.marcarOculta(p.getId(), nuevo);
                 p.setOculta(nuevo);
@@ -75,7 +72,6 @@ class PildoraContextMenu {
             });
 
             var miDuplicar = item("menu.duplicate", new FontIcon(FontAwesomeRegular.COPY), () -> {
-                if (OfflineGuard.blocked()) return;
                 dao.duplicar(p.getId(), I18n.get("pildora.copy.suffix"));
                 toast("status.pildora.duplicated");
                 a.refreshAll().run();

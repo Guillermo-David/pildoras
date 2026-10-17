@@ -20,73 +20,22 @@ public class DatabaseHelper {
     private Connection connection;
     private boolean usingTurso;
     private boolean ftsAvailable;
-    private boolean offline;
 
     private DatabaseHelper() {
         try {
             if (TursoConfig.isConfigured()) {
-                try {
-                    connectTurso();
-                } catch (SQLException e) {
-                    if (!Files.exists(getMirrorPath()))
-                        throw e;
-                    System.err.println("[DB] Turso no disponible, usando espejo local (solo lectura): " + e.getMessage());
-                    connectMirror();
-                }
+                connectTurso();
             } else {
                 connectLocal();
             }
-            if (offline) {
-                ftsAvailable = hasFtsTable();
-            } else {
-                initializeDatabase();
-            }
+            initializeDatabase();
         } catch (SQLException | IOException e) {
             throw new RuntimeException("Error inicializando la base de datos", e);
         }
-        System.out.println("[DB] Using Turso: " + usingTurso + ", offline: " + offline);
-        if (!usingTurso && !offline) {
+        System.out.println("[DB] Using Turso: " + usingTurso);
+        if (!usingTurso) {
             System.out.println("[DB] DB_PATH=" + getDatabasePathForDebug());
         }
-        if (usingTurso) {
-            TursoMirrorService.startBackgroundSync();
-        }
-    }
-
-    /** Solo para construir el esquema sobre una conexión ya abierta (espejo). */
-    private DatabaseHelper(Connection existing) throws SQLException {
-        this.connection = existing;
-        this.usingTurso = false;
-        initializeDatabase();
-    }
-
-    static void initSchema(Connection connection) throws SQLException {
-        new DatabaseHelper(connection);
-    }
-
-    public boolean isOffline() {
-        return offline;
-    }
-
-    public static Path getMirrorPath() {
-        return getRoamingDir().resolve(APP_FOLDER).resolve("knowledgebase-mirror.db").toAbsolutePath().normalize();
-    }
-
-    private boolean hasFtsTable() {
-        try (Statement s = connection.createStatement();
-             var rs = s.executeQuery("SELECT 1 FROM sqlite_master WHERE name = 'pildoras_fts'")) {
-            return rs.next();
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    private void connectMirror() throws SQLException {
-        var cfg = new org.sqlite.SQLiteConfig();
-        cfg.setReadOnly(true);
-        connection = DriverManager.getConnection("jdbc:sqlite:" + getMirrorPath(), cfg.toProperties());
-        usingTurso = false;
-        offline = true;
     }
 
     public static synchronized DatabaseHelper getInstance() {
@@ -136,13 +85,6 @@ public class DatabaseHelper {
         String token = TursoConfig.getToken();
 
         connection = DriverManager.getConnection(jdbcUrl, null, token);
-        try (Statement ping = connection.createStatement()) {
-            ping.execute("SELECT 1");
-        } catch (SQLException e) {
-            try { connection.close(); } catch (SQLException ignore) {}
-            connection = null;
-            throw e;
-        }
         usingTurso = true;
 
         System.out.println("[DB] Connected to Turso: " + TursoConfig.getUrl());
@@ -169,9 +111,7 @@ public class DatabaseHelper {
     private synchronized void reopenIfNeeded() throws SQLException {
         if (connection == null || connection.isClosed()) {
             try {
-                if (offline) {
-                    connectMirror();
-                } else if (usingTurso) {
+                if (usingTurso) {
                     connectTurso();
                 } else {
                     connectLocal();
