@@ -22,6 +22,7 @@ Aplicación de escritorio JavaFX para crear y gestionar "píldoras de conocimien
 - Ikonli FontAwesome6 v12.4.0 (FontAwesomeSolid, FontAwesomeBrands)
 - openhtmltopdf para exportación PDF (requiere XHTML estricto, atributos booleanos expandidos)
 - SQLite local + Turso/LibSQL para sincronización remota
+- jna-platform (DPAPI en Windows para la pregunta de seguridad)
 - Ventana UNDECORATED con barra de título personalizada y ResizeHelper
 - flexmark-java para markdown → HTML
 
@@ -43,6 +44,7 @@ io.github.guillermo_david/
 │   ├── EditorPildoraController     — Editor markdown
 │   ├── SettingsMenuHelper          — Menú engranaje: tema, idioma, tipografía, columnas, BD, seguridad, estadísticas, ayuda, acerca de (~1000 líneas, pendiente refactorizar)
 │   ├── PildoraContextMenu / TrashDialog / InfoDialogs — piezas extraídas de los controladores grandes
+│   ├── SettingsMenuHelper.Config   — record con las dependencias del menú de ajustes
 │   ├── SecurityUiHelper            — unlockWithFeedback(Parent) y humanize(ms) compartidos
 │   ├── TagSidebarHelper            — Panel lateral de etiquetas
 │   ├── TextFormatController        — Barra de formato del editor
@@ -78,7 +80,8 @@ io.github.guillermo_david/
 ├── markdown/
 │   └── MarkdownEngine.java         — Renderizado markdown a HTML
 ├── security/
-│   └── SecurityService.java        — Cifrado/descifrado de píldoras
+│   ├── SecurityService.java        — Cifrado/descifrado de píldoras
+│   └── DeviceProtector.java        — DPAPI (Windows) para la pregunta de seguridad
 ├── importer/
 │   └── MarkdownImportService.java
 └── util/
@@ -170,6 +173,9 @@ BorderPane (root)
 
 ## Trampas conocidas y lecciones aprendidas
 
+- **Turso y SQL**: el driver LibSQL/DBeaver sobre HTTP no soporta `setNull`/`setBytes`/`setObject(null)`; las variantes Turso construyen SQL a mano con `SqlHelper.esc()` (duplica comillas y quita NUL). No migrar a PreparedStatement sin probar contra Turso real.
+- **FXML**: los manejadores `onAction="#x"` deben existir con `@FXML` en el controlador; `FxmlHandlersTest` lo comprueba. El editor usa `onMd` con `userData="mdXxx"` y `TextFormatController.run()`.
+- **Tests de DAO**: fijan `user.home` a un directorio temporal antes de tocar `DatabaseHelper` (singleton).
 - **PDF export XHTML**: openhtmltopdf requiere XHTML estricto. Los atributos booleanos HTML (`checked`, `disabled`, `selected`) deben expandirse a `checked="checked"` etc. Si no, el parser falla silenciosamente.
 - **WebView JS bridge**: La clase que se pasa a `JSObject.setMember()` DEBE ser pública y con nombre. Las clases anónimas/lambda no funcionan — el garbage collector las elimina y las llamadas JS fallan silenciosamente.
 - **Compilación en cloud**: El pom.xml tiene `maven.compiler.release=25` pero el entorno cloud solo tiene Java 21. Usar siempre `-Dmaven.compiler.release=21` al compilar.
@@ -184,10 +190,8 @@ BorderPane (root)
 
 ## Tareas pendientes
 
-- **Refactorizar controladores grandes**: ListadoPildorasController (~1500 líneas), DetallePildoraController (~750 líneas), SettingsMenuHelper (~1000 líneas). Extraer lógica a clases auxiliares. Candidatos de extracción:
-  - ListadoPildorasController: setup de columnas, atajos de teclado, paginación, menú contextual, carga de vistas detalle/editor
-  - DetallePildoraController: lógica de exportación, barra de búsqueda Ctrl+F, renderizado WebView con temas
-  - SettingsMenuHelper: diálogos (About, Help, Statistics) a clases propias, configuración de tipografía, gestión de BD/Turso
+- `ListadoPildorasController` (~1300 líneas) sigue grande: candidatos a extraer: setup de columnas, atajos de teclado (`setSceneProperties`), carga de vistas detalle/editor.
+- `DetallePildoraController` (~750) y `SettingsMenuHelper` (~800): extraer búsqueda Ctrl+F, renderizado WebView, gestión Turso.
 
 ## Posibles mejoras/cambios
 
@@ -200,19 +204,15 @@ BorderPane (root)
 
 ### UX
 
-- **Búsqueda global / full-text search**: Actualmente solo se filtra por título o contenido con LIKE. Implementar FTS5 de SQLite para búsquedas más rápidas y con ranking de relevancia.
 - **Drag-and-drop de imágenes en el editor**: Permitir arrastrar imágenes al TextArea y convertirlas automáticamente a markdown con base64 o ruta relativa.
 - **Múltiples ventanas / tabs**: Abrir más de una píldora a la vez (en pestañas o ventanas independientes).
 - **Historial de versiones**: Guardar versiones anteriores de las píldoras para poder comparar o restaurar.
 - **Ordenación de tags en sidebar**: Permitir ordenar por nombre o por cantidad de uso.
-- **Filtro por múltiples tags (AND/OR)**: Actualmente el sidebar permite seleccionar múltiples tags pero el filtro parece ser OR. Ofrecer opción AND.
 - **Autocompletado de enlaces internos**: Al escribir `pildora:` en el editor, mostrar sugerencias de píldoras existentes (ya existe `Ctrl+Shift+K` pero podría ser inline).
 - **Indicador visual de píldoras enlazadas**: En la tabla de listado, indicar cuántos backlinks tiene cada píldora.
 - **Preview en tiempo real mejorada**: El SplitPane del editor podría recordar su posición entre sesiones.
 - **Modo "focus" / zen mode**: Ocultar todo excepto el editor para escribir sin distracciones.
 - **Atajos de teclado personalizables via UI**: Actualmente los atajos están hardcodeados. Permitir configurarlos desde Settings.
-- **Contador de palabras/caracteres en editor**: Mostrar estadísticas del texto mientras se escribe.
-- **Papelera de reciclaje**: En vez de borrado definitivo, marcar como eliminada con posibilidad de restaurar.
 
 ### FEATURE
 
@@ -227,7 +227,6 @@ BorderPane (root)
 - **Soporte LaTeX completo**: La extensión MathJax está comentada en `MarkdownEngine`. Activar y asegurar renderizado en preview y exports.
 - **Modo presentación**: Convertir una píldora (con headings) en slides simples navegables.
 - **Tabla de contenidos automática**: Generar TOC a partir de los headings de una píldora larga.
-- **Duplicar píldora**: Botón para crear una copia de una píldora existente como punto de partida.
 
 ### PERFORMANCE
 
@@ -236,11 +235,7 @@ BorderPane (root)
 
 ### SECURITY
 
-- **SecurityService lockout no es escalable a ataques sostenidos**: El exponential backoff crece (`30s * 2^cycles`) pero `lock_cycles` se resetea con un acierto. Considerar añadir un máximo de ciclos o wipe tras N ciclos.
-- **Pregunta de seguridad almacena texto en claro**: `K_Q_TEXT` guarda la pregunta en Preferences sin cifrar. Un atacante con acceso al registro del sistema puede ver las preguntas (aunque no las respuestas).
 - **PBKDF2 200K iteraciones**: Está bien para 2024, pero conviene tener en cuenta Argon2 como alternativa futura para mayor resistencia.
-- **Backup JSON expone cipher blobs en base64**: Si un backup es interceptado, contiene los datos cifrados. Considerar cifrar el fichero de backup completo.
-- **`askPin6()` en EditorPildoraController** usa `TextInputDialog` sin Dialogs.decorate() — no hereda el tema.
 
 ### ACCESSIBILITY
 
