@@ -7,7 +7,7 @@
 - No añadir comentarios en el código salvo que el "por qué" sea no obvio.
 - No crear ficheros de documentación (.md, README) salvo que se pida explícitamente.
 - Git: commit y push a la rama de trabajo al terminar, sin narrarlo. No crear PR salvo petición.
-- **Mantener este CLAUDE.md actualizado automáticamente**: Cada vez que se implemente una funcionalidad, se cambie la arquitectura, se añadan ficheros, o se modifique algo relevante del proyecto, actualizar este fichero sin que el usuario lo pida. Incluir nuevas funcionalidades en "Funcionalidades implementadas", mover tareas completadas de "Tareas pendientes", y actualizar la estructura si cambia.
+- **Mantener este CLAUDE.md actualizado SIEMPRE, sin que el usuario lo pida** (petición explícita y permanente del usuario). Regla de trabajo: el cambio en `CLAUDE.md` va en el mismo commit que el cambio de código, y antes de dar por terminada cualquier tarea hay que revisar que `CLAUDE.md` refleja el estado real. Se actualiza cuando: se implementa o elimina una funcionalidad (sección "Funcionalidades implementadas"), cambia la arquitectura o se añaden/mueven/borran ficheros (estructura), se añaden dependencias (stack), se descubre una trampa o lección (sección "Trampas conocidas"), se completa o aparece una tarea (mover/borrar de "Tareas pendientes" y "Posibles mejoras"). No hace falta avisar de que se ha actualizado.
 
 ## Descripción
 
