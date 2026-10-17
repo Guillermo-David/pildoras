@@ -95,4 +95,32 @@ class PildoraDaoFilterTest {
             dao.eliminarDefinitivo(copy.getId());
         }
     }
+
+    @Test
+    void fullTextSearchIsPrefixCaseAndAccentInsensitive() throws Exception {
+        int id = create("Canción de cuna", false);
+        try {
+            assertTrue(ids("cancion", null, false).contains(id));
+            assertTrue(ids("CANC cuna", null, false).contains(id));
+            assertFalse(ids("cancion zzz", null, false).contains(id));
+            assertEquals(1, dao.contarFiltradas("cancion", null, false, false));
+            assertEquals("\"a\"* \"b\"*", PildoraDao.ftsQuery("a \"b\" ;;"));
+            assertNull(PildoraDao.ftsQuery(" ;; "));
+        } finally {
+            dao.eliminarDefinitivo(id);
+        }
+    }
+
+    @Test
+    void ftsIndexFollowsUpdatesAndDeletes() throws Exception {
+        int id = create("temporal", false);
+        var p = dao.buscarPorId(id);
+        p.setTitulo("renombrada");
+        p.setDescripcion("otra cosa");
+        dao.actualizar(p);
+        assertTrue(ids("renombr", null, false).contains(id));
+        assertFalse(ids("tempor", null, false).contains(id));
+        dao.eliminarDefinitivo(id);
+        assertFalse(ids("renombr", null, false).contains(id));
+    }
 }

@@ -19,6 +19,7 @@ public class DatabaseHelper {
     private static DatabaseHelper instance;
     private Connection connection;
     private boolean usingTurso;
+    private boolean ftsAvailable;
 
     private DatabaseHelper() {
         try {
@@ -57,6 +58,10 @@ public class DatabaseHelper {
         try {
             if (connection != null && !connection.isClosed()) connection.close();
         } catch (SQLException ignore) {}
+    }
+
+    public boolean isFtsAvailable() {
+        return ftsAvailable;
     }
 
     public boolean isUsingTurso() {
@@ -201,6 +206,7 @@ public class DatabaseHelper {
         addMissingColumnsLocal();
         rebuildPildorasIfDescripcionNotNull();
         createPildorasIndexes();
+        createFullTextIndex();
         dedupeTagsCaseInsensitive();
         try (Statement s = connection.createStatement()) {
             s.execute("CREATE UNIQUE INDEX IF NOT EXISTS u_tags_nombre_lower ON tags(lower(nombre))");
@@ -292,6 +298,45 @@ public class DatabaseHelper {
                     s.execute("ALTER TABLE pildoras ADD COLUMN " + c[0] + " " + c[1]);
                 }
             }
+        }
+    }
+
+    private void createFullTextIndex() {
+        try (Statement s = connection.createStatement()) {
+            boolean exists;
+            try (var rs = s.executeQuery("SELECT 1 FROM sqlite_master WHERE name = 'pildoras_fts'")) {
+                exists = rs.next();
+            }
+            s.execute("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS pildoras_fts USING fts5(
+                    titulo, descripcion, content='pildoras', content_rowid='id',
+                    tokenize='unicode61 remove_diacritics 2')
+            """);
+            s.execute("""
+                CREATE TRIGGER IF NOT EXISTS pildoras_fts_ai AFTER INSERT ON pildoras BEGIN
+                  INSERT INTO pildoras_fts(rowid, titulo, descripcion) VALUES (new.id, new.titulo, new.descripcion);
+                END
+            """);
+            s.execute("""
+                CREATE TRIGGER IF NOT EXISTS pildoras_fts_ad AFTER DELETE ON pildoras BEGIN
+                  INSERT INTO pildoras_fts(pildoras_fts, rowid, titulo, descripcion)
+                  VALUES ('delete', old.id, old.titulo, old.descripcion);
+                END
+            """);
+            s.execute("""
+                CREATE TRIGGER IF NOT EXISTS pildoras_fts_au AFTER UPDATE OF titulo, descripcion ON pildoras BEGIN
+                  INSERT INTO pildoras_fts(pildoras_fts, rowid, titulo, descripcion)
+                  VALUES ('delete', old.id, old.titulo, old.descripcion);
+                  INSERT INTO pildoras_fts(rowid, titulo, descripcion) VALUES (new.id, new.titulo, new.descripcion);
+                END
+            """);
+            if (!exists) {
+                s.execute("INSERT INTO pildoras_fts(pildoras_fts) VALUES ('rebuild')");
+            }
+            ftsAvailable = true;
+        } catch (SQLException e) {
+            ftsAvailable = false;
+            System.err.println("[DB] FTS5 no disponible, se usará LIKE: " + e.getMessage());
         }
     }
 

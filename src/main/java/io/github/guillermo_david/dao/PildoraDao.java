@@ -75,23 +75,44 @@ public class PildoraDao {
 		}
 	}
 
-	private record Where(String sql, List<String> params) {
+	private record Where(String from, String sql, List<String> params, boolean fts) {
 		void bind(PreparedStatement ps, int[] idx) throws SQLException {
 			for (String v : params)
 				ps.setString(idx[0]++, v);
 		}
 	}
 
+	/** Cada palabra como prefijo ("tok"*), todas obligatorias. Null si no queda ningún término. */
+	static String ftsQuery(String text) {
+		List<String> terms = new ArrayList<>();
+		for (String raw : text.trim().split("\\s+")) {
+			String t = raw.replaceAll("[^\\p{L}\\p{N}_]", "");
+			if (!t.isEmpty())
+				terms.add("\"" + t + "\"*");
+		}
+		return terms.isEmpty() ? null : String.join(" ", terms);
+	}
+
 	private static Where buildWhere(String tituloFiltro, String tagsFiltro, boolean soloFavoritas,
 			boolean mostrarOcultas) {
 		StringBuilder w = new StringBuilder("WHERE p.eliminada = 0 ");
 		List<String> params = new ArrayList<>();
+		String from = "";
+		boolean fts = false;
 
 		if (tituloFiltro != null && !tituloFiltro.isBlank()) {
-			w.append("AND (p.titulo LIKE ? OR p.descripcion LIKE ?) ");
-			String like = "%" + tituloFiltro + "%";
-			params.add(like);
-			params.add(like);
+			String match = DatabaseHelper.getInstance().isFtsAvailable() ? ftsQuery(tituloFiltro) : null;
+			if (match != null) {
+				fts = true;
+				from = "JOIN pildoras_fts ON pildoras_fts.rowid = p.id ";
+				w.append("AND pildoras_fts MATCH ? ");
+				params.add(match);
+			} else {
+				w.append("AND (p.titulo LIKE ? OR p.descripcion LIKE ?) ");
+				String like = "%" + tituloFiltro + "%";
+				params.add(like);
+				params.add(like);
+			}
 		}
 
 		if (tagsFiltro != null && !tagsFiltro.isBlank()) {
@@ -114,7 +135,7 @@ public class PildoraDao {
 			w.append("AND p.favorita = 1 ");
 		if (!mostrarOcultas)
 			w.append("AND p.oculta = 0 ");
-		return new Where(w.toString(), params);
+		return new Where(from, w.toString(), params, fts);
 	}
 
 	public List<Pildora> listarFiltradas(String tituloFiltro, String tagsFiltro, boolean soloFavoritas,
@@ -148,11 +169,14 @@ public class PildoraDao {
 				""");
 
 		Where where = buildWhere(tituloFiltro, tagsFiltro, soloFavoritas, mostrarOcultas);
-		sql.append(where.sql());
+		sql.append(where.from()).append(where.sql());
 
 		sql.append(" ORDER BY p.pinned DESC ");
 
-		if (!"p.pinned".equals(colOrden)) {
+		boolean defaultOrder = "fecha_creacion".equals(columnaOrden) && "DESC".equals(dir);
+		if (where.fts() && defaultOrder) {
+			sql.append(", bm25(pildoras_fts, 10.0, 1.0) ");
+		} else if (!"p.pinned".equals(colOrden)) {
 			sql.append(", ").append(colOrden).append(' ').append(dir).append(' ');
 		} else {
 			// Si el usuario “ordena por pinned”, mantenemos pinned primero
@@ -198,7 +222,7 @@ public class PildoraDao {
 
 	public int contarFiltradas(String tituloFiltro, String tagsFiltro, boolean soloFavoritas, boolean mostrarOcultas) {
 		Where where = buildWhere(tituloFiltro, tagsFiltro, soloFavoritas, mostrarOcultas);
-		String sql = "SELECT COUNT(*) AS total FROM pildoras p " + where.sql();
+		String sql = "SELECT COUNT(*) AS total FROM pildoras p " + where.from() + where.sql();
 
 		try (PreparedStatement stmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			where.bind(stmt, new int[] { 1 });
