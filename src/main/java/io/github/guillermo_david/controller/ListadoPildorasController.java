@@ -430,6 +430,12 @@ public class ListadoPildorasController {
 			return true;
 		});
 
+		var rowMenus = new PildoraContextMenu(new PildoraContextMenu.Actions(
+				p -> { if (unlockIfProtected(p)) abrirDetallePildora(p); },
+				p -> { if (unlockIfProtected(p)) abrirFormularioEditar(p); },
+				p -> confirmAndDelete(p, () -> refrescarTabla()),
+				() -> refrescarTabla(), () -> table.refresh(), btnSoloFav::isSelected));
+
 		table.setRowFactory(tv -> {
 			TableRow<Pildora> row = new TableRow<>();
 			row.setOnMouseClicked(event -> {
@@ -444,78 +450,7 @@ public class ListadoPildorasController {
 				}
 			});
 
-			ContextMenu ctx = new ContextMenu();
-			ctx.getItems().add(new MenuItem("..."));
-
-			ctx.setOnShowing(e -> {
-				ctx.getItems().clear();
-				Pildora p = row.getItem();
-				if (p == null) return;
-
-				var miAbrir = new MenuItem(I18n.get("menu.open"));
-				miAbrir.setGraphic(new FontIcon(FontAwesomeSolid.EYE));
-				miAbrir.setOnAction(ev -> {
-					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
-					abrirDetallePildora(p);
-				});
-
-				var miEditar = new MenuItem(I18n.get("menu.edit"));
-				miEditar.setGraphic(new FontIcon(FontAwesomeRegular.EDIT));
-				miEditar.setOnAction(ev -> {
-					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
-					abrirFormularioEditar(p);
-				});
-
-				var miFav = new MenuItem(p.isFavorita() ? I18n.get("menu.favorites.remove") : I18n.get("menu.favorites.add"));
-				miFav.setGraphic(new FontIcon(p.isFavorita() ? FontAwesomeSolid.STAR : FontAwesomeRegular.STAR));
-				miFav.setOnAction(ev -> {
-					boolean nueva = !p.isFavorita();
-					pildoraDao.marcarFavorita(p.getId(), nueva);
-					p.setFavorita(nueva);
-					StatusBus.show(nueva ? I18n.get("status.favorites.added") : I18n.get("status.favorites.removed"),
-							StatusBus.Type.INFO, Duration.seconds(2));
-					table.refresh();
-					if (btnSoloFav.isSelected()) refrescarTabla();
-				});
-
-				var miPin = new MenuItem(p.isPinned() ? I18n.get("menu.unpin") : I18n.get("menu.pin"));
-				miPin.setGraphic(new FontIcon(FontAwesomeSolid.THUMBTACK));
-				miPin.setOnAction(ev -> {
-					boolean nuevo = !p.isPinned();
-					pildoraDao.marcarPinned(p.getId(), nuevo);
-					p.setPinned(nuevo);
-					StatusBus.show(nuevo ? I18n.get("status.pildora.pinned") : I18n.get("status.pildora.unpinned"),
-							StatusBus.Type.INFO, Duration.seconds(2));
-					refrescarTabla();
-				});
-
-				var miOcultar = new MenuItem(p.isOculta() ? I18n.get("menu.show") : I18n.get("menu.hide"));
-				miOcultar.setGraphic(new FontIcon(p.isOculta() ? FontAwesomeSolid.EYE : FontAwesomeSolid.EYE_SLASH));
-				miOcultar.setOnAction(ev -> {
-					boolean nuevo = !p.isOculta();
-					pildoraDao.marcarOculta(p.getId(), nuevo);
-					p.setOculta(nuevo);
-					StatusBus.show(nuevo ? I18n.get("status.pildora.hidden") : I18n.get("status.pildora.visible"),
-							StatusBus.Type.INFO, Duration.seconds(2));
-					refrescarTabla();
-				});
-
-				var miEliminar = new MenuItem(I18n.get("menu.delete"));
-				miEliminar.setGraphic(new FontIcon(FontAwesomeSolid.TRASH));
-				miEliminar.getStyleClass().add("danger");
-				miEliminar.setOnAction(ev -> {
-					confirmAndDelete(p, () -> refrescarTabla());
-				});
-
-				ctx.getItems().addAll(
-						miAbrir, miEditar,
-						new SeparatorMenuItem(),
-						miFav, miPin,
-						new SeparatorMenuItem(),
-						miOcultar,
-						new SeparatorMenuItem(),
-						miEliminar);
-			});
+			ContextMenu ctx = rowMenus.build(row::getItem);
 
 			row.itemProperty().addListener((obs, oldItem, newItem) -> {
 				row.setContextMenu(newItem != null ? ctx : null);
@@ -532,68 +467,7 @@ public class ListadoPildorasController {
 	}
 
 	private boolean ensureUnlockedWithRetries() {
-		var security = SecurityService.getInstance();
-
-		// Ya desbloqueado o recordado -> OK
-		if (security.isUnlocked() || security.isRemembered())
-			return true;
-
-		// Bloqueado ahora mismo -> avisa temado y corta
-		if (security.isLockedOut()) {
-			showLockoutAlert();
-			return false;
-		}
-
-		final int MAX = 3; // debe coincidir con MAX_FAILED del servicio
-		int attempts = 0;
-
-		while (attempts < MAX) {
-			// PIN temado + foco + "recordar 10 min"
-			char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
-			if (pin == null)
-				return false; // cancelado
-
-			try {
-				if (security.verifyPin(pin)) {
-					StatusBus.show(I18n.get("status.unlocked.10min"), StatusBus.Type.INFO, Duration.seconds(3));
-					return true;
-				} else {
-					attempts++;
-					// ¿acaba de bloquearse?
-					if (security.isLockedOut()) {
-						showLockoutAlert();
-						return false;
-					}
-					int left = MAX - attempts;
-					Alert warn = new Alert(AlertType.WARNING);
-					warn.setTitle(I18n.get("alert.pin.incorrect.title"));
-					warn.setHeaderText(null);
-					warn.setContentText(
-							left > 0 ? I18n.get("alert.pin.incorrect.remaining", left)
-									: I18n.get("alert.pin.exhausted"));
-					Dialogs.decorate(warn, root); // 👈 temado igual que el resto
-					warn.showAndWait();
-				}
-			} finally {
-				Arrays.fill(pin, '\0');
-			}
-		}
-
-		// Si salimos por agotar intentos, muestra lockout si aplica
-		if (security.isLockedOut())
-			showLockoutAlert();
-		return false;
-	}
-
-	private void showLockoutAlert() {
-		var security = SecurityService.getInstance();
-		long secs = (security.lockoutRemainingMillis() + 999) / 1000;
-		Alert lock = new Alert(AlertType.ERROR);
-		lock.setTitle(I18n.get("alert.lockout.title"));
-		lock.setHeaderText(I18n.get("alert.lockout.header"));
-		lock.setContentText(I18n.get("alert.lockout.content", secs));
-		Dialogs.decorate(lock, root); // 👈 temado
-		lock.showAndWait();
+		return SecurityUiHelper.ensureUnlockedWithRetries(root);
 	}
 
 	private void confirmAndDelete(Pildora p, Runnable after) {
@@ -608,6 +482,10 @@ public class ListadoPildorasController {
 				after.run();
 			}
 		});
+	}
+
+	private boolean unlockIfProtected(Pildora p) {
+		return !p.isProtegida() || security.isUnlocked() || ensureUnlockedWithRetries();
 	}
 
 	private boolean unlockWithFeedback() {
@@ -1010,32 +888,6 @@ public class ListadoPildorasController {
 			// Nueva
 			accel.accept(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN), this::abrirFormularioNueva);
 
-			// Paginación
-			accel.accept(new KeyCodeCombination(KeyCode.LEFT, KeyCombination.CONTROL_DOWN), () -> {
-				if (!btnAnterior.isDisabled()) {
-					paginaActual = Math.max(1, paginaActual - 1);
-					refrescarTabla();
-				}
-			});
-			accel.accept(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.CONTROL_DOWN), () -> {
-				if (!btnSiguiente.isDisabled()) {
-					paginaActual = Math.min(totalPaginas, paginaActual + 1);
-					refrescarTabla();
-				}
-			});
-			accel.accept(new KeyCodeCombination(KeyCode.PAGE_UP), () -> {
-				if (!btnAnterior.isDisabled()) {
-					paginaActual = Math.max(1, paginaActual - 1);
-					refrescarTabla();
-				}
-			});
-			accel.accept(new KeyCodeCombination(KeyCode.PAGE_DOWN), () -> {
-				if (!btnSiguiente.isDisabled()) {
-					paginaActual = Math.min(totalPaginas, paginaActual + 1);
-					refrescarTabla();
-				}
-			});
-
 			// Abrir detalle / Editar (cuando la tabla tiene foco)
 			accel.accept(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN), () -> {
 				if (table.isFocused() && table.getSelectionModel().getSelectedItem() != null) {
@@ -1123,11 +975,8 @@ public class ListadoPildorasController {
 				if ((e.getCode() == KeyCode.PAGE_UP && !e.isShiftDown() && !e.isAltDown() && !e.isMetaDown())
 						|| (e.isControlDown() && e.getCode() == KeyCode.LEFT)) {
 
-					if (!writing && !btnAnterior.isDisabled()) {
-						paginaActual = Math.max(1, paginaActual - 1);
-						refrescarTabla();
+					if (!writing && paginaAnterior())
 						e.consume();
-					}
 					return;
 				}
 
@@ -1135,14 +984,27 @@ public class ListadoPildorasController {
 				if ((e.getCode() == KeyCode.PAGE_DOWN && !e.isShiftDown() && !e.isAltDown() && !e.isMetaDown())
 						|| (e.isControlDown() && e.getCode() == KeyCode.RIGHT)) {
 
-					if (!writing && !btnSiguiente.isDisabled()) {
-						paginaActual = Math.min(totalPaginas, paginaActual + 1);
-						refrescarTabla();
+					if (!writing && paginaSiguiente())
 						e.consume();
-					}
 				}
 			});
 		});
+	}
+
+	private boolean paginaAnterior() {
+		if (btnAnterior.isDisabled())
+			return false;
+		paginaActual = Math.max(1, paginaActual - 1);
+		refrescarTabla();
+		return true;
+	}
+
+	private boolean paginaSiguiente() {
+		if (btnSiguiente.isDisabled())
+			return false;
+		paginaActual = Math.min(totalPaginas, paginaActual + 1);
+		refrescarTabla();
+		return true;
 	}
 
 	private void abrirDetallePildora(Pildora p) {
