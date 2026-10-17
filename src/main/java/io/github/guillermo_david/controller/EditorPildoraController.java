@@ -56,6 +56,7 @@ public class EditorPildoraController {
 
 	@FXML private TextField txtTagInput, txtTitulo;
 	@FXML private TextArea txtDescripcion;
+	@FXML private Label lblCount;
 	@FXML private ToggleSwitch switchProteger, switchPreview, switchOcultar;
 	@FXML private Button btnGuardar, btnCancelar;
 	@FXML private FlowPane tagsBox;
@@ -254,7 +255,11 @@ public class EditorPildoraController {
 		});
 
 		txtTitulo.textProperty().addListener((obs, o, n) -> dirty = true);
-		txtDescripcion.textProperty().addListener((obs, o, n) -> dirty = true);
+		txtDescripcion.textProperty().addListener((obs, o, n) -> {
+			dirty = true;
+			updateCount(n);
+		});
+		updateCount(txtDescripcion.getText());
 
 		autosaveTimer = new javafx.animation.Timeline(
 			new javafx.animation.KeyFrame(Duration.seconds(30), ev -> saveRecoveryDraft())
@@ -265,6 +270,12 @@ public class EditorPildoraController {
 		offerRecoveryDraft();
 
 		initPreview();
+	}
+
+	private void updateCount(String text) {
+		String t = text == null ? "" : text.trim();
+		int words = t.isEmpty() ? 0 : t.split("\\s+").length;
+		lblCount.setText(I18n.get("editor.count", words, t.length()));
 	}
 
 	private void saveRecoveryDraft() {

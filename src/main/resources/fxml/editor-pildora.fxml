@@ -103,6 +103,7 @@
 	        <WebView fx:id="webPreview"/>
 	    </items>
 	</SplitPane> 
+    <Label fx:id="lblCount" styleClass="muted-label"/>
 
     <Label fx:id="lblTags" text="Tags"/>
 	<HBox spacing="8">

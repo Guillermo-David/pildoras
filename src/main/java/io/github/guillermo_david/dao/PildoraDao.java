@@ -355,6 +355,22 @@ public class PildoraDao {
 		TagDao.invalidateCache();
 	}
 
+	/** Copia la píldora (contenido, cifrado, etiquetas y enlaces) con un sufijo en el título. */
+	public Pildora duplicar(int id, String suffix) {
+		Pildora src = buscarPorId(id);
+		if (src == null)
+			return null;
+		Pildora copy = new Pildora(0, src.getTitulo() + suffix, src.getDescripcion(), null, null, false, false,
+				src.isProtegida(), src.getDescripcionCipher(), src.getDescripcionIv(), src.isOculta());
+		insertar(copy);
+		exec("INSERT INTO pildora_tag(pildora_id, tag_id) SELECT ?, tag_id FROM pildora_tag WHERE pildora_id = ?",
+				copy.getId(), id);
+		exec("INSERT OR IGNORE INTO pildora_link(from_id, to_id, kind) SELECT ?, to_id, kind FROM pildora_link WHERE from_id = ?",
+				copy.getId(), id);
+		TagDao.invalidateCache();
+		return copy;
+	}
+
 	public void restaurar(int id) {
 		exec("UPDATE pildoras SET eliminada = 0, fecha_eliminacion = NULL WHERE id = ?", id);
 		TagDao.invalidateCache();

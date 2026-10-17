@@ -83,4 +83,16 @@ class PildoraDaoFilterTest {
         assertEquals(0, dao.contarPapelera());
         assertNull(dao.buscarPorId(d));
     }
+
+    @Test
+    void duplicateCopiesTagsAndTitle() throws Exception {
+        var copy = dao.duplicar(a, " (copia)");
+        try {
+            assertEquals("alfa (copia)", dao.buscarPorId(copy.getId()).getTitulo());
+            assertEquals(2, tags.findByPildoraId(copy.getId()).size());
+            assertFalse(dao.buscarPorId(copy.getId()).isFavorita());
+        } finally {
+            dao.eliminarDefinitivo(copy.getId());
+        }
+    }
 }

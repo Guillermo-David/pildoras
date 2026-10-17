@@ -71,10 +71,16 @@ class PildoraContextMenu {
                 a.refreshAll().run();
             });
 
+            var miDuplicar = item("menu.duplicate", new FontIcon(FontAwesomeRegular.COPY), () -> {
+                dao.duplicar(p.getId(), I18n.get("pildora.copy.suffix"));
+                toast("status.pildora.duplicated");
+                a.refreshAll().run();
+            });
+
             var miEliminar = item("menu.delete", new FontIcon(FontAwesomeSolid.TRASH), () -> a.delete().accept(p));
             miEliminar.getStyleClass().add("danger");
 
-            ctx.getItems().addAll(miAbrir, miEditar, new SeparatorMenuItem(), miFav, miPin,
+            ctx.getItems().addAll(miAbrir, miEditar, miDuplicar, new SeparatorMenuItem(), miFav, miPin,
                     new SeparatorMenuItem(), miOcultar, new SeparatorMenuItem(), miEliminar);
         });
         return ctx;
