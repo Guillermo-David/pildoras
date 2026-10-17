@@ -250,7 +250,7 @@ public class EditorPildoraController {
 		        KeyCombination.CONTROL_DOWN,
 		        KeyCombination.SHIFT_DOWN
 		    );
-		    sc.getAccelerators().put(kc, this::mdInsertInternalLink);
+		    sc.getAccelerators().put(kc, () -> textFormatController.mdInsertInternalLink());
 		});
 
 		txtTitulo.textProperty().addListener((obs, o, n) -> dirty = true);
@@ -765,112 +765,7 @@ public class EditorPildoraController {
 		rootNode.addEventFilter(KeyEvent.KEY_PRESSED, editorKeyHandler);
 	}
 
-	@FXML
-	public void mdBold() {
-		textFormatController.mdBold();
-	}
-
-	@FXML
-	public void mdItalic() {
-		textFormatController.mdItalic();
-	}
-
-	@FXML
-	public void mdStrike() {
-		textFormatController.mdStrike();
-	}
-
-	@FXML
-	public void mdCodeInline() {
-		textFormatController.mdCodeInline();
-	}
-
-	@FXML
-	public void mdH1() {
-		textFormatController.mdH1();
-	}
-
-	@FXML
-	public void mdH2() {
-		textFormatController.mdH2();
-	}
-
-	@FXML
-	public void mdH3() {
-		textFormatController.mdH3();
-	}
-
-	@FXML
-	public void mdClearHeading() {
-		textFormatController.mdClearHeading();
-	}
-
-	@FXML
-	public void mdBulletedList() {
-		textFormatController.mdBulletedList();
-	}
-
-	@FXML
-	public void mdNumberedList() {
-		textFormatController.mdNumberedList();
-	}
-
-	@FXML
-	public void mdTaskList() {
-		textFormatController.mdTaskList();
-	}
-
-	@FXML
-	public void mdBlockquote() {
-		textFormatController.mdBlockquote();
-	}
-
-	@FXML
-	public void mdCodeBlock() {
-		textFormatController.mdCodeBlock();
-	}
-
-	@FXML
-	public void mdHorizontalRule() {
-		textFormatController.mdHorizontalRule();
-	}
-
-	@FXML
-	public void mdTable2x2() {
-		textFormatController.mdTable2x2();
-	}
-
-	@FXML
-	public void mdInsertLinkDialog() {
-		textFormatController.mdInsertLinkDialog();
-	}
-
-	@FXML
-	public void mdInsertImageDialog() {
-		textFormatController.mdInsertImageDialog();
-	}
-
-	@FXML
-	public void mdFootnote() {
-		textFormatController.mdFootnote();
-	}
-
-	@FXML
-	public void mdInsertTOC() {
-		textFormatController.mdInsertTOC();
-	}
-
-	@FXML
-	public void mdMathInline() {
-		textFormatController.mdMathInline();
-	}
-
-	@FXML
-	public void mdMathBlock() {
-		textFormatController.mdMathBlock();
-	}
-
-	@FXML
+@FXML
 	private void mostrarAyuda() {
 		Alert ayuda = new Alert(Alert.AlertType.INFORMATION);
 		ayuda.setTitle(I18n.get("help.markdown.title"));
@@ -879,12 +774,7 @@ public class EditorPildoraController {
 		ayuda.showAndWait();
 	}
 	
-	@FXML
-	public void mdInsertInternalLink() {
-	    textFormatController.mdInsertInternalLink();
-	}
-
-	private void insertarTexto(String snippet) {
+private void insertarTexto(String snippet) {
 		int pos = txtDescripcion.getCaretPosition();
 		txtDescripcion.insertText(pos, snippet);
 		txtDescripcion.requestFocus();

@@ -22,9 +22,57 @@ public class TextFormatController {
 
 	TextArea txtDescripcion;
 	VBox root;
+	private final java.util.Map<String, Runnable> actions = new java.util.HashMap<>();
+
+	private void registerActions() {
+		actions.put("mdBlockquote", this::mdBlockquote);
+		actions.put("mdBold", this::mdBold);
+		actions.put("mdBulletedList", this::mdBulletedList);
+		actions.put("mdClearHeading", this::mdClearHeading);
+		actions.put("mdCodeBlock", this::mdCodeBlock);
+		actions.put("mdCodeInline", this::mdCodeInline);
+		actions.put("mdFootnote", this::mdFootnote);
+		actions.put("mdH1", this::mdH1);
+		actions.put("mdH2", this::mdH2);
+		actions.put("mdH3", this::mdH3);
+		actions.put("mdHorizontalRule", this::mdHorizontalRule);
+		actions.put("mdInsertImageDialog", this::mdInsertImageDialog);
+		actions.put("mdInsertInternalLink", this::mdInsertInternalLink);
+		actions.put("mdInsertLinkDialog", this::mdInsertLinkDialog);
+		actions.put("mdInsertTOC", this::mdInsertTOC);
+		actions.put("mdItalic", this::mdItalic);
+		actions.put("mdMathBar", this::mdMathBar);
+		actions.put("mdMathBlock", this::mdMathBlock);
+		actions.put("mdMathDelimsBrace", this::mdMathDelimsBrace);
+		actions.put("mdMathDelimsBrack", this::mdMathDelimsBrack);
+		actions.put("mdMathDelimsParen", this::mdMathDelimsParen);
+		actions.put("mdMathFrac", this::mdMathFrac);
+		actions.put("mdMathHat", this::mdMathHat);
+		actions.put("mdMathInline", this::mdMathInline);
+		actions.put("mdMathInt", this::mdMathInt);
+		actions.put("mdMathLim", this::mdMathLim);
+		actions.put("mdMathNSqrt", this::mdMathNSqrt);
+		actions.put("mdMathProd", this::mdMathProd);
+		actions.put("mdMathSqrt", this::mdMathSqrt);
+		actions.put("mdMathSub", this::mdMathSub);
+		actions.put("mdMathSum", this::mdMathSum);
+		actions.put("mdMathSup", this::mdMathSup);
+		actions.put("mdMathVec", this::mdMathVec);
+		actions.put("mdNumberedList", this::mdNumberedList);
+		actions.put("mdStrike", this::mdStrike);
+		actions.put("mdTable2x2", this::mdTable2x2);
+		actions.put("mdTaskList", this::mdTaskList);
+	}
+
+	public void run(String action) {
+		Runnable r = actions.get(action);
+		if (r != null) r.run();
+	}
+
 	public TextFormatController(VBox root, TextArea txtDescripcion) {
 		this.txtDescripcion = txtDescripcion;
 		this.root = root;
+		registerActions();
 	}
 	// ==== Utils básicos de selección/edición ====
 

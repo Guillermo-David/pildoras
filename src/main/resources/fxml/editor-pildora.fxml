@@ -25,15 +25,15 @@
     <Label fx:id="lblContent" text="Contenido (Markdown):"/>
     <ToolBar>
 	    <!-- Estilo básico -->
-	    <Button text="B"    onAction="#mdBold" focusTraversable="false"/>
-	    <Button text="I"    onAction="#mdItalic" focusTraversable="false"/>
-	    <Button text="~~"   onAction="#mdStrike" focusTraversable="false"/>
-	    <Button text="`"    onAction="#mdCodeInline" focusTraversable="false"/>
+	    <Button text="B"    onAction="#onMd" userData="mdBold" focusTraversable="false"/>
+	    <Button text="I"    onAction="#onMd" userData="mdItalic" focusTraversable="false"/>
+	    <Button text="~~"   onAction="#onMd" userData="mdStrike" focusTraversable="false"/>
+	    <Button text="`"    onAction="#onMd" userData="mdCodeInline" focusTraversable="false"/>
 	    <Separator/>
-	    <SplitMenuButton fx:id="smbLinks" text="🔗" onAction="#mdInsertLinkDialog" focusTraversable="false">
+	    <SplitMenuButton fx:id="smbLinks" text="🔗" onAction="#onMd" userData="mdInsertLinkDialog" focusTraversable="false">
 		    <items>
-		        <MenuItem text="Enlace externo…"    onAction="#mdInsertLinkDialog"/>
-		        <MenuItem text="Enlace a píldora…"  onAction="#mdInsertInternalLink"/>
+		        <MenuItem text="Enlace externo…"    onAction="#onMd" userData="mdInsertLinkDialog"/>
+		        <MenuItem text="Enlace a píldora…"  onAction="#onMd" userData="mdInsertInternalLink"/>
 		    </items>
 		</SplitMenuButton>
 
@@ -42,48 +42,48 @@
 	    <!-- Encabezados -->
 	    <MenuButton fx:id="mbHeadings" text="H#" focusTraversable="false">
 	        <items>
-	            <MenuItem text="H1" onAction="#mdH1"/>
-	            <MenuItem text="H2" onAction="#mdH2"/>
-	            <MenuItem text="H3" onAction="#mdH3"/>
+	            <MenuItem text="H1" onAction="#onMd" userData="mdH1"/>
+	            <MenuItem text="H2" onAction="#onMd" userData="mdH2"/>
+	            <MenuItem text="H3" onAction="#onMd" userData="mdH3"/>
 	            <SeparatorMenuItem/>
-	            <MenuItem text="Quitar encabezado" onAction="#mdClearHeading"/>
+	            <MenuItem text="Quitar encabezado" onAction="#onMd" userData="mdClearHeading"/>
 	        </items>
 	    </MenuButton>
 	
 	    <!-- Listas -->
 	    <MenuButton fx:id="mbLists" text="Listas" focusTraversable="false">
 	        <items>
-	            <MenuItem text="• Viñetas"     onAction="#mdBulletedList"/>
-	            <MenuItem text="1. Numerada"   onAction="#mdNumberedList"/>
-	            <MenuItem text="☐ Tareas"      onAction="#mdTaskList"/>
+	            <MenuItem text="• Viñetas"     onAction="#onMd" userData="mdBulletedList"/>
+	            <MenuItem text="1. Numerada"   onAction="#onMd" userData="mdNumberedList"/>
+	            <MenuItem text="☐ Tareas"      onAction="#onMd" userData="mdTaskList"/>
 	        </items>
 	    </MenuButton>
 	
 	    <!-- Bloques -->
 	    <MenuButton fx:id="mbBlocks" text="Bloques" focusTraversable="false">
 	        <items>
-	            <MenuItem text="Cita (>)"        onAction="#mdBlockquote"/>
-	            <MenuItem text="Bloque de código" onAction="#mdCodeBlock"/>
-	            <MenuItem text="Regla ---"        onAction="#mdHorizontalRule"/>
-	            <MenuItem text="Tabla 2×2"        onAction="#mdTable2x2"/>
+	            <MenuItem text="Cita (>)"        onAction="#onMd" userData="mdBlockquote"/>
+	            <MenuItem text="Bloque de código" onAction="#onMd" userData="mdCodeBlock"/>
+	            <MenuItem text="Regla ---"        onAction="#onMd" userData="mdHorizontalRule"/>
+	            <MenuItem text="Tabla 2×2"        onAction="#onMd" userData="mdTable2x2"/>
 	        </items>
 	    </MenuButton>
 	
 	    <!-- Insertar -->
 	    <MenuButton fx:id="mbInsert" text="Insertar" focusTraversable="false">
 	        <items>
-	            <MenuItem text="Enlace…" onAction="#mdInsertLinkDialog"/>
-	            <MenuItem text="Imagen…" onAction="#mdInsertImageDialog"/>
+	            <MenuItem text="Enlace…" onAction="#onMd" userData="mdInsertLinkDialog"/>
+	            <MenuItem text="Imagen…" onAction="#onMd" userData="mdInsertImageDialog"/>
 	        </items>
 	    </MenuButton>
 	    
 	    <!-- Avanzado (requiere extensiones en tu renderer si quieres que se vean chulas) -->
 	    <MenuButton fx:id="mbAdvanced" text="Avanzado" focusTraversable="false">
 	        <items>
-	            <MenuItem text="Nota al pie"     onAction="#mdFootnote"/>
-	            <MenuItem text="Índice (TOC)"    onAction="#mdInsertTOC"/>
-	            <MenuItem text="Math inline $…$" onAction="#mdMathInline"/>
-	            <MenuItem text="Math bloque $$"  onAction="#mdMathBlock"/>
+	            <MenuItem text="Nota al pie"     onAction="#onMd" userData="mdFootnote"/>
+	            <MenuItem text="Índice (TOC)"    onAction="#onMd" userData="mdInsertTOC"/>
+	            <MenuItem text="Math inline $…$" onAction="#onMd" userData="mdMathInline"/>
+	            <MenuItem text="Math bloque $$"  onAction="#onMd" userData="mdMathBlock"/>
 	        </items>
 	    </MenuButton>
 	
