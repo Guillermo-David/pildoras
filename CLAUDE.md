@@ -39,11 +39,11 @@ io.github.guillermo_david/
 ├── MainApp.java                    — Punto de entrada
 ├── controller/
 │   ├── MainController.java         — Controlador principal (contenedor)
-│   ├── ListadoPildorasController   — Tabla, paginación, filtros, columnas (~1500 líneas, pendiente refactorizar)
+│   ├── ListadoPildorasController   — Tabla, paginación, filtros, columnas (~1300 líneas, pendiente refactorizar)
 │   ├── DetallePildoraController    — Vista detalle con WebView, Ctrl+F (~750 líneas, pendiente refactorizar)
 │   ├── EditorPildoraController     — Editor markdown
-│   ├── SettingsMenuHelper          — Menú engranaje: tema, idioma, tipografía, columnas, BD, seguridad, estadísticas, ayuda, acerca de (~1000 líneas, pendiente refactorizar)
-│   ├── PildoraContextMenu / TrashDialog / InfoDialogs — piezas extraídas de los controladores grandes
+│   ├── SettingsMenuHelper          — Menú engranaje: tema, idioma, tipografía, columnas, BD, seguridad (~800 líneas)
+│   ├── PildoraContextMenu / TrashDialog / InfoDialogs — piezas extraídas de los controladores grandes (InfoDialogs incluye el diálogo de contraseña de backup)
 │   ├── SettingsMenuHelper.Config   — record con las dependencias del menú de ajustes
 │   ├── SecurityUiHelper            — unlockWithFeedback(Parent) y humanize(ms) compartidos
 │   ├── TagSidebarHelper            — Panel lateral de etiquetas
@@ -113,7 +113,7 @@ La app tiene una sola ventana (`Stage UNDECORATED`). `MainApp` carga `listado-pi
 - **Listado → Detalle**: `ListadoPildorasController` carga `detalle-pildora.fxml` y reemplaza el contenido del `center` del `BorderPane root`. Le pasa callbacks (`onClose`, `onEdit`, `onDelete`, `onTagClick`) al `DetallePildoraController`.
 - **Listado → Editor**: Similar, carga `editor-pildora.fxml` y pasa callbacks al `EditorPildoraController`.
 - **Detalle → Editor**: El botón editar en detalle invoca el callback `onEdit` que `ListadoPildorasController` proporcionó.
-- **SettingsMenuHelper**: Se instancia desde `ListadoPildorasController`, recibiendo el `MenuButton btnSettings` y múltiples callbacks/dependencias via constructor (root, security, prefs, ensureUnlocked, refrescarTabla, setLogoFor, setPaginaActual, showColumnSelector).
+- **SettingsMenuHelper**: Se instancia desde `ListadoPildorasController`, recibiendo un record `SettingsMenuHelper.Config` (root, security, btnSettings, prefs, fuentes, ensureUnlocked, refrescarTabla, setLogoFor, setPaginaActual, showColumnSelector). Los diálogos Acerca de/Ayuda/Estadísticas/Atajos/Guía Turso/contraseña de backup están en `InfoDialogs`; la papelera en `TrashDialog`; el menú contextual de filas en `PildoraContextMenu`.
 
 ## Temas disponibles
 
@@ -195,11 +195,8 @@ BorderPane (root)
 
 ## Posibles mejoras/cambios
 
-### CODE QUALITY / REFACTORING (pendiente)
+### CODE QUALITY / REFACTORING
 
-- `DatabaseHelper.initializeDatabase()` (~190 líneas): extraer cada migración a su método.
-- `SettingsMenuHelper` constructor con 11 parámetros: usar record de configuración.
-- `EditorPildoraController`: ~30 métodos FXML que solo delegan a `textFormatController`.
 - `PildoraExporter` y `MarkdownEngine` mantienen opciones flexmark distintas a propósito (TOC/typographic); no unificar sin probar exports.
 
 ### UX
@@ -246,6 +243,6 @@ BorderPane (root)
 
 ## Git
 
-- Rama de desarrollo: `claude/optimistic-fermi-wnwnr9`
+- Rama de desarrollo actual: `claude/vibrant-bardeen-c3o2db` (el usuario trabaja sin mergear a `master`; basta con commit y push)
 - Rama principal: `master`
 - Autor: Guillermo David (willorenagepete@gmail.com)
