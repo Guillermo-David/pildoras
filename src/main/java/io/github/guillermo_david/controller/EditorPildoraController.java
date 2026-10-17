@@ -743,7 +743,15 @@ public class EditorPildoraController {
 		rootNode.addEventFilter(KeyEvent.KEY_PRESSED, editorKeyHandler);
 	}
 
-@FXML
+	@FXML
+	private void onMd(javafx.event.ActionEvent e) {
+		Object src = e.getSource();
+		Object key = src instanceof javafx.scene.control.MenuItem mi ? mi.getUserData()
+				: ((javafx.scene.Node) src).getUserData();
+		textFormatController.run(String.valueOf(key));
+	}
+
+	@FXML
 	private void mostrarAyuda() {
 		Alert ayuda = new Alert(Alert.AlertType.INFORMATION);
 		ayuda.setTitle(I18n.get("help.markdown.title"));
@@ -752,7 +760,7 @@ public class EditorPildoraController {
 		ayuda.showAndWait();
 	}
 	
-private void insertarTexto(String snippet) {
+	private void insertarTexto(String snippet) {
 		int pos = txtDescripcion.getCaretPosition();
 		txtDescripcion.insertText(pos, snippet);
 		txtDescripcion.requestFocus();
