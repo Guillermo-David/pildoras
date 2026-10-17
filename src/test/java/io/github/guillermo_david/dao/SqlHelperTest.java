@@ -24,6 +24,16 @@ class SqlHelperTest {
     }
 
     @Test
+    void escStripsNulChars() {
+        assertEquals("'ab'", SqlHelper.esc("a\u0000b"));
+    }
+
+    @Test
+    void escNeutralizesInjectionPayload() {
+        assertEquals("'x''); DROP TABLE pildoras;--'", SqlHelper.esc("x'); DROP TABLE pildoras;--"));
+    }
+
+    @Test
     void escEmptyString() {
         assertEquals("''", SqlHelper.esc(""));
     }

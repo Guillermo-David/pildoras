@@ -12,7 +12,7 @@ public final class SqlHelper {
 
     public static String esc(String val) {
         if (val == null) return "NULL";
-        return "'" + val.replace("'", "''") + "'";
+        return "'" + val.replace("\u0000", "").replace("'", "''") + "'";
     }
 
     public static String escBlob(byte[] val) {

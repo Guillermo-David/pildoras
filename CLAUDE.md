@@ -186,8 +186,7 @@ BorderPane (root)
 
 ### BUG / FIX
 
-- **Turso SQL injection**: `PildoraDao` (insertarTurso, actualizarTurso), `TagDao.findOrCreateTurso()`, `BackupService.importFromFile()` usan concatenación de strings para construir SQL. Aunque `SqlHelper.esc()` escapa valores, es más seguro migrar a queries parametrizadas.
-- **BackupService import duplica código local/Turso**: Las ramas `if (!turso)` y `else` en `importFromFile()` ejecutan exactamente el mismo SQL de DELETE — código muerto.
+- **Turso SQL concatenado (por diseño)**: el driver LibSQL/DBeaver sobre HTTP no soporta `setNull`/`setBytes`/`setObject(null)`, así que las variantes Turso construyen SQL a mano. No migrar a PreparedStatement sin probar contra Turso real. `SqlHelper.esc()` duplica comillas y elimina NUL; blobs van como hex; ids como int.
 - **EditorPildoraController.mdClearHeading()** llama a `textFormatController.mdH3()` en vez de a un método que elimine headings. Probablemente un bug de copiar/pegar.
 - **EditorPildoraController preview doble-wrapping HTML**: `renderPreviewNow()` genera un HTML completo y luego lo mete dentro de otro `<!doctype html>` con `loadContent(formatted)`. El body se renderiza dos veces anidado.
 - **TagSidebarHelper instancia `new TagDao()` en cada `refresh()`** — debería reutilizar instancia.

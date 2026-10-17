@@ -123,26 +123,15 @@ public class BackupService {
     public static int[] importFromFile(File file) throws Exception {
         BackupData data = readBackup(file);
         var conn = DatabaseHelper.getInstance().getConnection();
-        boolean turso = DatabaseHelper.getInstance().isUsingTurso();
 
         int pCount = 0, tCount = 0, dCount = 0;
 
-        if (!turso) {
-            try (Statement st = conn.createStatement()) {
-                st.execute("DELETE FROM pildora_link");
-                st.execute("DELETE FROM pildora_tag");
-                st.execute("DELETE FROM drafts");
-                st.execute("DELETE FROM pildoras");
-                st.execute("DELETE FROM tags");
-            }
-        } else {
-            try (Statement st = conn.createStatement()) {
-                st.execute("DELETE FROM pildora_link");
-                st.execute("DELETE FROM pildora_tag");
-                st.execute("DELETE FROM drafts");
-                st.execute("DELETE FROM pildoras");
-                st.execute("DELETE FROM tags");
-            }
+        try (Statement st = conn.createStatement()) {
+            st.execute("DELETE FROM pildora_link");
+            st.execute("DELETE FROM pildora_tag");
+            st.execute("DELETE FROM drafts");
+            st.execute("DELETE FROM pildoras");
+            st.execute("DELETE FROM tags");
         }
 
         for (TagRow t : data.tags) {
