@@ -2,10 +2,11 @@
 
 ## Preferencias de trabajo
 
-- No generar explicaciones. Solo hacer el cambio y confirmar brevemente qué se hizo.
+- **Minimizar tokens**: el usuario quiere el mínimo gasto posible. Solo escribir código correcto en la app y probarlo (compilar/tests). Sin explicaciones, sin resúmenes largos, sin repetir contexto, sin preguntas innecesarias. Respuesta final: 1-3 líneas máximo (qué se hizo + resultado de la prueba).
+- No leer ficheros enteros ni explorar si no hace falta; usar grep/rangos de líneas. No releer lo ya editado.
 - No añadir comentarios en el código salvo que el "por qué" sea no obvio.
 - No crear ficheros de documentación (.md, README) salvo que se pida explícitamente.
-- Respuestas cortas y directas.
+- Git: commit y push a la rama de trabajo al terminar, sin narrarlo. No crear PR salvo petición.
 - **Mantener este CLAUDE.md actualizado automáticamente**: Cada vez que se implemente una funcionalidad, se cambie la arquitectura, se añadan ficheros, o se modifique algo relevante del proyecto, actualizar este fichero sin que el usuario lo pida. Incluir nuevas funcionalidades en "Funcionalidades implementadas", mover tareas completadas de "Tareas pendientes", y actualizar la estructura si cambia.
 
 ## Descripción
@@ -41,6 +42,7 @@ io.github.guillermo_david/
 │   ├── DetallePildoraController    — Vista detalle con WebView, Ctrl+F (~750 líneas, pendiente refactorizar)
 │   ├── EditorPildoraController     — Editor markdown
 │   ├── SettingsMenuHelper          — Menú engranaje: tema, idioma, tipografía, columnas, BD, seguridad, estadísticas, ayuda, acerca de (~1000 líneas, pendiente refactorizar)
+│   ├── SecurityUiHelper            — unlockWithFeedback(Parent) y humanize(ms) compartidos
 │   ├── TagSidebarHelper            — Panel lateral de etiquetas
 │   ├── TextFormatController        — Barra de formato del editor
 │   └── DraftsUIHelper              — UI de borradores
@@ -184,26 +186,12 @@ BorderPane (root)
 
 ## Posibles mejoras/cambios
 
-### BUG / FIX
+### CODE QUALITY / REFACTORING (pendiente)
 
-- **Turso SQL concatenado (por diseño)**: el driver LibSQL/DBeaver sobre HTTP no soporta `setNull`/`setBytes`/`setObject(null)`, así que las variantes Turso construyen SQL a mano. No migrar a PreparedStatement sin probar contra Turso real. `SqlHelper.esc()` duplica comillas y elimina NUL; blobs van como hex; ids como int.
-- **EditorPildoraController.mdClearHeading()** llama a `textFormatController.mdH3()` en vez de a un método que elimine headings. Probablemente un bug de copiar/pegar.
-- **EditorPildoraController preview doble-wrapping HTML**: `renderPreviewNow()` genera un HTML completo y luego lo mete dentro de otro `<!doctype html>` con `loadContent(formatted)`. El body se renderiza dos veces anidado.
-- **TagSidebarHelper instancia `new TagDao()` en cada `refresh()`** — debería reutilizar instancia.
-- **PildoraExporter duplica configuración flexmark**: `MarkdownEngine` y `PildoraExporter` tienen cada uno su propia configuración de Parser/HtmlRenderer con extensiones ligeramente distintas (PildoraExporter no incluye TypographicExtension). Deberían compartir una instancia.
-- **ThemeManager.toggle()** solo alterna entre "light" y "dark" aunque hay 7 temas; si el usuario está en "dracula", toggle lo pone en "light" sin pasar por los intermedios.
-
-### CODE QUALITY / REFACTORING
-
-- **Código duplicado `unlockWithFeedback()`**: Existe tanto en `ListadoPildorasController` como en `DetallePildoraController`. Extraer a una clase utilitaria `SecurityUiHelper`.
-- **Código duplicado `humanize()`**: Misma situación: duplicado en `ListadoPildorasController` y `DetallePildoraController`.
-- **Lógica de confirmación de borrado triplicada**: En `ListadoPildorasController` aparece en el menú contextual, en la columna acciones, y en el handler de tecla DELETE. Unificar en un solo método `confirmAndDelete(Pildora)`.
-- **Métodos de exportación duplicados en DetallePildoraController**: `exportMarkdown()`, `exportHtml()`, `exportPdf()` tienen bloques try/catch casi idénticos para selección de fichero, invocación y manejo de error. Extraer a un método genérico `exportWith(extension, exporter)`.
-- **PildoraDao.listarFiltradas()/contarFiltradas()** duplican la construcción de la cláusula WHERE. Extraer a un método privado `buildWhereClause(...)`.
-- **`new TagDao()` creado múltiples veces** en DetallePildoraController en distintos métodos — reutilizar una instancia de campo.
-- **SettingsMenuHelper constructor con 11 parámetros** — considerar un builder o un record de configuración.
-- **DatabaseHelper.initializeDatabase()** es un método de ~190 líneas con migraciones entrelazadas — extraer cada migración a su propio método.
-- **EditorPildoraController** tiene ~30 métodos FXML que solo delegan a `textFormatController` (`mdBold`, `mdItalic`, etc.) — considerar enlazar directamente en FXML con un `TextFormatController` instanciado en FXML o usar un solo método dispatcher.
+- `DatabaseHelper.initializeDatabase()` (~190 líneas): extraer cada migración a su método.
+- `SettingsMenuHelper` constructor con 11 parámetros: usar record de configuración.
+- `EditorPildoraController`: ~30 métodos FXML que solo delegan a `textFormatController`.
+- `PildoraExporter` y `MarkdownEngine` mantienen opciones flexmark distintas a propósito (TOC/typographic); no unificar sin probar exports.
 
 ### UX
 
@@ -238,9 +226,6 @@ BorderPane (root)
 
 ### PERFORMANCE
 
-- **Cache de tags con TTL fijo de 5s** (`TagDao.CACHE_TTL_MS`): Podría ser configurable. Además, `listAllWithCount()` no diferencia la cache entre los modos `includeHidden=true` y `includeHidden=false` — puede devolver datos incorrectos.
-- **`preloadForPildoras()` concatena IDs sin PreparedStatement**: Para listas grandes podría ser un problema. Usar parámetros o batches.
-- **MarkdownEngine se instancia repetidamente**: `EditorPildoraController` crea `new MarkdownEngine()` en campo. Podría ser un singleton o compartido si es thread-safe (flexmark parsers son reutilizables).
 - **Paginación**: `contarFiltradas()` ejecuta un COUNT que recorre la misma query que `listarFiltradas()` — en tablas grandes podría beneficiarse de caching del total mientras los filtros no cambien.
 - **DatabaseHelper.reconnect()** cierra y destruye la instancia singleton sin sincronización fina — si otros hilos están usando la conexión anterior podría dar errores.
 

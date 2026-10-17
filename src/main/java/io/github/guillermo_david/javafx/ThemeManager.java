@@ -68,7 +68,6 @@ public final class ThemeManager {
     }
 
     public static Theme toggle(Scene scene) {
-        String current = loadId();
         String next = (load() == Theme.DARK) ? "light" : "dark";
         apply(scene, next);
         save(next);

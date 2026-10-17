@@ -87,6 +87,7 @@ public class DetallePildoraController {
 	private Label searchStatus;
 
 	private static final MarkdownEngine MD = new MarkdownEngine();
+	private final TagDao tagDao = new TagDao();
 
 	private boolean shortcutsInstalados = false;
 	private boolean deletingNow = false;
@@ -264,83 +265,47 @@ public class DetallePildoraController {
 		btnExportMenu.getItems().setAll(miMd, miHtml, miPdf);
 	}
 
-	private void exportMarkdown() {
+	@FunctionalInterface
+	private interface Exporter {
+		void run(java.nio.file.Path target) throws Exception;
+	}
+
+	private void exportWith(String key, String ext, Exporter exporter) {
 		if (currentPildora == null)
 			return;
 		var chooser = new javafx.stage.FileChooser();
-		chooser.setTitle(I18n.get("filechooser.export.markdown"));
-		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.markdown"), "*.md"));
-		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".md");
+		chooser.setTitle(I18n.get("filechooser.export." + key));
+		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter." + key), "*." + ext));
+		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + "." + ext);
 		applyLastExportDir(chooser);
 		var file = chooser.showSaveDialog(root.getScene().getWindow());
 		if (file == null)
 			return;
 		saveLastExportDir(file);
 		try {
-			PildoraExporter.exportMarkdown(currentPildora, new TagDao(), file.toPath());
-			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
+			exporter.run(file.toPath());
+			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, Duration.seconds(3));
 		} catch (Exception ex) {
-		    String msg = ex.getMessage();
-		    if (msg != null && msg.contains("Contenido protegido")) {
-		        StatusBus.show(I18n.get("status.unlock.before.export"), StatusBus.Type.ERROR, Duration.seconds(4));
-		    } else {
-		        StatusBus.show(I18n.get("status.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(4));
-		    }
+			String msg = ex.getMessage();
+			String text = msg != null && msg.contains("Contenido protegido")
+					? I18n.get("status.unlock.before.export")
+					: I18n.get("status.export.error", msg);
+			StatusBus.show(text, StatusBus.Type.ERROR, Duration.seconds(4));
 		}
+	}
 
+	private void exportMarkdown() {
+		exportWith("markdown", "md", path -> PildoraExporter.exportMarkdown(currentPildora, tagDao, path));
 	}
 
 	private void exportHtml() {
-		if (currentPildora == null)
-			return;
-		var chooser = new javafx.stage.FileChooser();
-		chooser.setTitle(I18n.get("filechooser.export.html"));
-		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.html"), "*.html"));
-		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".html");
-		applyLastExportDir(chooser);
-		var file = chooser.showSaveDialog(root.getScene().getWindow());
-		if (file == null)
-			return;
-		saveLastExportDir(file);
-		try {
-			var extraCss = buildChipsCssForHtml(currentPildora.getId());
-			PildoraExporter.exportHtml(currentPildora, new TagDao(), file.toPath(), extraCss);
-			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
-		} catch (Exception ex) {
-		    String msg = ex.getMessage();
-		    if (msg != null && msg.contains("Contenido protegido")) {
-		        StatusBus.show(I18n.get("status.unlock.before.export"), StatusBus.Type.ERROR, Duration.seconds(4));
-		    } else {
-		        StatusBus.show(I18n.get("status.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(4));
-		    }
-		}
-
+		exportWith("html", "html", path -> PildoraExporter.exportHtml(currentPildora, tagDao, path,
+				buildChipsCssForHtml(currentPildora.getId())));
 	}
 
 	private void exportPdf() {
-		if (currentPildora == null)
-			return;
-		var chooser = new javafx.stage.FileChooser();
-		chooser.setTitle(I18n.get("filechooser.export.pdf"));
-		chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(I18n.get("filechooser.filter.pdf"), "*.pdf"));
-		chooser.setInitialFileName(safeFilename(currentPildora.getTitulo()) + ".pdf");
-		applyLastExportDir(chooser);
-		var file = chooser.showSaveDialog(root.getScene().getWindow());
-		if (file == null)
-			return;
-		saveLastExportDir(file);
-		try {
-			var extraCss = buildChipsCssForHtml(currentPildora.getId());
-			PildoraExporter.exportPdf(currentPildora, new TagDao(), file.toPath(), extraCss);
-			StatusBus.show(I18n.get("status.exported.to", file.getName()), StatusBus.Type.SUCCESS, javafx.util.Duration.seconds(3));
-		} catch (Exception ex) {
-		    String msg = ex.getMessage();
-		    if (msg != null && msg.contains("Contenido protegido")) {
-		        StatusBus.show(I18n.get("status.unlock.before.export"), StatusBus.Type.ERROR, Duration.seconds(4));
-		    } else {
-		        StatusBus.show(I18n.get("status.export.error", ex.getMessage()), StatusBus.Type.ERROR, Duration.seconds(4));
-		    }
-		}
+		exportWith("pdf", "pdf", path -> PildoraExporter.exportPdf(currentPildora, tagDao, path,
+				buildChipsCssForHtml(currentPildora.getId())));
 	}
 	
 	private static final java.util.prefs.Preferences EXPORT_PREFS =
@@ -419,7 +384,6 @@ public class DetallePildoraController {
 	}
 
 	private String buildChipsCssForHtml(int pildoraId) {
-		var tagDao = new TagDao();
 		var tags = tagDao.findByPildoraId(pildoraId);
 		boolean dark = false; // el HTML por defecto es claro; pon true si quieres tema oscuro
 
@@ -470,46 +434,7 @@ public class DetallePildoraController {
 	}
 
 	private boolean unlockWithFeedback() {
-		var security = io.github.guillermo_david.security.SecurityService.getInstance();
-		if (security.isUnlocked())
-			return true;
-
-		long lockMs = security.lockoutRemainingMillis();
-		if (lockMs > 0) {
-			StatusBus.show(I18n.get("status.lockout.retry", humanize(lockMs)),
-					StatusBus.Type.ERROR, Duration.seconds(4));
-			return false;
-		}
-		char[] pin = PinDialogs.promptPin6(root, true, java.time.Duration.ofMinutes(10));
-		if (pin == null)
-			return false;
-		try {
-			if (security.verifyPin(pin)) {
-				StatusBus.show(I18n.get("status.unlocked"), StatusBus.Type.INFO, Duration.seconds(2));
-				return true;
-			} else {
-				if (security.isLockedOut()) {
-					long ms = security.lockoutRemainingMillis();
-					StatusBus.show(I18n.get("status.lockout.retry", humanize(ms)),
-							StatusBus.Type.ERROR, Duration.seconds(4));
-				} else {
-					int left = security.attemptsLeft();
-					StatusBus.show(I18n.get("alert.pin.incorrect.remaining", left),
-							StatusBus.Type.ERROR, Duration.seconds(3));
-				}
-				return false;
-			}
-		} finally {
-			java.util.Arrays.fill(pin, '\0');
-		}
-	}
-
-	private static String humanize(long ms) {
-		long s = (ms + 999) / 1000;
-		if (s < 60)
-			return s + " s";
-		long m = s / 60, rs = s % 60;
-		return rs == 0 ? (m + " min") : (m + " min " + rs + " s");
+		return SecurityUiHelper.unlockWithFeedback(root);
 	}
 
 	public void mostrarPildora(Pildora p) {
@@ -524,7 +449,7 @@ public class DetallePildoraController {
 				: I18n.get("detail.no.date")));
 
 		tagsBox.getChildren().clear();
-		for (Tag t : new TagDao().findByPildoraId(p.getId())) {
+		for (Tag t : tagDao.findByPildoraId(p.getId())) {
 			tagsBox.getChildren().add(buildTagChipButton(t.getNombre()));
 		}
 		repaintTagChipsForTheme();

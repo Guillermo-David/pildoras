@@ -16,12 +16,14 @@ public class TagDao {
 
     private static final long CACHE_TTL_MS = 5_000;
     private static volatile long cacheTimestamp;
-    private static volatile List<String[]> cachedCounts;
+    private static volatile List<String[]> cachedCountsAll;
+    private static volatile List<String[]> cachedCountsVisible;
     private static volatile Map<Integer, List<Tag>> cachedByPildora = new ConcurrentHashMap<>();
 
     public static void invalidateCache() {
         cacheTimestamp = 0;
-        cachedCounts = null;
+        cachedCountsAll = null;
+        cachedCountsVisible = null;
         cachedByPildora.clear();
     }
 
@@ -105,20 +107,16 @@ public class TagDao {
     public void preloadForPildoras(List<Integer> pildoraIds) {
         if (pildoraIds == null || pildoraIds.isEmpty()) return;
         cachedByPildora.clear();
-        StringBuilder sb = new StringBuilder(
-            "SELECT pt.pildora_id, t.id, t.nombre FROM tags t " +
-            "JOIN pildora_tag pt ON t.id = pt.tag_id WHERE pt.pildora_id IN (");
-        for (int i = 0; i < pildoraIds.size(); i++) {
-            if (i > 0) sb.append(',');
-            sb.append(pildoraIds.get(i));
-        }
-        sb.append(") ORDER BY t.nombre");
-        try (Statement stmt = DatabaseHelper.getInstance().getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sb.toString())) {
-            while (rs.next()) {
-                int pid = rs.getInt("pildora_id");
-                cachedByPildora.computeIfAbsent(pid, k -> new ArrayList<>())
-                    .add(new Tag(rs.getInt("id"), rs.getString("nombre")));
+        String sql = "SELECT pt.pildora_id, t.id, t.nombre FROM tags t "
+            + "JOIN pildora_tag pt ON t.id = pt.tag_id WHERE pt.pildora_id IN ("
+            + String.join(",", java.util.Collections.nCopies(pildoraIds.size(), "?")) + ") ORDER BY t.nombre";
+        try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+            for (int i = 0; i < pildoraIds.size(); i++) ps.setInt(i + 1, pildoraIds.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    cachedByPildora.computeIfAbsent(rs.getInt("pildora_id"), k -> new ArrayList<>())
+                        .add(new Tag(rs.getInt("id"), rs.getString("nombre")));
+                }
             }
         } catch (SQLException e) { e.printStackTrace(); }
         for (int id : pildoraIds) cachedByPildora.putIfAbsent(id, List.of());
@@ -174,7 +172,8 @@ public class TagDao {
     }
 
     public List<String[]> listAllWithCount(boolean includeHidden) {
-        if (cachedCounts != null && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS) return cachedCounts;
+        List<String[]> hit = includeHidden ? cachedCountsAll : cachedCountsVisible;
+        if (hit != null && (System.currentTimeMillis() - cacheTimestamp) < CACHE_TTL_MS) return hit;
 
         List<String[]> list = new ArrayList<>();
         String sql;
@@ -205,7 +204,7 @@ public class TagDao {
                 list.add(new String[]{ rs.getString("nombre"), String.valueOf(rs.getInt("cnt")) });
             }
         } catch (SQLException e) { e.printStackTrace(); }
-        cachedCounts = list;
+        if (includeHidden) cachedCountsAll = list; else cachedCountsVisible = list;
         cacheTimestamp = System.currentTimeMillis();
         return list;
     }

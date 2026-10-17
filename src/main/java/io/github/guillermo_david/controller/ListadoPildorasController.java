@@ -504,17 +504,7 @@ public class ListadoPildorasController {
 				miEliminar.setGraphic(new FontIcon(FontAwesomeSolid.TRASH));
 				miEliminar.getStyleClass().add("danger");
 				miEliminar.setOnAction(ev -> {
-					if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries()) return;
-					Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-							I18n.get("confirm.delete.pildora", p.getTitulo()));
-					Dialogs.decorate(confirm, root);
-					confirm.showAndWait().ifPresent(res -> {
-						if (res.getButtonData().isDefaultButton()) {
-							pildoraDao.eliminar(p.getId());
-							StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
-							refrescarTabla();
-						}
-					});
+					confirmAndDelete(p, () -> refrescarTabla());
 				});
 
 				ctx.getItems().addAll(
@@ -539,45 +529,6 @@ public class ListadoPildorasController {
 		colFav.setMaxWidth(80);
 		colFav.setResizable(false);
 
-	}
-
-	private char[] promptPinOnce() {
-		var dialog = new Dialog<char[]>();
-		dialog.setTitle(I18n.get("pin.dialog.title"));
-		dialog.setHeaderText(I18n.get("pin.dialog.header"));
-
-		var pf = new PasswordField();
-		pf.setPromptText("******");
-		pf.setTextFormatter(new TextFormatter<String>(c -> {
-			if (!c.getControlNewText().matches("\\d{0,6}"))
-				return null;
-			return c;
-		}));
-
-		var remember = new CheckBox(I18n.get("pin.remember.minutes", 10));
-		var content = new VBox(8, new Label(I18n.get("label.pin")), pf, remember);
-		dialog.getDialogPane().setContent(content);
-
-		var okBtn = new ButtonType(I18n.get("button.accept"), ButtonBar.ButtonData.OK_DONE);
-		var cancel = new ButtonType(I18n.get("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
-		dialog.getDialogPane().getButtonTypes().setAll(okBtn, cancel);
-
-		var okNode = dialog.getDialogPane().lookupButton(okBtn);
-		okNode.setDisable(true);
-		pf.textProperty().addListener((o, a, b) -> okNode.setDisable(b == null || b.length() != 6));
-
-		dialog.setResultConverter(bt -> {
-			if (bt == okBtn) {
-				if (remember.isSelected()) {
-					security.startRememberWindow(java.time.Duration.ofMinutes(10));
-				}
-				return pf.getText().toCharArray();
-			}
-			return null;
-		});
-
-		var res = dialog.showAndWait();
-		return res.orElse(null);
 	}
 
 	private boolean ensureUnlockedWithRetries() {
@@ -645,50 +596,22 @@ public class ListadoPildorasController {
 		lock.showAndWait();
 	}
 
-	private boolean unlockWithFeedback() {
-
-		if (security.isUnlocked())
-			return true;
-
-		long lockMs = security.lockoutRemainingMillis();
-		if (lockMs > 0) {
-			StatusBus.show(I18n.get("status.lockout.retry", humanize(lockMs)),
-					StatusBus.Type.ERROR, Duration.seconds(4));
-			return false;
-		}
-
-		char[] pin = promptPinOnce();
-		if (pin == null)
-			return false;
-
-		try {
-			boolean ok = security.verifyPin(pin);
-			if (ok) {
-				StatusBus.show(I18n.get("status.unlocked"), StatusBus.Type.INFO, Duration.seconds(2));
-				return true;
-			} else {
-				if (security.isLockedOut()) {
-					long ms = security.lockoutRemainingMillis();
-					StatusBus.show(I18n.get("status.lockout.retry", humanize(ms)),
-							StatusBus.Type.ERROR, Duration.seconds(4));
-				} else {
-					int left = security.attemptsLeft();
-					StatusBus.show(I18n.get("alert.pin.incorrect.remaining", left),
-							StatusBus.Type.ERROR, Duration.seconds(3));
-				}
-				return false;
+	private void confirmAndDelete(Pildora p, Runnable after) {
+		if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries())
+			return;
+		Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, I18n.get("confirm.delete.pildora", p.getTitulo()));
+		Dialogs.decorate(confirm, root);
+		confirm.showAndWait().ifPresent(res -> {
+			if (res.getButtonData().isDefaultButton()) {
+				pildoraDao.eliminar(p.getId());
+				StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
+				after.run();
 			}
-		} finally {
-			Arrays.fill(pin, '\0');
-		}
+		});
 	}
 
-	private static String humanize(long ms) {
-		long s = (ms + 999) / 1000;
-		if (s < 60)
-			return s + " s";
-		long m = s / 60, rs = s % 60;
-		return rs == 0 ? (m + " min") : (m + " min " + rs + " s");
+	private boolean unlockWithFeedback() {
+		return SecurityUiHelper.unlockWithFeedback(root);
 	}
 
 	private void setColFav() {
@@ -1038,21 +961,7 @@ public class ListadoPildorasController {
 				if (p == null)
 					return;
 
-				if (p.isProtegida() && !security.isUnlocked()) {
-					if (!ensureUnlockedWithRetries())
-						return; // no borrar si no desbloquea
-				}
-
-				Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-						I18n.get("confirm.delete.pildora", p.getTitulo()));
-				Dialogs.decorate(confirm, root);
-				confirm.showAndWait().ifPresent(res -> {
-					if (res.getButtonData().isDefaultButton()) {
-						pildoraDao.eliminar(p.getId());
-						StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
-						refrescarTabla();
-					}
-				});
+				confirmAndDelete(p, () -> refrescarTabla());
 			});
 
 			private final HBox box = new HBox(8, btnEditar, btnBorrar);
@@ -1166,24 +1075,15 @@ public class ListadoPildorasController {
 				if (sel == null)
 					return;
 
-				Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-						I18n.get("confirm.delete.pildora", sel.getTitulo()));
-
-				Dialogs.decorate(confirm, root);
-
-				confirm.showAndWait().ifPresent(res -> {
-					if (res.getButtonData().isDefaultButton()) {
-						pildoraDao.eliminar(sel.getId());
-						StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
-						String delTags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTags() : null;
-						int total = pildoraDao.contarFiltradas(
-								txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
-								delTags,
-								true, btnSoloFav.isSelected(), mostrarOcultas);
-						totalPaginas = Math.max(1, (int) Math.ceil((double) total / tamanioPagina));
-						paginaActual = Math.min(paginaActual, totalPaginas);
-						refrescarTabla();
-					}
+				confirmAndDelete(sel, () -> {
+					String delTags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTags() : null;
+					int total = pildoraDao.contarFiltradas(
+							txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
+							delTags,
+							true, btnSoloFav.isSelected(), mostrarOcultas);
+					totalPaginas = Math.max(1, (int) Math.ceil((double) total / tamanioPagina));
+					paginaActual = Math.min(paginaActual, totalPaginas);
+					refrescarTabla();
 				});
 				e.consume(); // no dejar que baje
 			});
@@ -1302,21 +1202,10 @@ public class ListadoPildorasController {
 			});
 
 			controller.setOnDelete(pildora -> {
-				Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-				confirm.setTitle(I18n.get("confirm.delete.title"));
-				confirm.setHeaderText(I18n.get("confirm.delete.header"));
-				confirm.setContentText(pildora.getTitulo());
-
-				Dialogs.decorate(confirm, root);
-
-				confirm.showAndWait().ifPresent(res -> {
-					if (res == ButtonType.OK) {
-						pildoraDao.eliminar(p.getId());
-						StatusBus.show(I18n.get("status.pildora.deleted"), StatusBus.Type.INFO, Duration.seconds(3));
-						controller.dispose(); // 👈 limpiar también aquí
-						restaurarFiltrosYPaginacion();
-						refrescarTabla();
-					}
+				confirmAndDelete(pildora, () -> {
+					controller.dispose();
+					restaurarFiltrosYPaginacion();
+					refrescarTabla();
 				});
 			});
 			

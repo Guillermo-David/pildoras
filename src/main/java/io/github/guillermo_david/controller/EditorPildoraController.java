@@ -83,7 +83,7 @@ public class EditorPildoraController {
 	private boolean originalProtegida = false;
 	private String decryptedContentCache = null;
 
-	private MarkdownEngine md = new MarkdownEngine();
+	private static final MarkdownEngine md = new MarkdownEngine();
 	private String cssLight, cssDark, cssBaseWeb;
 
 	private static final Pattern P_PILDORA_ID = Pattern.compile("\\b[pP]ildora:(\\d+)");
@@ -802,7 +802,7 @@ public class EditorPildoraController {
 
 	@FXML
 	public void mdClearHeading() {
-		textFormatController.mdH3();
+		textFormatController.mdClearHeading();
 	}
 
 	@FXML
@@ -959,14 +959,6 @@ public class EditorPildoraController {
 		}
 	}
 
-	// Decide CSS según tema actual
-	@SuppressWarnings("unused")
-	private String currentCssForTheme() {
-		var isDark = io.github.guillermo_david.javafx.ThemeManager
-				.load() == io.github.guillermo_david.javafx.ThemeManager.Theme.DARK;
-		return isDark ? cssDark : cssLight;
-	}
-
 	// Renderiza ya (sin debounce)
 	private void renderPreviewNow() {
 	    String mdText = txtDescripcion.getText();
@@ -984,31 +976,15 @@ public class EditorPildoraController {
 	        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 	        """ : "";
 
-	    String html = """
-	        <!doctype html>
-	        <html>
-	        <head>
-	          <meta charset="utf-8">
-	          <style>
-	          		""" + cssAll + """
-	          </style>
-	        </head>
-	        <body class="md-body">
-	        """ + body + math + """
-	        </body>
-	        </html>
-	        """;
-
 	    webPreview.getEngine().loadContent(
 	        """
 	        <!doctype html><html><head>
 	          <meta charset="UTF-8">
 	          <meta name="color-scheme" content="dark light">
 	          <style>%s</style>
-	        </head><body class="md-body">%s</body></html>
-	        """.formatted(cssAll, html)
+	        </head><body class="md-body">%s%s</body></html>
+	        """.formatted(cssAll, body, math)
 	    );
-//	    webPreview.getEngine().loadContent(html, "text/html");
 	}
 	
 }

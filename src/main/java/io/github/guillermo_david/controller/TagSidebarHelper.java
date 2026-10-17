@@ -17,6 +17,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 
 class TagSidebarHelper {
+    private final TagDao tagDao = new TagDao();
 
     private static final String PREF_SIDEBAR_COLLAPSED = "sidebarCollapsed";
 
@@ -89,7 +90,7 @@ class TagSidebarHelper {
             if (selectedTags.isEmpty()) allBtn.getStyleClass().add("tag-sidebar-selected");
         }
 
-        var tagsWithCount = new TagDao().listAllWithCount(includeHidden.getAsBoolean());
+        var tagsWithCount = tagDao.listAllWithCount(includeHidden.getAsBoolean());
         for (String[] tc : tagsWithCount) {
             String nombre = tc[0];
             String count = tc[1];

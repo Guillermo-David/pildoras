@@ -75,6 +75,58 @@ public class PildoraDao {
 		}
 	}
 
+	private record Where(String sql, List<String> params) {
+		void bind(PreparedStatement ps, int[] idx) throws SQLException {
+			for (String v : params)
+				ps.setString(idx[0]++, v);
+		}
+	}
+
+	private static Where buildWhere(String tituloFiltro, String tagsFiltro, boolean andMode, boolean soloFavoritas,
+			boolean mostrarOcultas) {
+		StringBuilder w = new StringBuilder("WHERE 1=1 ");
+		List<String> params = new ArrayList<>();
+
+		if (tituloFiltro != null && !tituloFiltro.isBlank()) {
+			w.append("AND (p.titulo LIKE ? OR p.descripcion LIKE ?) ");
+			String like = "%" + tituloFiltro + "%";
+			params.add(like);
+			params.add(like);
+		}
+
+		if (tagsFiltro != null && !tagsFiltro.isBlank()) {
+			String[] tags = Arrays.stream(tagsFiltro.split(",")).map(String::trim).filter(s -> !s.isBlank())
+					.map(String::toLowerCase).toArray(String[]::new);
+			if (tags.length > 0) {
+				if (andMode) {
+					for (String t : tags) {
+						w.append("""
+								AND EXISTS (
+								 SELECT 1 FROM pildora_tag pt2
+								 JOIN tags t2 ON pt2.tag_id = t2.id
+								 WHERE pt2.pildora_id = p.id AND LOWER(t2.nombre) = ?
+								) """);
+						params.add(t);
+					}
+				} else {
+					w.append("""
+							AND EXISTS (
+							 SELECT 1 FROM pildora_tag pt2
+							 JOIN tags t2 ON pt2.tag_id = t2.id
+							 WHERE pt2.pildora_id = p.id AND LOWER(t2.nombre) IN (""")
+							.append(String.join(", ", Collections.nCopies(tags.length, "?"))).append(")) ");
+					params.addAll(Arrays.asList(tags));
+				}
+			}
+		}
+
+		if (soloFavoritas)
+			w.append("AND p.favorita = 1 ");
+		if (!mostrarOcultas)
+			w.append("AND p.oculta = 0 ");
+		return new Where(w.toString(), params);
+	}
+
 	public List<Pildora> listarFiltradas(String tituloFiltro, String tagsFiltro, boolean andMode, boolean soloFavoritas,
 			int page, int pageSize, String columnaOrden, String direccionOrden, boolean mostrarOcultas) {
 
@@ -105,45 +157,8 @@ public class PildoraDao {
 				FROM pildoras p
 				""");
 
-		boolean joinTags = tagsFiltro != null && !tagsFiltro.isBlank() && !andMode; // OR requiere JOIN
-		if (joinTags) {
-			sql.append("JOIN pildora_tag pt ON p.id = pt.pildora_id ").append("JOIN tags t ON pt.tag_id = t.id ");
-		}
-
-		sql.append("WHERE 1=1 ");
-
-		if (tituloFiltro != null && !tituloFiltro.isBlank()) {
-			sql.append("AND (p.titulo LIKE ? OR p.descripcion LIKE ?) ");
-		}
-
-		String[] tagsArr = null;
-		if (tagsFiltro != null && !tagsFiltro.isBlank()) {
-			tagsArr = Arrays.stream(tagsFiltro.split(",")).map(String::trim).filter(s -> !s.isBlank())
-					.toArray(String[]::new);
-			if (tagsArr.length > 0) {
-				if (andMode) {
-					for (int i = 0; i < tagsArr.length; i++) {
-						sql.append("""
-								AND EXISTS (
-								 SELECT 1 FROM pildora_tag pt2
-								 JOIN tags t2 ON pt2.tag_id = t2.id
-								 WHERE pt2.pildora_id = p.id AND LOWER(t2.nombre) = LOWER(?)
-								) """);
-					}
-				} else {
-					sql.append("AND LOWER(t.nombre) IN (")
-							.append(String.join(", ", Collections.nCopies(tagsArr.length, "?"))).append(") ");
-				}
-			}
-		}
-
-		if (soloFavoritas) {
-			sql.append("AND p.favorita = 1 ");
-		}
-
-		if (!mostrarOcultas) {
-			sql.append("AND p.oculta = 0 ");
-		}
+		Where where = buildWhere(tituloFiltro, tagsFiltro, andMode, soloFavoritas, mostrarOcultas);
+		sql.append(where.sql());
 
 		sql.append(" ORDER BY p.pinned DESC ");
 
@@ -154,28 +169,13 @@ public class PildoraDao {
 			// y metemos un criterio estable secundario (por ejemplo, fecha desc)
 			sql.append(", p.fecha_creacion DESC ");
 		}
-// ORDER: favoritas primero (si NO está el filtro exclusivo), luego la columna elegida
-//		if (!soloFavoritas && !"p.favorita".equals(colOrden)) {
-//			sql.append("ORDER BY p.favorita DESC, ").append(colOrden).append(" ").append(dir).append(" ");
-//		} else {
-//			sql.append("ORDER BY ").append(colOrden).append(" ").append(dir).append(" ");
-//		}
-
 		sql.append("LIMIT ? OFFSET ?");
 
 		List<Pildora> lista = new ArrayList<>();
 		try (PreparedStatement stmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql.toString())) {
-			int idx = 1;
-
-			if (tituloFiltro != null && !tituloFiltro.isBlank()) {
-				String like = "%" + tituloFiltro + "%";
-				stmt.setString(idx++, like);
-				stmt.setString(idx++, like);
-			}
-			if (tagsArr != null) {
-				for (String t : tagsArr)
-					stmt.setString(idx++, t.toLowerCase());
-			}
+			int[] ix = { 1 };
+			where.bind(stmt, ix);
+			int idx = ix[0];
 
 			stmt.setInt(idx++, pageSize);
 			stmt.setInt(idx++, Math.max(0, (page - 1) * pageSize));
@@ -207,60 +207,11 @@ public class PildoraDao {
 	}
 
 	public int contarFiltradas(String tituloFiltro, String tagsFiltro, boolean andMode, boolean soloFavoritas, boolean mostrarOcultas) {
-		StringBuilder sql = new StringBuilder("SELECT COUNT(DISTINCT p.id) AS total " + "FROM pildoras p ");
+		Where where = buildWhere(tituloFiltro, tagsFiltro, andMode, soloFavoritas, mostrarOcultas);
+		String sql = "SELECT COUNT(*) AS total FROM pildoras p " + where.sql();
 
-		boolean joinTags = tagsFiltro != null && !tagsFiltro.isBlank() && !andMode; // OR necesita JOIN
-		if (joinTags) {
-			sql.append("JOIN pildora_tag pt ON p.id = pt.pildora_id ").append("JOIN tags t ON pt.tag_id = t.id ");
-		}
-
-		sql.append("WHERE 1=1 ");
-
-		if (tituloFiltro != null && !tituloFiltro.isBlank()) {
-			sql.append("AND (p.titulo LIKE ? OR p.descripcion LIKE ?) ");
-		}
-
-		String[] tagsArr = null;
-		if (tagsFiltro != null && !tagsFiltro.isBlank()) {
-			tagsArr = Arrays.stream(tagsFiltro.split(",")).map(String::trim).filter(s -> !s.isBlank())
-					.toArray(String[]::new);
-			if (tagsArr.length > 0) {
-				if (andMode) {
-					for (int i = 0; i < tagsArr.length; i++) {
-						sql.append("""
-								AND EXISTS (
-								  SELECT 1 FROM pildora_tag pt2
-								  JOIN tags t2 ON pt2.tag_id = t2.id
-								  WHERE pt2.pildora_id = p.id AND LOWER(t2.nombre) = LOWER(?)
-								) """);
-					}
-				} else {
-					sql.append("AND LOWER(t.nombre) IN (")
-							.append(String.join(", ", Collections.nCopies(tagsArr.length, "?"))).append(") ");
-				}
-			}
-		}
-
-		if (soloFavoritas) {
-			sql.append("AND p.favorita = 1 ");
-		}
-
-		if (!mostrarOcultas) {
-			sql.append("AND p.oculta = 0 ");
-		}
-
-		try (PreparedStatement stmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql.toString())) {
-			int idx = 1;
-			if (tituloFiltro != null && !tituloFiltro.isBlank()) {
-				String like = "%" + tituloFiltro + "%";
-				stmt.setString(idx++, like);
-				stmt.setString(idx++, like);
-			}
-			if (tagsArr != null) {
-				for (String t : tagsArr)
-					stmt.setString(idx++, t.toLowerCase());
-			}
-
+		try (PreparedStatement stmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+			where.bind(stmt, new int[] { 1 });
 			try (ResultSet rs = stmt.executeQuery()) {
 				return rs.next() ? rs.getInt("total") : 0;
 			}
