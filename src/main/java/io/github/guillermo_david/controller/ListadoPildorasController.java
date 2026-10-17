@@ -1075,16 +1075,7 @@ public class ListadoPildorasController {
 				if (sel == null)
 					return;
 
-				confirmAndDelete(sel, () -> {
-					String delTags = tagSidebarHelper != null ? tagSidebarHelper.getSelectedTags() : null;
-					int total = pildoraDao.contarFiltradas(
-							txtFiltroTexto.getText().isBlank() ? null : txtFiltroTexto.getText().trim(),
-							delTags,
-							true, btnSoloFav.isSelected(), mostrarOcultas);
-					totalPaginas = Math.max(1, (int) Math.ceil((double) total / tamanioPagina));
-					paginaActual = Math.min(paginaActual, totalPaginas);
-					refrescarTabla();
-				});
+				confirmAndDelete(sel, () -> refrescarTabla());
 				e.consume(); // no dejar que baje
 			});
 
@@ -1262,10 +1253,8 @@ public class ListadoPildorasController {
 
 	@SuppressWarnings("unchecked")
 	private void cargarTabla(String tituloFiltro, String tagsFiltro) {
-		boolean andMode = true;
-
 		boolean soloFavoritas = btnSoloFav.isSelected();
-		int total = pildoraDao.contarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, mostrarOcultas);
+		int total = pildoraDao.contarFiltradas(tituloFiltro, tagsFiltro, soloFavoritas, mostrarOcultas);
 		totalPaginas = Math.max(1, (int) Math.ceil((double) total / tamanioPagina));
 
 		// Ajusta paginaActual si se ha quedado fuera de rango
@@ -1275,7 +1264,7 @@ public class ListadoPildorasController {
 			paginaActual = 1;
 		}
 
-		List<Pildora> todas = pildoraDao.listarFiltradas(tituloFiltro, tagsFiltro, andMode, soloFavoritas, paginaActual,
+		List<Pildora> todas = pildoraDao.listarFiltradas(tituloFiltro, tagsFiltro, soloFavoritas, paginaActual,
 				tamanioPagina, columnaOrden, direccionOrden, mostrarOcultas);
 
 		var ids = todas.stream().map(Pildora::getId).collect(Collectors.toList());

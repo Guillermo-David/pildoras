@@ -42,29 +42,23 @@ class PildoraDaoFilterTest {
         c = create("gamma", true, "x");
     }
 
-    private List<Integer> ids(String text, String tags, boolean and, boolean hidden) {
-        return dao.listarFiltradas(text, tags, and, false, 1, 50, "titulo", "ASC", hidden).stream()
+    private List<Integer> ids(String text, String tags, boolean hidden) {
+        return dao.listarFiltradas(text, tags, false, 1, 50, "titulo", "ASC", hidden).stream()
                 .map(Pildora::getId).toList();
     }
 
     @Test
-    void orFilterHasNoDuplicates() {
-        assertEquals(List.of(a, b), ids(null, "x,y", false, false));
-        assertEquals(2, dao.contarFiltradas(null, "x,y", false, false, false));
-    }
-
-    @Test
     void andFilter() {
-        assertEquals(List.of(a), ids(null, "x,y", true, true));
-        assertEquals(1, dao.contarFiltradas(null, "x,y", true, false, true));
+        assertEquals(List.of(a), ids(null, "x,y", true));
+        assertEquals(1, dao.contarFiltradas(null, "x,y", false, true));
     }
 
     @Test
     void hiddenAndTextFilters() {
-        assertEquals(List.of(a, b, c), ids(null, null, false, true));
-        assertEquals(List.of(b), ids("bet", null, false, true));
-        assertEquals(3, dao.contarFiltradas(null, null, false, false, true));
-        assertEquals(2, dao.contarFiltradas(null, null, false, false, false));
+        assertEquals(List.of(a, b, c), ids(null, null, true));
+        assertEquals(List.of(b), ids("bet", null, true));
+        assertEquals(3, dao.contarFiltradas(null, null, false, true));
+        assertEquals(2, dao.contarFiltradas(null, null, false, false));
     }
 
     @Test
