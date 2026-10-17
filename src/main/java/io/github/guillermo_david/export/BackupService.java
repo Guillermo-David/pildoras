@@ -122,7 +122,7 @@ public class BackupService {
              ResultSet rs = st.executeQuery(
                  "SELECT id,titulo,descripcion,fecha_creacion,fecha_actualizacion,"
                  + "favorita,pinned,protegida,hex(descripcion_cipher) AS ch,hex(descripcion_iv) AS iv,oculta "
-                 + "FROM pildoras ORDER BY id")) {
+                 + "FROM pildoras WHERE eliminada = 0 ORDER BY id")) {
             while (rs.next()) {
                 pildoras.add(new PildoraRow(
                     rs.getInt("id"), rs.getString("titulo"), rs.getString("descripcion"),
@@ -145,7 +145,7 @@ public class BackupService {
 
         List<PildoraTagRow> pildoraTags = new ArrayList<>();
         try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery("SELECT pildora_id,tag_id FROM pildora_tag ORDER BY pildora_id,tag_id")) {
+             ResultSet rs = st.executeQuery("SELECT pildora_id,tag_id FROM pildora_tag WHERE pildora_id IN (SELECT id FROM pildoras WHERE eliminada = 0) ORDER BY pildora_id,tag_id")) {
             while (rs.next()) {
                 pildoraTags.add(new PildoraTagRow(rs.getInt("pildora_id"), rs.getInt("tag_id")));
             }
@@ -168,7 +168,7 @@ public class BackupService {
 
         List<PildoraLinkRow> links = new ArrayList<>();
         try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery("SELECT from_id,to_id,kind FROM pildora_link ORDER BY from_id,to_id")) {
+             ResultSet rs = st.executeQuery("SELECT from_id,to_id,kind FROM pildora_link WHERE from_id IN (SELECT id FROM pildoras WHERE eliminada = 0) AND to_id IN (SELECT id FROM pildoras WHERE eliminada = 0) ORDER BY from_id,to_id")) {
             while (rs.next()) {
                 links.add(new PildoraLinkRow(rs.getInt("from_id"), rs.getInt("to_id"), rs.getString("kind")));
             }

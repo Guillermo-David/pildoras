@@ -68,4 +68,19 @@ class PildoraDaoFilterTest {
         assertEquals("2", all.stream().filter(r -> r[0].equals("x")).findFirst().get()[1]);
         assertEquals("1", visible.stream().filter(r -> r[0].equals("x")).findFirst().get()[1]);
     }
+
+    @Test
+    void trashHidesRestoresAndPurges() throws Exception {
+        int d = create("delta", false, "z");
+        dao.eliminar(d);
+        assertFalse(ids(null, null, true).contains(d));
+        assertTrue(tags.listAllWithCount(true).stream().noneMatch(r -> r[0].equals("z")));
+        assertEquals(1, dao.contarPapelera());
+        dao.restaurar(d);
+        assertTrue(ids(null, null, true).contains(d));
+        dao.eliminar(d);
+        dao.vaciarPapelera();
+        assertEquals(0, dao.contarPapelera());
+        assertNull(dao.buscarPorId(d));
+    }
 }

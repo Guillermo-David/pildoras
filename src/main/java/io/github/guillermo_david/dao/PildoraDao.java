@@ -84,7 +84,7 @@ public class PildoraDao {
 
 	private static Where buildWhere(String tituloFiltro, String tagsFiltro, boolean soloFavoritas,
 			boolean mostrarOcultas) {
-		StringBuilder w = new StringBuilder("WHERE 1=1 ");
+		StringBuilder w = new StringBuilder("WHERE p.eliminada = 0 ");
 		List<String> params = new ArrayList<>();
 
 		if (tituloFiltro != null && !tituloFiltro.isBlank()) {
@@ -248,7 +248,7 @@ public class PildoraDao {
         String sql = """
             SELECT id, titulo, fecha_creacion, fecha_actualizacion, favorita, pinned, protegida
             FROM pildoras
-            WHERE (? IS NULL OR ? = '' OR lower(titulo) LIKE lower(?) )
+            WHERE eliminada = 0 AND (? IS NULL OR ? = '' OR lower(titulo) LIKE lower(?) )
             ORDER BY COALESCE(fecha_actualizacion, fecha_creacion) DESC, id DESC
             LIMIT ?
             """;
@@ -346,8 +346,61 @@ public class PildoraDao {
 		}
 	}
 
+	public record TrashItem(int id, String titulo, String fechaEliminacion) {}
+
+	/** Mueve a la papelera. */
 	public void eliminar(int id) {
+		exec("UPDATE pildoras SET eliminada = 1, fecha_eliminacion = ?, pinned = 0 WHERE id = ?",
+				LocalDateTime.now().format(DATETIME_FMT), id);
+		TagDao.invalidateCache();
+	}
+
+	public void restaurar(int id) {
+		exec("UPDATE pildoras SET eliminada = 0, fecha_eliminacion = NULL WHERE id = ?", id);
+		TagDao.invalidateCache();
+	}
+
+	public int contarPapelera() {
+		String sql = "SELECT COUNT(*) FROM pildoras WHERE eliminada = 1";
+		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement();
+				ResultSet rs = st.executeQuery(sql)) {
+			if (rs.next()) return rs.getInt(1);
+		} catch (SQLException e) { e.printStackTrace(); }
+		return 0;
+	}
+
+	public List<TrashItem> listarPapelera() {
+		String sql = "SELECT id, titulo, fecha_eliminacion FROM pildoras WHERE eliminada = 1 "
+				+ "ORDER BY fecha_eliminacion DESC, id DESC";
+		List<TrashItem> out = new ArrayList<>();
+		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement();
+				ResultSet rs = st.executeQuery(sql)) {
+			while (rs.next())
+				out.add(new TrashItem(rs.getInt("id"), rs.getString("titulo"), rs.getString("fecha_eliminacion")));
+		} catch (SQLException e) { e.printStackTrace(); }
+		return out;
+	}
+
+	public void vaciarPapelera() {
+		for (TrashItem t : listarPapelera())
+			eliminarDefinitivo(t.id());
+	}
+
+	private void exec(String sql, Object... args) {
+		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
+			for (int i = 0; i < args.length; i++) {
+				if (args[i] instanceof Integer n) ps.setInt(i + 1, n);
+				else ps.setString(i + 1, (String) args[i]);
+			}
+			ps.execute();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void eliminarDefinitivo(int id) {
 		cleanupDanglingRefs(id);
+		TagDao.invalidateCache();
 		String sql = "DELETE FROM pildoras WHERE id = ?";
 		try (PreparedStatement pstmt = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			pstmt.setInt(1, id);
@@ -427,19 +480,19 @@ public class PildoraDao {
 	}
 
 	public int contarProtegidas() {
-		return countWhere("WHERE protegida = 1");
+		return countWhere("AND protegida = 1");
 	}
 
 	public int contarFavoritas() {
-		return countWhere("WHERE favorita = 1");
+		return countWhere("AND favorita = 1");
 	}
 
 	public int contarOcultas() {
-		return countWhere("WHERE oculta = 1");
+		return countWhere("AND oculta = 1");
 	}
 
 	public int contarCreadasDesde(LocalDateTime since) {
-		String sql = "SELECT COUNT(*) FROM pildoras WHERE fecha_creacion >= ?";
+		String sql = "SELECT COUNT(*) FROM pildoras WHERE eliminada = 0 AND fecha_creacion >= ?";
 		try (PreparedStatement ps = DatabaseHelper.getInstance().getConnection().prepareStatement(sql)) {
 			ps.setString(1, since.format(DATETIME_FMT));
 			try (ResultSet rs = ps.executeQuery()) {
@@ -450,7 +503,7 @@ public class PildoraDao {
 	}
 
 	private int countWhere(String where) {
-		String sql = "SELECT COUNT(*) FROM pildoras " + where;
+		String sql = "SELECT COUNT(*) FROM pildoras WHERE eliminada = 0 " + where;
 		try (Statement st = DatabaseHelper.getInstance().getConnection().createStatement();
 			 ResultSet rs = st.executeQuery(sql)) {
 			if (rs.next()) return rs.getInt(1);

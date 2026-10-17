@@ -181,7 +181,9 @@ public class TagDao {
             sql = """
                 SELECT t.nombre, COUNT(pt.pildora_id) AS cnt
                 FROM tags t
-                LEFT JOIN pildora_tag pt ON t.id = pt.tag_id
+                JOIN pildora_tag pt ON t.id = pt.tag_id
+                JOIN pildoras p ON p.id = pt.pildora_id
+                WHERE p.eliminada = 0
                 GROUP BY t.id, t.nombre
                 HAVING cnt > 0
                 ORDER BY t.nombre
@@ -192,7 +194,7 @@ public class TagDao {
                 FROM tags t
                 JOIN pildora_tag pt ON t.id = pt.tag_id
                 JOIN pildoras p ON p.id = pt.pildora_id
-                WHERE p.oculta = 0
+                WHERE p.oculta = 0 AND p.eliminada = 0
                 GROUP BY t.id, t.nombre
                 HAVING cnt > 0
                 ORDER BY t.nombre
@@ -214,6 +216,8 @@ public class TagDao {
             SELECT t.nombre, COUNT(pt.pildora_id) AS cnt
             FROM tags t
             JOIN pildora_tag pt ON t.id = pt.tag_id
+            JOIN pildoras p ON p.id = pt.pildora_id
+            WHERE p.eliminada = 0
             GROUP BY t.id, t.nombre
             ORDER BY cnt DESC, t.nombre ASC
             LIMIT ?

@@ -363,7 +363,11 @@ class SettingsMenuHelper {
         var miRestore = new MenuItem(I18n.get("menu.backup.import"));
         miRestore.setOnAction(e -> handleImportBackup());
 
-        miDatabase.getItems().addAll(miImport, new SeparatorMenuItem(),
+        var miTrash = new MenuItem(I18n.get("menu.trash"));
+        miTrash.setGraphic(new FontIcon(FontAwesomeSolid.TRASH_RESTORE));
+        miTrash.setOnAction(e -> TrashDialog.show(root, refrescarTabla));
+
+        miDatabase.getItems().addAll(miImport, miTrash, new SeparatorMenuItem(),
                 miTurso, miMigrate, new SeparatorMenuItem(),
                 miBackup, miRestore, new SeparatorMenuItem(), miTursoGuide);
 

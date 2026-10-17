@@ -99,7 +99,7 @@ public class PildoraLinkDao {
             SELECT p.id, p.titulo, p.protegida
             FROM pildora_link l
             JOIN pildoras p ON p.id = l.to_id
-            WHERE l.from_id = ? AND l.kind = 'ref'
+            WHERE l.from_id = ? AND l.kind = 'ref' AND p.eliminada = 0
             ORDER BY lower(p.titulo)
         """;
         List<Pildora> out = new ArrayList<>();
@@ -126,7 +126,7 @@ public class PildoraLinkDao {
             SELECT p.id, p.titulo, p.protegida
             FROM pildora_link l
             JOIN pildoras p ON p.id = l.from_id
-            WHERE l.to_id = ? AND l.kind = 'ref'
+            WHERE l.to_id = ? AND l.kind = 'ref' AND p.eliminada = 0
             ORDER BY lower(p.titulo)
         """;
         List<Pildora> out = new ArrayList<>();

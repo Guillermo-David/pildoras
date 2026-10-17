@@ -185,7 +185,9 @@ public class DatabaseHelper {
         {"protegida", "INTEGER NOT NULL DEFAULT 0"},
         {"descripcion_cipher", "BLOB"},
         {"descripcion_iv", "BLOB"},
-        {"oculta", "INTEGER NOT NULL DEFAULT 0"}
+        {"oculta", "INTEGER NOT NULL DEFAULT 0"},
+        {"eliminada", "INTEGER NOT NULL DEFAULT 0"},
+        {"fecha_eliminacion", "TIMESTAMP"}
     };
 
     private void initializeDatabase() throws SQLException {
@@ -219,7 +221,9 @@ public class DatabaseHelper {
                     descripcion_cipher BLOB,
                     descripcion_iv     BLOB,
                     protegida INTEGER NOT NULL DEFAULT 0,
-                    oculta    INTEGER NOT NULL DEFAULT 0
+                    oculta    INTEGER NOT NULL DEFAULT 0,
+                    eliminada INTEGER NOT NULL DEFAULT 0,
+                    fecha_eliminacion TIMESTAMP
                 )
             """);
 
@@ -297,6 +301,7 @@ public class DatabaseHelper {
             s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_pinned   ON pildoras(pinned)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_protegida ON pildoras(protegida)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_oculta ON pildoras(oculta)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_eliminada ON pildoras(eliminada)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_pildoras_titulo_lower ON pildoras(lower(titulo))");
         }
     }
@@ -318,17 +323,19 @@ public class DatabaseHelper {
                         descripcion_cipher BLOB,
                         descripcion_iv     BLOB,
                         protegida INTEGER NOT NULL DEFAULT 0,
-                        oculta    INTEGER NOT NULL DEFAULT 0
+                        oculta    INTEGER NOT NULL DEFAULT 0,
+                        eliminada INTEGER NOT NULL DEFAULT 0,
+                        fecha_eliminacion TIMESTAMP
                     )
                 """);
 
                 s.execute("""
                     INSERT INTO pildoras_new
                       (id, titulo, descripcion, fecha_creacion, fecha_actualizacion,
-                       favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta)
+                       favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta, eliminada, fecha_eliminacion)
                     SELECT
                       id, titulo, descripcion, fecha_creacion, fecha_actualizacion,
-                      favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta
+                      favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta, eliminada, fecha_eliminacion
                     FROM pildoras
                 """);
 
