@@ -183,11 +183,11 @@ public class ListadoPildorasController {
 		setBotones();
 		btnSoloFav.setSelected(PREFS.getBoolean(PREF_SOLO_FAV, false));
 
-		settingsHelper = new SettingsMenuHelper(root, security, btnSettings, PREFS,
+		settingsHelper = new SettingsMenuHelper(new SettingsMenuHelper.Config(root, security, btnSettings, PREFS,
 				PREF_FONT_FAMILY, PREF_FONT_SIZE, DEF_FONT_FAMILY, DEF_FONT_SIZE,
 				this::ensureUnlockedWithRetries, this::refrescarTabla,
 				this::setLogoFor, p -> paginaActual = p,
-				this::showColumnSelector);
+				this::showColumnSelector));
 		settingsHelper.initSettingsMenu();
 		settingsHelper.applyTypographyNow();
 		cargarTabla(null, null);
