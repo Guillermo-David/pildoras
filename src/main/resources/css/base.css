@@ -935,3 +935,12 @@
     -fx-icon-color: -c-accent;
 }
 
+
+.offline-badge {
+    -fx-text-fill: white;
+    -fx-background-color: #c0392b;
+    -fx-background-radius: 8;
+    -fx-padding: 1 8 1 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}

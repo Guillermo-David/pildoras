@@ -311,6 +311,12 @@ public class ListadoPildorasController {
 	    Label lblVer = new Label("v" + v);
 	    lblVer.getStyleClass().add("version-badge");
 	    lblVer.setOpacity(0.8);
+	    if (io.github.guillermo_david.db.DatabaseHelper.getInstance().isOffline()) {
+	        Label lblOffline = new Label(I18n.get("badge.offline"));
+	        lblOffline.getStyleClass().add("offline-badge");
+	        lblOffline.setTooltip(new Tooltip(I18n.get("status.offline.readonly")));
+	        statusBar.getChildren().add(lblOffline);
+	    }
 	    statusBar.getChildren().add(lblVer);
 	}
 
@@ -471,6 +477,7 @@ public class ListadoPildorasController {
 	}
 
 	private void confirmAndDelete(Pildora p, Runnable after) {
+		if (OfflineGuard.blocked()) return;
 		if (p.isProtegida() && !security.isUnlocked() && !ensureUnlockedWithRetries())
 			return;
 		Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, I18n.get("confirm.delete.pildora", p.getTitulo()));
@@ -516,6 +523,7 @@ public class ListadoPildorasController {
 				pinBtn.setGraphic(pinIcon);
 				pinBtn.setTooltip(new Tooltip(p.isPinned() ? I18n.get("tooltip.unpin") : I18n.get("tooltip.pin")));
 				pinBtn.setOnAction(e -> {
+					if (OfflineGuard.blocked()) return;
 					boolean nuevo = !p.isPinned();
 					pildoraDao.marcarPinned(p.getId(), nuevo);
 					p.setPinned(nuevo);
@@ -536,6 +544,7 @@ public class ListadoPildorasController {
 				if (p.isFavorita()) starIcon.getStyleClass().add("star-fav");
 				star.setGraphic(starIcon);
 				star.setOnAction(e -> {
+					if (OfflineGuard.blocked()) return;
 					boolean nueva = !p.isFavorita();
 					pildoraDao.marcarFavorita(p.getId(), nueva);
 					p.setFavorita(nueva);
@@ -947,7 +956,7 @@ public class ListadoPildorasController {
 			scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 				if (e.getCode() == KeyCode.M && table.isFocused()) {
 					var sel = table.getSelectionModel().getSelectedItem();
-					if (sel != null) {
+					if (sel != null && !OfflineGuard.blocked()) {
 						boolean nueva = !sel.isFavorita();
 						pildoraDao.marcarFavorita(sel.getId(), nueva);
 						sel.setFavorita(nueva);
@@ -1068,6 +1077,7 @@ public class ListadoPildorasController {
 	}
 
 	private void abrirFormularioEditar(Pildora p) {
+		if (OfflineGuard.blocked()) return;
 		try {
 			FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/editor-pildora.fxml"));
 			Parent editorRoot = loader.load();
@@ -1092,6 +1102,7 @@ public class ListadoPildorasController {
 	}
 
 	private void abrirFormularioNueva() {
+		if (OfflineGuard.blocked()) return;
 		try {
 			FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/editor-pildora.fxml"));
 			Parent editorRoot = loader.load();

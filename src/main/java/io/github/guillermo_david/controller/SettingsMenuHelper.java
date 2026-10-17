@@ -365,9 +365,24 @@ class SettingsMenuHelper {
 
         var miTrash = new MenuItem(I18n.get("menu.trash"));
         miTrash.setGraphic(new FontIcon(FontAwesomeSolid.TRASH_RESTORE));
-        miTrash.setOnAction(e -> TrashDialog.show(root, refrescarTabla));
+        miTrash.setOnAction(e -> {
+            if (!OfflineGuard.blocked()) TrashDialog.show(root, refrescarTabla);
+        });
 
-        miDatabase.getItems().addAll(miImport, miTrash, new SeparatorMenuItem(),
+        var miRetry = new MenuItem(I18n.get("menu.offline.retry"));
+        miRetry.setGraphic(new FontIcon(FontAwesomeSolid.SYNC_ALT));
+        miRetry.setVisible(DatabaseHelper.getInstance().isOffline());
+        miRetry.setOnAction(e -> {
+            DatabaseHelper.reconnect();
+            io.github.guillermo_david.dao.TagDao.invalidateCache();
+            boolean offline = DatabaseHelper.getInstance().isOffline();
+            miRetry.setVisible(offline);
+            StatusBus.show(I18n.get(offline ? "status.offline.still" : "status.offline.reconnected"),
+                    offline ? StatusBus.Type.WARN : StatusBus.Type.SUCCESS, Duration.seconds(4));
+            refrescarTabla.run();
+        });
+
+        miDatabase.getItems().addAll(miImport, miTrash, miRetry, new SeparatorMenuItem(),
                 miTurso, miMigrate, new SeparatorMenuItem(),
                 miBackup, miRestore, new SeparatorMenuItem(), miTursoGuide);
 
@@ -649,6 +664,7 @@ class SettingsMenuHelper {
     }
 
     private void handleImportBackup() {
+        if (OfflineGuard.blocked()) return;
         var confirm = new Alert(AlertType.WARNING);
         confirm.setTitle(I18n.get("filechooser.import.backup"));
         confirm.setHeaderText(I18n.get("confirm.import.backup.header"));
@@ -684,6 +700,7 @@ class SettingsMenuHelper {
     }
 
     private void handleImportMarkdown() {
+        if (OfflineGuard.blocked()) return;
         var scene = root.getScene();
         if (scene == null) return;
 
@@ -742,6 +759,7 @@ class SettingsMenuHelper {
     }
 
     private void handleMigrateToTurso() {
+        if (OfflineGuard.blocked()) return;
         if (!TursoConfig.isConfigured()) {
             var alert = new Alert(AlertType.WARNING);
             alert.setTitle(I18n.get("alert.turso.not.configured.title"));

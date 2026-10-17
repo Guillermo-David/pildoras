@@ -42,6 +42,7 @@ io.github.guillermo_david/
 │   ├── DetallePildoraController    — Vista detalle con WebView, Ctrl+F (~750 líneas, pendiente refactorizar)
 │   ├── EditorPildoraController     — Editor markdown
 │   ├── SettingsMenuHelper          — Menú engranaje: tema, idioma, tipografía, columnas, BD, seguridad, estadísticas, ayuda, acerca de (~1000 líneas, pendiente refactorizar)
+│   ├── OfflineGuard / PildoraContextMenu / TrashDialog / InfoDialogs — piezas extraídas de los controladores grandes
 │   ├── SecurityUiHelper            — unlockWithFeedback(Parent) y humanize(ms) compartidos
 │   ├── TagSidebarHelper            — Panel lateral de etiquetas
 │   ├── TextFormatController        — Barra de formato del editor
@@ -162,6 +163,11 @@ BorderPane (root)
 - Paginación servidor con ordenación por columnas
 - Pill picker ordenado alfabéticamente
 - Pin/favoritos/ocultar píldoras
+- Papelera (borrado lógico `eliminada`) con restaurar/eliminar definitivamente (Ajustes → Base de datos)
+- Duplicar píldora (menú contextual), contador de palabras/caracteres en el editor
+- Búsqueda FTS5 (solo SQLite local; prefijo, sin acentos, ranking bm25 con orden por defecto). Turso usa LIKE
+- Modo sin conexión: si Turso no responde al arrancar se abre `knowledgebase-mirror.db` en solo lectura (badge SIN CONEXIÓN, `OfflineGuard`, "Reintentar conexión"). `TursoMirrorService` copia Turso→espejo cada 10 min
+- Backup JSON con cifrado opcional por contraseña (AES-GCM, PBKDF2); pregunta de seguridad protegida con DPAPI en Windows (`DeviceProtector`); bloqueo de PIN con tope de 24 h
 
 ## Trampas conocidas y lecciones aprendidas
 

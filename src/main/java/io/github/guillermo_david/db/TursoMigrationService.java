@@ -97,11 +97,11 @@ public final class TursoMigrationService {
     private static int migratePildoras(Connection local, Connection turso) throws SQLException {
         int count = 0;
         try (Statement st = local.createStatement();
-             ResultSet rs = st.executeQuery("SELECT id, titulo, descripcion, fecha_creacion, fecha_actualizacion, favorita, pinned, descripcion_cipher, descripcion_iv, protegida FROM pildoras")) {
+             ResultSet rs = st.executeQuery("SELECT id, titulo, descripcion, fecha_creacion, fecha_actualizacion, favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta, eliminada, fecha_eliminacion FROM pildoras")) {
 
             try (Statement ts = turso.createStatement()) {
                 while (rs.next()) {
-                    String sql = "INSERT INTO pildoras (id, titulo, descripcion, fecha_creacion, fecha_actualizacion, favorita, pinned, descripcion_cipher, descripcion_iv, protegida) VALUES ("
+                    String sql = "INSERT INTO pildoras (id, titulo, descripcion, fecha_creacion, fecha_actualizacion, favorita, pinned, descripcion_cipher, descripcion_iv, protegida, oculta, eliminada, fecha_eliminacion) VALUES ("
                         + rs.getInt("id") + ", "
                         + esc(rs.getString("titulo")) + ", "
                         + esc(rs.getString("descripcion")) + ", "
@@ -111,7 +111,10 @@ public final class TursoMigrationService {
                         + rs.getInt("pinned") + ", "
                         + escBlob(rs.getBytes("descripcion_cipher")) + ", "
                         + escBlob(rs.getBytes("descripcion_iv")) + ", "
-                        + rs.getInt("protegida") + ")";
+                        + rs.getInt("protegida") + ", "
+                        + rs.getInt("oculta") + ", "
+                        + rs.getInt("eliminada") + ", "
+                        + esc(rs.getString("fecha_eliminacion")) + ")";
                     ts.execute(sql);
                     count++;
                 }
