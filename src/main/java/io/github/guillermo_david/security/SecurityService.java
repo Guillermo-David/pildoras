@@ -99,6 +99,13 @@ public final class SecurityService {
 
 	private static final int MAX_FAILED = 3;
 	private static final long LOCKOUT_MS = 30_000L; // 30s
+	private static final long MAX_LOCKOUT_MS = 24L * 60 * 60 * 1000; // 24h
+
+	/** 1º ciclo = 30s, 2º = 60s, 3º = 120s... con tope de 24h. */
+	static long lockoutPenaltyMs(int cycles) {
+		int shift = Math.min(Math.max(cycles - 1, 0), 20);
+		return Math.min(MAX_LOCKOUT_MS, LOCKOUT_MS << shift);
+	}
 	
 	
 	
@@ -237,8 +244,7 @@ public final class SecurityService {
 		        int cycles = PREFS.getInt(K_LOCK_CYCLES, 0) + 1;
 		        PREFS.putInt(K_LOCK_CYCLES, cycles);
 
-		        long penalty = LOCKOUT_MS * (1L << (cycles - 1)); 
-		        // 1º ciclo = 30s, 2º = 60s, 3º = 120s, etc.
+		        long penalty = lockoutPenaltyMs(cycles);
 
 		        PREFS.putLong(K_LOCK_UNTIL, System.currentTimeMillis() + penalty);
 		        PREFS.putInt(K_FAILED, 0); // reinicia intentos

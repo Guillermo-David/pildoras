@@ -226,4 +226,12 @@ class SecurityServiceTest {
         sec.verifyPin(pin("000000"));
         assertEquals(1, sec.attemptsLeft());
     }
+
+    @org.junit.jupiter.api.Test
+    void lockoutPenaltyDoublesAndCapsAt24h() {
+        assertEquals(30_000L, SecurityService.lockoutPenaltyMs(1));
+        assertEquals(60_000L, SecurityService.lockoutPenaltyMs(2));
+        assertEquals(24L * 60 * 60 * 1000, SecurityService.lockoutPenaltyMs(40));
+        assertEquals(24L * 60 * 60 * 1000, SecurityService.lockoutPenaltyMs(Integer.MAX_VALUE));
+    }
 }

@@ -526,41 +526,8 @@ public class EditorPildoraController {
 	    return ids;
 	}
 
-	private char[] askPin6() {
-		var dlg = new javafx.scene.control.TextInputDialog();
-		dlg.setTitle(I18n.get("pin.dialog.title"));
-		dlg.setHeaderText(I18n.get("pin.dialog.header"));
-		dlg.setContentText(I18n.get("label.pin"));
-		var tf = dlg.getEditor();
-		tf.setPromptText("••••••");
-		tf.setTextFormatter(new javafx.scene.control.TextFormatter<String>(c -> {
-			String t = c.getControlNewText();
-			return t.matches("\\d{0,6}") ? c : null;
-		}));
-		var res = dlg.showAndWait();
-		if (res.isEmpty() || res.get().length() != 6)
-			return null;
-		return res.get().toCharArray();
-	}
-
 	private char[] askNewPin6() {
-		// muy simple: dos diálogos seguidos
-		var p1 = askPin6();
-		if (p1 == null)
-			return null;
-		var p2 = askPin6();
-		if (p2 == null) {
-			java.util.Arrays.fill(p1, '\0');
-			return null;
-		}
-		boolean eq = java.util.Arrays.equals(p1, p2);
-		java.util.Arrays.fill(p2, '\0');
-		if (!eq) {
-			StatusBus.show(I18n.get("status.pin.mismatch"), Type.WARN, Duration.seconds(3));
-			java.util.Arrays.fill(p1, '\0');
-			return null;
-		}
-		return p1;
+		return io.github.guillermo_david.javafx.PinDialogs.promptNewPin6(root);
 	}
 
 	public void cargarPildora(Pildora p) {
